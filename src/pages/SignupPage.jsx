@@ -1,61 +1,133 @@
+// src/pages/SignupPage.jsx
 import React, { useState } from "react";
-import { register } from "../api/auth"; // ✅ 백엔드 API 함수 가져오기
+import { register } from "../api/auth";
+import { useNavigate } from "react-router-dom";
 
 export default function SignupPage() {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [code, setCode] = useState("");
+  const navigate = useNavigate();
+  const [formData, setFormData] = useState({
+    name: "",
+    email: "",
+    password: "",
+    affiliation: "",
+    code: "", // ✅ 인증코드 state 다시 추가
+    interests: [],
+    spokenLanguages: "",
+    desiredLanguages: "",
+    termsOfServiceAgreed: false,
+    privacyPolicyAgreed: false,
+    eventPhotoAgreed: false,
+  });
+
+  const affiliations = ["NCCU", "NTU", "NTNU", "Taipei Tech", "Other"];
+  const interestOptions = ["K-POP", "Sports", "Movies", "Cooking", "Travel", "Gaming"];
+
+  const handleChange = (e) => {
+    const { name, value, type, checked } = e.target;
+    if (type === "checkbox" && name !== "interests") {
+      setFormData((prev) => ({ ...prev, [name]: checked }));
+    } else {
+      setFormData((prev) => ({ ...prev, [name]: value }));
+    }
+  };
+
+  const handleInterestChange = (e) => {
+    const { value, checked } = e.target;
+    setFormData((prev) => {
+      const newInterests = checked
+        ? [...prev.interests, value]
+        : prev.interests.filter((interest) => interest !== value);
+      return { ...prev, interests: newInterests };
+    });
+  };
+  
+  const handleSendCode = () => {
+    if (!formData.email) {
+      alert("인증코드를 받을 이메일을 먼저 입력해주세요.");
+      return;
+    }
+    // TODO: 백엔드에 인증코드 전송을 요청하는 API 호출
+    console.log(`Sending verification code to ${formData.email}`);
+    alert("인증코드가 전송되었습니다. 이메일을 확인해주세요.");
+  };
 
   const handleSignup = async (e) => {
     e.preventDefault();
+    if (!formData.termsOfServiceAgreed || !formData.privacyPolicyAgreed) {
+      alert("필수 약관에 동의해주세요.");
+      return;
+    }
+    // ✅ 인증코드 필드가 비어있는지 확인
+    if (!formData.code) {
+      alert("이메일 인증코드를 입력해주세요.");
+      return;
+    }
     try {
-      await register(email, password);
+      const submissionData = {
+        ...formData,
+        interests: formData.interests.join(","),
+      };
+      await register(submissionData);
       alert("회원가입 성공! 이제 로그인 해보세요.");
+      navigate("/login");
     } catch (err) {
       alert("회원가입 실패: " + err);
     }
   };
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-gray-100">
-      <div className="flex items-center mb-8">
+    <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 py-12">
+      <div className="flex items-center mb-6">
         <img src="/slam_logo_web_rgb.jpg" alt="SLAM Logo" className="w-10 h-10 rounded-full mr-2" />
         <span className="text-2xl font-bold text-gray-800">SLAM</span>
       </div>
-      <form onSubmit={handleSignup} className="bg-white p-8 rounded shadow-md w-full max-w-md">
+      <form onSubmit={handleSignup} className="bg-white p-8 rounded-lg shadow-md w-full max-w-lg">
         <h2 className="text-2xl font-semibold mb-6 text-center">Sign Up</h2>
-        <input
-          type="email"
-          placeholder="Email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          className="w-full mb-4 px-4 py-2 border rounded"
-          required
-        />
-        <input
-          type="password"
-          placeholder="Password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          className="w-full mb-4 px-4 py-2 border rounded"
-          required
-        />
-        <div className="flex gap-2 mb-4">
-          <input
-            type="text"
-            placeholder="Verification Code"
-            value={code}
-            onChange={(e) => setCode(e.target.value)}
-            className="flex-grow px-4 py-2 border rounded"
-          />
-          <button
-            type="button"
-            className="px-4 bg-gray-300 rounded hover:bg-gray-400 text-sm"
-            onClick={() => console.log("인증코드 전송")}
-          >
-            Send Code
-          </button>
+
+        {/* 기본 정보 */}
+        <div className="space-y-4 mb-4">
+          <input type="text" name="name" placeholder="Name" value={formData.name} onChange={handleChange} className="w-full px-4 py-2 border rounded" required />
+          
+          {/* ✅ 이메일 + 인증코드 섹션 */}
+          <div className="flex gap-2">
+            <input type="email" name="email" placeholder="Email" value={formData.email} onChange={handleChange} className="flex-grow px-4 py-2 border rounded" required />
+            <button type="button" onClick={handleSendCode} className="px-4 bg-gray-300 rounded hover:bg-gray-400 text-sm whitespace-nowrap">
+              Send Code
+            </button>
+          </div>
+          <input type="text" name="code" placeholder="Verification Code" value={formData.code} onChange={handleChange} className="w-full px-4 py-2 border rounded" required />
+
+
+          <input type="password" name="password" placeholder="Password" value={formData.password} onChange={handleChange} className="w-full px-4 py-2 border rounded" required />
+          <select name="affiliation" value={formData.affiliation} onChange={handleChange} className="w-full px-4 py-2 border rounded bg-white" required>
+            <option value="">소속 (Affiliation)</option>
+            {affiliations.map(aff => <option key={aff} value={aff}>{aff}</option>)}
+          </select>
         </div>
+
+        {/* ... (관심사, 언어, 약관 동의 부분은 이전과 동일) ... */}
+        <div className="mb-4">
+          <label className="block text-sm font-medium mb-2">관심사 (Interests)</label>
+          <div className="grid grid-cols-3 gap-2">
+            {interestOptions.map(interest => (
+              <label key={interest} className="flex items-center space-x-2">
+                <input type="checkbox" name="interests" value={interest} checked={formData.interests.includes(interest)} onChange={handleInterestChange} />
+                <span>{interest}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+            <input type="text" name="spokenLanguages" placeholder="구사 언어 (e.g., Korean, English)" value={formData.spokenLanguages} onChange={handleChange} className="w-full px-4 py-2 border rounded" />
+            <input type="text" name="desiredLanguages" placeholder="배우고 싶은 언어 (e.g., Chinese)" value={formData.desiredLanguages} onChange={handleChange} className="w-full px-4 py-2 border rounded" />
+        </div>
+        <div className="space-y-2 mb-6 text-sm">
+          <label className="flex items-center"><input type="checkbox" name="termsOfServiceAgreed" checked={formData.termsOfServiceAgreed} onChange={handleChange} className="mr-2" /><span>서비스 이용약관 (필수)</span></label>
+          <label className="flex items-center"><input type="checkbox" name="privacyPolicyAgreed" checked={formData.privacyPolicyAgreed} onChange={handleChange} className="mr-2" /><span>개인정보 처리방침 (필수)</span></label>
+          <label className="flex items-center"><input type="checkbox" name="eventPhotoAgreed" checked={formData.eventPhotoAgreed} onChange={handleChange} className="mr-2" /><span>이벤트 사진 사용 동의 (선택)</span></label>
+        </div>
+
+
         <button type="submit" className="w-full bg-green-500 text-white py-2 rounded hover:bg-green-600">
           Sign Up
         </button>
