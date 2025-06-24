@@ -41,8 +41,8 @@ export default function MainHeader() {
       </div>
       <nav className="flex items-center gap-6 text-sm font-medium">
         <Link to="/">Home</Link>
-        <a href="#">Community</a>
-        <a href="#">Events</a>
+        <Link to="/">Community</Link>
+        <Link to="/events/pilot">Events</Link>
 
         {!isLoggedIn ? (
           <>

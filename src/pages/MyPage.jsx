@@ -24,8 +24,6 @@ export default function MyPage() {
 
   return (
     <div className="bg-gray-50 min-h-screen font-sans text-gray-900">
-      <MainHeader />
-
       <main className="max-w-4xl mx-auto px-4 sm:px-6 py-12">
         <h1 className="text-3xl font-bold mb-8 text-center text-gray-800">마이페이지</h1>
 
