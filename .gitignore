@@ -3,3 +3,11 @@
 .env
 build/
 .DS_Store
+
+
+# Dependencies
+/node_modules
+
+# Build & Cache
+/build
+/.cache
