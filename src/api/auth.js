@@ -7,12 +7,19 @@ export const login = async (email, password) => {
       password,
     });
 
-    const token = response.data.token;
-    
-    // ✅ 이메일을 localStorage에 저장하는 코드를 추가합니다.
-    localStorage.setItem("userEmail", email); 
+    // ✅ 백엔드에서 전달해주는 데이터 전체를 받습니다.
+    const { token, profileImage } = response.data;
+
+    // localStorage에 필요한 모든 정보를 저장합니다.
+    localStorage.setItem("userEmail", email);
     localStorage.setItem("jwtToken", token);
     
+    // ✅ 프로필 이미지가 있는 경우에만 localStorage에 저장합니다.
+    if (profileImage) {
+      localStorage.setItem("profileImage", profileImage);
+    }
+
+    // 모든 axios 요청에 인증 헤더를 기본으로 설정합니다.
     axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
 
     return response.data;
@@ -21,14 +28,12 @@ export const login = async (email, password) => {
   }
 };
 
-// ✅ 회원가입 함수 수정
-// 상세 정보가 포함된 userData 객체를 인자로 받아 백엔드에 전달합니다.
+// register 함수는 기존과 동일합니다.
 export const register = async (userData) => {
   try {
     const response = await axios.post("/auth/register", userData);
     return response.data;
   } catch (error) {
-    // 백엔드에서 오는 구체적인 에러 메시지가 있다면 그것을 사용하고, 없다면 기본 메시지를 사용합니다.
     throw error.response?.data || error.message || "회원가입 실패";
   }
 };

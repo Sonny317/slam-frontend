@@ -1,7 +1,5 @@
-// src/pages/MyPage.jsx
-
 import React, { useState, useEffect } from "react";
-import MainHeader from "../components/MainHeader";
+
 import axios from "../api/axios";
 
 export default function MyPage() {
@@ -12,7 +10,6 @@ export default function MyPage() {
     const [posts, setPosts] = useState([ { id: 1, title: "첫 번째 게시글", date: "2025-05-01" } ]);
     const [comments, setComments] = useState([ { id: 1, content: "좋은 정보 감사합니다!", postTitle: "첫 번째 게시글" } ]);
 
-    // ✅ 백엔드 서버의 주소
     const backendUrl = "http://localhost:8080";
 
     useEffect(() => {
@@ -20,7 +17,6 @@ export default function MyPage() {
         const storedImage = localStorage.getItem("profileImage");
         if (email) setUserEmail(email);
         
-        // ✅ 저장된 이미지가 있으면 전체 URL로 설정
         if (storedImage) {
             setProfileImage(backendUrl + storedImage);
         }
@@ -42,9 +38,7 @@ export default function MyPage() {
 
             const newImagePath = response.data.profileImage;
             if (newImagePath) {
-                // ✅ 전체 URL로 상태 업데이트
                 setProfileImage(backendUrl + newImagePath);
-                // localStorage에는 상대 경로 저장
                 localStorage.setItem("profileImage", newImagePath);
                 window.dispatchEvent(new Event("profileImageChanged"));
             }
@@ -65,7 +59,7 @@ export default function MyPage() {
 
     return (
         <div className="bg-gray-50 min-h-screen">
-            <MainHeader key={profileImage} />
+            {/* <MainHeader key={profileImage} /> ⬅️ 이 줄을 삭제했습니다. */}
             <main className="max-w-4xl mx-auto px-4 sm:px-6 py-12">
                 <h1 className="text-3xl font-bold mb-8 text-center">마이페이지</h1>
                 <div className="bg-white p-8 rounded-lg shadow-md mb-10">
@@ -77,7 +71,6 @@ export default function MyPage() {
                                     src={profileImage}
                                     alt="프로필"
                                     className="w-full h-full rounded-full object-cover border-2 border-gray-200"
-                                    // ✅ 이미지 로딩 실패 시 기본 이미지 표시
                                     onError={(e) => { e.target.onerror = null; e.target.src = "/default_profile.jpg"; }}
                                 />
                                 <label htmlFor="profile-upload" className="absolute bottom-2 right-2 bg-gray-700 p-2 rounded-full shadow-lg cursor-pointer hover:bg-gray-600 transition-colors">
