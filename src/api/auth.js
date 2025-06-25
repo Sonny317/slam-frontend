@@ -1,6 +1,5 @@
 import axios from './axios';
 
-// 기존 로그인 함수는 변경사항 없이 그대로 유지합니다.
 export const login = async (email, password) => {
   try {
     const response = await axios.post('/auth/login', {
@@ -9,7 +8,11 @@ export const login = async (email, password) => {
     });
 
     const token = response.data.token;
-    localStorage.setItem('jwtToken', token);
+    
+    // ✅ 이메일을 localStorage에 저장하는 코드를 추가합니다.
+    localStorage.setItem("userEmail", email); 
+    localStorage.setItem("jwtToken", token);
+    
     axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
 
     return response.data;
