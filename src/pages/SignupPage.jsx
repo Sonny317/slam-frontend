@@ -1,7 +1,7 @@
-// src/pages/SignupPage.jsx
 import React, { useState } from "react";
 import { register } from "../api/auth";
 import { useNavigate } from "react-router-dom";
+import axios from "../api/axios";
 
 export default function SignupPage() {
   const navigate = useNavigate();
@@ -10,7 +10,7 @@ export default function SignupPage() {
     email: "",
     password: "",
     affiliation: "",
-    code: "", // ✅ 인증코드 state 다시 추가
+    code: "",
     interests: [],
     spokenLanguages: "",
     desiredLanguages: "",
@@ -40,24 +40,29 @@ export default function SignupPage() {
       return { ...prev, interests: newInterests };
     });
   };
-  
-  const handleSendCode = () => {
+
+  const handleSendCode = async () => {
     if (!formData.email) {
-      alert("인증코드를 받을 이메일을 먼저 입력해주세요.");
-      return;
+      return alert("인증코드를 받을 이메일을 먼저 입력해주세요.");
     }
-    // TODO: 백엔드에 인증코드 전송을 요청하는 API 호출
-    console.log(`Sending verification code to ${formData.email}`);
-    alert("인증코드가 전송되었습니다. 이메일을 확인해주세요.");
+    try {
+      await axios.post("/auth/send-verification-code", { email: formData.email });
+      alert("인증코드가 전송되었습니다. 이메일을 확인해주세요.");
+    } catch (error) {
+      const errorMessage = error.response?.data || "인증코드 전송에 실패했습니다.";
+      alert(errorMessage);
+    }
   };
 
   const handleSignup = async (e) => {
     e.preventDefault();
-    if (!formData.termsOfServiceAgreed || !formData.privacyPolicyAgreed) {
-      alert("필수 약관에 동의해주세요.");
+    
+    // ✅ 수정: 모든 필수 약관(이벤트 사진 포함)을 검사하도록 조건문 변경
+    if (!formData.termsOfServiceAgreed || !formData.privacyPolicyAgreed || !formData.eventPhotoAgreed) {
+      alert("모든 필수 약관에 동의해야 합니다.");
       return;
     }
-    // ✅ 인증코드 필드가 비어있는지 확인
+
     if (!formData.code) {
       alert("이메일 인증코드를 입력해주세요.");
       return;
@@ -71,7 +76,8 @@ export default function SignupPage() {
       alert("회원가입 성공! 이제 로그인 해보세요.");
       navigate("/login");
     } catch (err) {
-      alert("회원가입 실패: " + err);
+      const errorMessage = err.response?.data || err.message || "회원가입에 실패했습니다.";
+      alert(errorMessage);
     }
   };
 
@@ -84,11 +90,8 @@ export default function SignupPage() {
       <form onSubmit={handleSignup} className="bg-white p-8 rounded-lg shadow-md w-full max-w-lg">
         <h2 className="text-2xl font-semibold mb-6 text-center">Sign Up</h2>
 
-        {/* 기본 정보 */}
         <div className="space-y-4 mb-4">
           <input type="text" name="name" placeholder="Name" value={formData.name} onChange={handleChange} className="w-full px-4 py-2 border rounded" required />
-          
-          {/* ✅ 이메일 + 인증코드 섹션 */}
           <div className="flex gap-2">
             <input type="email" name="email" placeholder="Email" value={formData.email} onChange={handleChange} className="flex-grow px-4 py-2 border rounded" required />
             <button type="button" onClick={handleSendCode} className="px-4 bg-gray-300 rounded hover:bg-gray-400 text-sm whitespace-nowrap">
@@ -96,8 +99,6 @@ export default function SignupPage() {
             </button>
           </div>
           <input type="text" name="code" placeholder="Verification Code" value={formData.code} onChange={handleChange} className="w-full px-4 py-2 border rounded" required />
-
-
           <input type="password" name="password" placeholder="Password" value={formData.password} onChange={handleChange} className="w-full px-4 py-2 border rounded" required />
           <select name="affiliation" value={formData.affiliation} onChange={handleChange} className="w-full px-4 py-2 border rounded bg-white" required>
             <option value="">소속 (Affiliation)</option>
@@ -105,7 +106,6 @@ export default function SignupPage() {
           </select>
         </div>
 
-        {/* ... (관심사, 언어, 약관 동의 부분은 이전과 동일) ... */}
         <div className="mb-4">
           <label className="block text-sm font-medium mb-2">관심사 (Interests)</label>
           <div className="grid grid-cols-3 gap-2">
@@ -121,12 +121,23 @@ export default function SignupPage() {
             <input type="text" name="spokenLanguages" placeholder="구사 언어 (e.g., Korean, English)" value={formData.spokenLanguages} onChange={handleChange} className="w-full px-4 py-2 border rounded" />
             <input type="text" name="desiredLanguages" placeholder="배우고 싶은 언어 (e.g., Chinese)" value={formData.desiredLanguages} onChange={handleChange} className="w-full px-4 py-2 border rounded" />
         </div>
-        <div className="space-y-2 mb-6 text-sm">
-          <label className="flex items-center"><input type="checkbox" name="termsOfServiceAgreed" checked={formData.termsOfServiceAgreed} onChange={handleChange} className="mr-2" /><span>서비스 이용약관 (필수)</span></label>
-          <label className="flex items-center"><input type="checkbox" name="privacyPolicyAgreed" checked={formData.privacyPolicyAgreed} onChange={handleChange} className="mr-2" /><span>개인정보 처리방침 (필수)</span></label>
-          <label className="flex items-center"><input type="checkbox" name="eventPhotoAgreed" checked={formData.eventPhotoAgreed} onChange={handleChange} className="mr-2" /><span>이벤트 사진 사용 동의 (선택)</span></label>
-        </div>
 
+        {/* ✅ 약관 동의 섹션 수정 */}
+        <div className="space-y-2 mb-6 text-sm">
+          <label className="flex items-center">
+            <input type="checkbox" name="termsOfServiceAgreed" checked={formData.termsOfServiceAgreed} onChange={handleChange} className="mr-2" />
+            <span>서비스 이용약관 (필수)</span>
+          </label>
+          <label className="flex items-center">
+            <input type="checkbox" name="privacyPolicyAgreed" checked={formData.privacyPolicyAgreed} onChange={handleChange} className="mr-2" />
+            <span>개인정보 처리방침 (필수)</span>
+          </label>
+          <label className="flex items-center">
+            <input type="checkbox" name="eventPhotoAgreed" checked={formData.eventPhotoAgreed} onChange={handleChange} className="mr-2" />
+            {/* ✅ "선택"을 "필수"로 텍스트 수정 */}
+            <span>이벤트 사진 사용 동의 (필수)</span>
+          </label>
+        </div>
 
         <button type="submit" className="w-full bg-green-500 text-white py-2 rounded hover:bg-green-600">
           Sign Up
