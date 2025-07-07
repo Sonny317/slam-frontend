@@ -6,19 +6,23 @@ import SignupPage from "./pages/SignupPage";
 import MyPage from "./pages/MyPage";
 import EventDetailPage from "./pages/EventDetailPage";
 import MainHeader from './components/MainHeader';
+import EventsPage from './pages/EventsPage'; // ✅ 새로 만든 목록 페이지 불러오기
+import PartnershipPage from './pages/PartnershipPage'; // ✅ 추가
+
 
 export default function App() {
   return (
     <Router>
-      <MainHeader /> {/* 헤더를 Routes 바깥에 두면 모든 페이지에 적용됩니다. */}
+      <MainHeader />
       <Routes>
         <Route path="/" element={<MainPage />} />
+        <Route path="/events" element={<EventsPage />} /> {/* ✅ 목록 페이지 경로 추가 */}
+        <Route path="/events/:eventId" element={<EventDetailPage />} /> {/* ✅ 상세 페이지 경로 수정 */}
         <Route path="/login" element={<LoginPage />} />
         <Route path="/signup" element={<SignupPage />} />
         <Route path="/mypage" element={<MyPage />} />
-        <Route path="/events/pilot" element={<EventDetailPage />} />
+        <Route path="/partnership" element={<PartnershipPage />} /> {/* ✅ 추가 */}
       </Routes>
-      {/* 여기에 Footer 컴포넌트를 추가할 수도 있습니다. */}
     </Router>
   );
 }

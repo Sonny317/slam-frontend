@@ -65,7 +65,9 @@ export default function MainHeader() {
       <nav className="flex items-center gap-6 text-sm font-medium">
         <Link to="/">Home</Link>
         <Link to="/">Community</Link>
-        <Link to="/events/pilot">Events</Link>
+        <Link to="/events">Events</Link>
+        <Link to="/partnership">Partners</Link> {/* ✅ 추가 */}
+
 
         {!isLoggedIn ? (
           <>
