@@ -37,3 +37,15 @@ export const register = async (userData) => {
     throw error.response?.data || error.message || "회원가입 실패";
   }
 };
+
+// ✅ 이 함수를 파일에 추가해주세요.
+export const sendVerificationCode = async (email) => {
+  try {
+    // 이 주소는 친구(백엔드)가 만들어준 API 경로입니다.
+    const response = await axios.post("/auth/send-verification-code", { email });
+    return response.data;
+  } catch (error) {
+    // 에러를 던져서 호출한 쪽에서 처리할 수 있게 합니다.
+    throw error.response?.data || error;
+  }
+};

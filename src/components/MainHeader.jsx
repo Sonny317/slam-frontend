@@ -63,7 +63,7 @@ export default function MainHeader() {
         <span className="text-lg font-semibold">SLAM</span>
       </Link>
       <nav className="flex items-center gap-6 text-sm font-medium">
-        <Link to="/">Home</Link>
+        <Link to="/about-us">About Us</Link>
         <Link to="/">Community</Link>
         <Link to="/events">Events</Link>
         <Link to="/partnership">Partners</Link> {/* ✅ 추가 */}

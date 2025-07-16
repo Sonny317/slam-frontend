@@ -1,22 +1,23 @@
+// src/pages/LoginPage.jsx
 import React, { useState } from "react";
 import { login } from "../api/auth"; // 로그인 API
-import { useNavigate } from "react-router-dom"; // 페이지 이동 훅
+import { Link, useNavigate } from "react-router-dom"; // ✅ Link를 import 합니다.
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const navigate = useNavigate(); // ✅ 페이지 이동 함수 준비
+  const navigate = useNavigate();
 
   const handleLogin = async (e) => {
     e.preventDefault();
     try {
       const result = await login(email, password); // 로그인 요청
-      alert("로그인 성공!");
+      alert("Login successful!");
       console.log(result); // 토큰 확인 등
-      navigate("/"); // ✅ 메인 페이지로 이동
+      navigate("/"); // 메인 페이지로 이동
     } catch (error) {
-      alert("로그인 실패: " + (error?.message || error));
-      console.error("로그인 에러:", error);
+      alert("Login failed: " + (error?.message || "Please check your email and password."));
+      console.error("Login error:", error);
     }
   };
 
@@ -47,6 +48,17 @@ export default function LoginPage() {
         <button type="submit" className="w-full bg-blue-500 text-white py-2 rounded hover:bg-blue-600">
           Log In
         </button>
+        
+        {/* ✅ '비밀번호 찾기'와 '회원가입' 링크 추가 */}
+        <div className="text-center text-sm mt-6">
+          <Link to="/forgot-password" className="text-gray-600 hover:text-blue-600 hover:underline">
+            Forgot Password?
+          </Link>
+          <span className="mx-2 text-gray-300">|</span>
+          <Link to="/signup" className="text-gray-600 hover:text-blue-600 hover:underline">
+            Create an Account
+          </Link>
+        </div>
       </form>
     </div>
   );

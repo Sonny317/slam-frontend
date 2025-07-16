@@ -1,83 +1,74 @@
+// src/pages/SignupPage.jsx
 import React, { useState } from "react";
-import { register } from "../api/auth";
-import { useNavigate } from "react-router-dom";
-import axios from "../api/axios";
+import { Link, useNavigate } from "react-router-dom";
+import { register, sendVerificationCode } from "../api/auth"; 
 
 export default function SignupPage() {
   const navigate = useNavigate();
+  const [isSendingCode, setIsSendingCode] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
     email: "",
     password: "",
-    affiliation: "",
-    code: "",
-    interests: [],
-    spokenLanguages: "",
-    desiredLanguages: "",
+    passwordConfirm: "", // ✅ 1. 비밀번호 확인을 위한 state 추가
+    code: "", 
     termsOfServiceAgreed: false,
     privacyPolicyAgreed: false,
     eventPhotoAgreed: false,
   });
 
-  const affiliations = ["NCCU", "NTU", "NTNU", "Taipei Tech", "Other"];
-  const interestOptions = ["K-POP", "Sports", "Movies", "Cooking", "Travel", "Gaming"];
-
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
-    if (type === "checkbox" && name !== "interests") {
-      setFormData((prev) => ({ ...prev, [name]: checked }));
-    } else {
-      setFormData((prev) => ({ ...prev, [name]: value }));
-    }
-  };
-
-  const handleInterestChange = (e) => {
-    const { value, checked } = e.target;
-    setFormData((prev) => {
-      const newInterests = checked
-        ? [...prev.interests, value]
-        : prev.interests.filter((interest) => interest !== value);
-      return { ...prev, interests: newInterests };
-    });
+    setFormData((prev) => ({ ...prev, [name]: type === "checkbox" ? checked : value }));
   };
 
   const handleSendCode = async () => {
     if (!formData.email) {
-      return alert("인증코드를 받을 이메일을 먼저 입력해주세요.");
+      alert("Please enter your email to receive a verification code.");
+      return;
     }
+    setIsSendingCode(true);
     try {
-      await axios.post("/auth/send-verification-code", { email: formData.email });
-      alert("인증코드가 전송되었습니다. 이메일을 확인해주세요.");
+      await sendVerificationCode(formData.email);
+      alert("A verification code has been sent. Please check your email.");
     } catch (error) {
-      const errorMessage = error.response?.data || "인증코드 전송에 실패했습니다.";
-      alert(errorMessage);
+      alert("Failed to send code: " + (error.message || error));
+    } finally {
+      setIsSendingCode(false);
     }
   };
 
   const handleSignup = async (e) => {
     e.preventDefault();
-    
-    // ✅ 수정: 모든 필수 약관(이벤트 사진 포함)을 검사하도록 조건문 변경
-    if (!formData.termsOfServiceAgreed || !formData.privacyPolicyAgreed || !formData.eventPhotoAgreed) {
-      alert("모든 필수 약관에 동의해야 합니다.");
+
+    // ✅ 2. 비밀번호 일치 여부 검사
+    if (formData.password !== formData.passwordConfirm) {
+      alert("Passwords do not match. Please check again.");
       return;
     }
 
+    // ✅ 3. 비밀번호 규칙 검사 (8자 이상, 영문+숫자)
+    const passwordRegex = /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{8,}$/;
+    if (!passwordRegex.test(formData.password)) {
+      alert("Password must be at least 8 characters long and include both letters and numbers.");
+      return;
+    }
+
+    if (!formData.termsOfServiceAgreed || !formData.privacyPolicyAgreed || !formData.eventPhotoAgreed) {
+      alert("You must agree to all required terms.");
+      return;
+    }
     if (!formData.code) {
-      alert("이메일 인증코드를 입력해주세요.");
+      alert("Please enter the verification code.");
       return;
     }
     try {
-      const submissionData = {
-        ...formData,
-        interests: formData.interests.join(","),
-      };
-      await register(submissionData);
-      alert("회원가입 성공! 이제 로그인 해보세요.");
+      const { name, email, password, code } = formData;
+      await register({ name, email, password, code });
+      alert("Signup successful! Please log in.");
       navigate("/login");
     } catch (err) {
-      const errorMessage = err.response?.data || err.message || "회원가입에 실패했습니다.";
-      alert(errorMessage);
+      alert("Signup failed: " + (err.response?.data?.message || err.message));
     }
   };
 
@@ -87,61 +78,47 @@ export default function SignupPage() {
         <img src="/slam_logo_web_rgb.jpg" alt="SLAM Logo" className="w-10 h-10 rounded-full mr-2" />
         <span className="text-2xl font-bold text-gray-800">SLAM</span>
       </div>
-      <form onSubmit={handleSignup} className="bg-white p-8 rounded-lg shadow-md w-full max-w-lg">
-        <h2 className="text-2xl font-semibold mb-6 text-center">Sign Up</h2>
-
-        <div className="space-y-4 mb-4">
+      <form onSubmit={handleSignup} className="bg-white p-8 rounded-lg shadow-md w-full max-w-md">
+        <h2 className="text-2xl font-semibold mb-6 text-center">Create Your Account</h2>
+        <div className="space-y-4">
           <input type="text" name="name" placeholder="Name" value={formData.name} onChange={handleChange} className="w-full px-4 py-2 border rounded" required />
           <div className="flex gap-2">
             <input type="email" name="email" placeholder="Email" value={formData.email} onChange={handleChange} className="flex-grow px-4 py-2 border rounded" required />
-            <button type="button" onClick={handleSendCode} className="px-4 bg-gray-300 rounded hover:bg-gray-400 text-sm whitespace-nowrap">
-              Send Code
+            <button type="button" onClick={handleSendCode} disabled={isSendingCode} className="px-4 bg-gray-200 rounded hover:bg-gray-300 text-sm whitespace-nowrap disabled:bg-gray-400 disabled:cursor-not-allowed">
+              {isSendingCode ? "Sending..." : "Send Code"}
             </button>
           </div>
           <input type="text" name="code" placeholder="Verification Code" value={formData.code} onChange={handleChange} className="w-full px-4 py-2 border rounded" required />
-          <input type="password" name="password" placeholder="Password" value={formData.password} onChange={handleChange} className="w-full px-4 py-2 border rounded" required />
-          <select name="affiliation" value={formData.affiliation} onChange={handleChange} className="w-full px-4 py-2 border rounded bg-white" required>
-            <option value="">소속 (Affiliation)</option>
-            {affiliations.map(aff => <option key={aff} value={aff}>{aff}</option>)}
-          </select>
+          <input type="password" name="password" placeholder="Password (8+ characters, letters & numbers)" value={formData.password} onChange={handleChange} className="w-full px-4 py-2 border rounded" required />
+          {/* ✅ 4. 비밀번호 확인 입력칸 추가 */}
+          <input type="password" name="passwordConfirm" placeholder="Confirm Password" value={formData.passwordConfirm} onChange={handleChange} className="w-full px-4 py-2 border rounded" required />
         </div>
 
-        <div className="mb-4">
-          <label className="block text-sm font-medium mb-2">관심사 (Interests)</label>
-          <div className="grid grid-cols-3 gap-2">
-            {interestOptions.map(interest => (
-              <label key={interest} className="flex items-center space-x-2">
-                <input type="checkbox" name="interests" value={interest} checked={formData.interests.includes(interest)} onChange={handleInterestChange} />
-                <span>{interest}</span>
-              </label>
-            ))}
-          </div>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-            <input type="text" name="spokenLanguages" placeholder="구사 언어 (e.g., Korean, English)" value={formData.spokenLanguages} onChange={handleChange} className="w-full px-4 py-2 border rounded" />
-            <input type="text" name="desiredLanguages" placeholder="배우고 싶은 언어 (e.g., Chinese)" value={formData.desiredLanguages} onChange={handleChange} className="w-full px-4 py-2 border rounded" />
-        </div>
-
-        {/* ✅ 약관 동의 섹션 수정 */}
-        <div className="space-y-2 mb-6 text-sm">
+        <div className="space-y-2 my-6 text-sm">
           <label className="flex items-center">
             <input type="checkbox" name="termsOfServiceAgreed" checked={formData.termsOfServiceAgreed} onChange={handleChange} className="mr-2" />
-            <span>서비스 이용약관 (필수)</span>
+            <span className="ml-2">
+              I agree to the <a href="YOUR_NOTION_LINK_FOR_TERMS" target="_blank" rel="noopener noreferrer" className="underline text-blue-600 hover:text-blue-800">Terms of Service</a> (Required)
+            </span>
           </label>
           <label className="flex items-center">
             <input type="checkbox" name="privacyPolicyAgreed" checked={formData.privacyPolicyAgreed} onChange={handleChange} className="mr-2" />
-            <span>개인정보 처리방침 (필수)</span>
+            <span className="ml-2">
+              I agree to the <a href="YOUR_NOTION_LINK_FOR_PRIVACY" target="_blank" rel="noopener noreferrer" className="underline text-blue-600 hover:text-blue-800">Privacy Policy</a> (Required)
+            </span>
           </label>
           <label className="flex items-center">
             <input type="checkbox" name="eventPhotoAgreed" checked={formData.eventPhotoAgreed} onChange={handleChange} className="mr-2" />
-            {/* ✅ "선택"을 "필수"로 텍스트 수정 */}
-            <span>이벤트 사진 사용 동의 (필수)</span>
+            <span>I agree to the use of event photos/videos (Required)</span>
           </label>
         </div>
 
-        <button type="submit" className="w-full bg-green-500 text-white py-2 rounded hover:bg-green-600">
-          Sign Up
+        <button type="submit" className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700">
+          Create Account
         </button>
+        <p className="text-center text-sm mt-4">
+          Already have an account? <Link to="/login" className="text-blue-600 hover:underline">Log In</Link>
+        </p>
       </form>
     </div>
   );

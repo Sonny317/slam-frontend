@@ -21,27 +21,48 @@ const testimonials = [
 ];
 
 // --- Main Page Component ---
-export default function App() {
+export default function App() { // 또는 MainPage()
   return (
     <div className="font-sans text-gray-800 bg-white">
-
+      
       {/* ==================================================================
           [1단계: 시선을 압도하는 첫인사 - The Hero Section]
       ================================================================== */}
-      <section className="text-center px-6 py-24 md:py-32 bg-gray-50">
-        <div className="max-w-4xl mx-auto">
-            <h1 className="text-4xl md:text-6xl font-black leading-tight mb-4 text-gray-900">
-                Study Less, Achieve More? <div></div>We pack <span className="text-blue-600">a world of connections</span> into a 2-hour meetup.
-            </h1>
-            <p className="text-lg md:text-xl text-gray-600 max-w-3xl mx-auto">
-                <span className="text-blue-600 font-semibold">Discover in 3 minutes:</span> The secret formula that connects locals and foreigners in just 2 hours.
-            </p>
-            <div className="mt-10">
-                <Link to="/events" className="bg-blue-600 text-white font-bold py-4 px-10 rounded-full text-lg hover:bg-blue-700 transition-all duration-300 transform hover:scale-105 shadow-lg">
-                    Find Your Next Event
-                </Link>
-            </div>
+      <section className="relative h-screen flex items-center justify-center text-center px-6 text-white overflow-hidden">
+        {/* 맨 아래층: 배경 동영상 */}
+        <video 
+          autoPlay 
+          loop 
+          muted 
+          playsInline
+          // ✅ 더 명확한 스타일링 코드로 변경
+          className="absolute top-0 left-0 w-full h-full object-cover z-0"
+          
+        >
+          {/* ✅ public 폴더에 있는 실제 동영상 파일 이름과 정확히 일치시켜주세요. */}
+          <source src="/Landing_page.mp4" type="video/mp4" />
+          Your browser does not support the video tag.
+        </video>
+
+        {/* 중간층: 어두운 오버레이 */}
+        <div className="absolute inset-0 bg-gradient-to-b from-black/40 to-black/60 z-10"></div>
+
+
+        {/* 맨 위층: 텍스트 콘텐츠 */}
+        <div className="relative z-20 max-w-4xl mx-auto">
+          <h1 className="text-4xl md:text-6xl font-black leading-tight mb-4">
+            Study Less, Achieve More? <div></div>We pack <span className="text-blue-400">a world of connections</span> into a 2-hour meetup.
+          </h1>
+          <p className="text-lg md:text-xl text-gray-200 max-w-3xl mx-auto">
+            <span className="font-semibold">Discover in 3 minutes:</span> The secret formula that connects locals and foreigners in just 2 hours.
+          </p>
+          <div className="mt-10">
+            <Link to="/events" className="bg-blue-600 text-white font-bold py-4 px-10 rounded-full text-lg hover:bg-blue-700 transition-all duration-300 transform hover:scale-105 shadow-lg">
+              Find Your Next Event
+            </Link>
+          </div>
         </div>
+
       </section>
 
       {/* ==================================================================
