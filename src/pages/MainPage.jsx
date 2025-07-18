@@ -28,52 +28,40 @@ export default function App() { // 또는 MainPage()
       {/* ==================================================================
           [1단계: 시선을 압도하는 첫인사 - The Hero Section]
       ================================================================== */}
-      <section className="relative h-screen flex items-center justify-center text-center px-6 text-white overflow-hidden">
-        {/* 맨 아래층: 배경 동영상 */}
-        <video 
-          autoPlay 
-          loop 
-          muted 
-          playsInline
-          // ✅ 더 명확한 스타일링 코드로 변경
-          className="absolute top-0 left-0 w-full h-full object-cover z-0"
-          
-        >
-          {/* ✅ public 폴더에 있는 실제 동영상 파일 이름과 정확히 일치시켜주세요. */}
-          <source src="/Landing_page.mp4" type="video/mp4" />
-          Your browser does not support the video tag.
-        </video>
-
-        {/* 중간층: 어두운 오버레이 */}
-        <div className="absolute inset-0 bg-gradient-to-b from-black/40 to-black/60 z-10"></div>
-
-
-        {/* 맨 위층: 텍스트 콘텐츠 */}
-        <div className="relative z-20 max-w-4xl mx-auto">
-          <h1 className="text-4xl md:text-6xl font-black leading-tight mb-4">
-            Study Less, Achieve More? <div></div>We pack <span className="text-blue-400">a world of connections</span> into a 2-hour meetup.
-          </h1>
-          <p className="text-lg md:text-xl text-gray-200 max-w-3xl mx-auto">
-            <span className="font-semibold">Discover in 3 minutes:</span> The secret formula that connects locals and foreigners in just 2 hours.
-          </p>
-          <div className="mt-10">
-            <Link to="/events" className="bg-blue-600 text-white font-bold py-4 px-10 rounded-full text-lg hover:bg-blue-700 transition-all duration-300 transform hover:scale-105 shadow-lg">
-              Find Your Next Event
-            </Link>
-          </div>
-        </div>
-
-      </section>
+        {/* 1. Hero Section */}
+        <section className="relative h-screen flex items-center justify-center text-center px-6 text-white overflow-hidden">
+            <video autoPlay loop muted playsInline className="absolute top-0 left-0 w-full h-full object-cover z-0">
+            <source src="/Landing_page.mp4" type="video/mp4" />
+            Your browser does not support the video tag.
+            </video>
+            <div className="absolute inset-0 bg-gradient-to-b from-black/40 to-black/60 z-10"></div>
+            <div className="relative z-20 max-w-5xl mx-auto">
+            <h1 className="text-5xl md:text-6xl font-black leading-tight mb-6">
+                Study Less, Achieve More? <br /> We pack <span className="text-blue-400">a world of connections</span> into a 2-hour meetup.
+            </h1>
+            <p className="text-lg md:text-xl text-gray-200 max-w-4xl mx-auto leading-relaxed">
+                <span className="font-semibold">Discover in 3 minutes:</span> The secret formula for connecting locals and foreigners in just 2 hours.
+            </p>
+            <div className="mt-12">
+                <Link to="/events" className="bg-blue-600 text-white font-bold py-3 px-10 rounded-full text-lg hover:bg-blue-700 transition-all duration-300 transform hover:scale-105 shadow-lg">
+                Find Your Next Event
+                </Link>
+            </div>
+            </div>
+        </section>
 
       {/* ==================================================================
           [2단계: 즉각적인 신뢰 구축 - The Social Proof Bar]
       ================================================================== */}
       <section className="py-20 bg-white">
         <div className="max-w-5xl mx-auto text-center px-6">
+                        <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">Taipei's Fastest-Growing International Community</h2>
+
             <p className="text-lg text-gray-700 mb-12">
                 From 6 to <span className="text-blue-600 font-bold">500+ members</span> in 3 years. Taipei's fastest-growing international community.
             </p>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
+            <br></br>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
                 <div className="flex flex-col items-center">
                     <GlobeIcon />
                     <h3 className="font-bold text-xl mt-2">A Global Melting Pot</h3>
@@ -90,6 +78,7 @@ export default function App() { // 또는 MainPage()
                     <p className="text-gray-600 mt-1">A golden <span className="text-blue-600 font-bold">6:4 ratio</span> of locals to internationals provides the ideal environment for exchange.</p>
                 </div>
             </div>
+            <br></br>
             <div className="px-6 pt-20">
                 <img src="/group_photo.jpg" alt="SLAM Group Photo" className="rounded-xl shadow-lg max-w-4xl mx-auto" />
             </div>
@@ -109,14 +98,20 @@ export default function App() { // 또는 MainPage()
                 <p>"Local students and professionals want to practice English, but can't find the right environment..."</p>
                 <p>"It's hard to break into a new social circle, especially for working professionals in a new city..."</p>
             </div>
+            <br></br>
             <h3 className="text-2xl md:text-3xl font-bold text-gray-800 mb-4">
                 What's SLAM's <span className="text-blue-600">secret formula</span> that connects locals and foreigners in 2 hours?
             </h3>
+            <br></br>
             <p className="text-lg text-gray-600 leading-relaxed">
-                It’s not magic. It's by design. We've crafted a unique environment where language is just a tool, and genuine human connection is the goal.
+                It’s not magic. It's by <span className="text-blue-600 font-semibold">design.</span> <br></br> We've crafted a unique environment <br></br>where language is just a tool, and genuine human connection is the goal.
             </p>
-            <ImageSlider />
         </div>
+      </section>
+
+      {/* 3. Image Slider Section */}
+      <section className="bg-gray-50 py-10">
+        <ImageSlider />
       </section>
 
       {/* ==================================================================

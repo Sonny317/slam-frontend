@@ -5,8 +5,9 @@ const images = [
   "/bar.jpg",
   "/event.jpg",
   "/event2.jpg",
-  "/event3.jpg",
   "/outing.jpg",
+  "/event3.jpg"
+
   //"/picnic_photo2.jpg",
   //"/picnic_photo3.jpg"
 ];

@@ -12,6 +12,13 @@ import BrandStoryPage from './pages/BrandStoryPage'; // ✅ 추가
 import MembershipPage from './pages/MembershipPage';
 import ForgotPasswordPage from './pages/ForgotPasswordPage'; // ✅ 1. 새 페이지 import
 
+import CommunityPage from './pages/CommunityPage';
+import PostDetailPage from './pages/PostDetailPage';
+import NewPostPage from './pages/NewPostPage';
+
+import AdminScannerPage from './pages/AdminScannerPage'; // ✅ 스캐너 페이지 import
+
+
 
 
 export default function App() {
@@ -29,6 +36,13 @@ export default function App() {
         <Route path="/partnership" element={<PartnershipPage />} /> {/* ✅ 추가 */}
         <Route path="/Membership" element={<MembershipPage />} /> {/* ✅ 추가 */}
         <Route path="/forgot-password" element={<ForgotPasswordPage />} /> {/* ✅ 2. 새 경로 추가 */}
+
+        <Route path="/community" element={<CommunityPage />} />
+        <Route path="/community/new" element={<NewPostPage />} /> {/* :postId 보다 위에 있어야 합니다! */}
+        <Route path="/community/:postId" element={<PostDetailPage />} />
+
+        <Route path="/admin/scanner" element={<AdminScannerPage />} /> {/* ✅ 스캐너 페이지 경로 추가 */}
+
 
       </Routes>
     </Router>
