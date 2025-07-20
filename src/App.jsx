@@ -6,45 +6,40 @@ import SignupPage from "./pages/SignupPage";
 import MyPage from "./pages/MyPage";
 import EventDetailPage from "./pages/EventDetailPage";
 import MainHeader from './components/MainHeader';
-import EventsPage from './pages/EventsPage'; // ✅ 새로 만든 목록 페이지 불러오기
-import PartnershipPage from './pages/PartnershipPage'; // ✅ 추가
-import BrandStoryPage from './pages/BrandStoryPage'; // ✅ 추가
+import EventsPage from './pages/EventsPage';
+import PartnershipPage from './pages/PartnershipPage';
+import BrandStoryPage from './pages/BrandStoryPage';
 import MembershipPage from './pages/MembershipPage';
-import ForgotPasswordPage from './pages/ForgotPasswordPage'; // ✅ 1. 새 페이지 import
-
+import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import CommunityPage from './pages/CommunityPage';
 import PostDetailPage from './pages/PostDetailPage';
 import NewPostPage from './pages/NewPostPage';
-
-import AdminScannerPage from './pages/AdminScannerPage'; // ✅ 스캐너 페이지 import
-
-
-
+import AdminScannerPage from './pages/AdminScannerPage';
+import { UserProvider } from './context/UserContext'; // ✅ UserProvider를 임포트합니다.
 
 export default function App() {
   return (
-    <Router>
-      <MainHeader />
-      <Routes>
-        <Route path="/" element={<MainPage />} />
-        <Route path="/about-us" element={<BrandStoryPage />} /> {/* ✅ 추가 */}
-        <Route path="/events" element={<EventsPage />} /> {/* ✅ 목록 페이지 경로 추가 */}
-        <Route path="/events/:eventId" element={<EventDetailPage />} /> {/* ✅ 상세 페이지 경로 수정 */}
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/signup" element={<SignupPage />} />
-        <Route path="/mypage" element={<MyPage />} />
-        <Route path="/partnership" element={<PartnershipPage />} /> {/* ✅ 추가 */}
-        <Route path="/Membership" element={<MembershipPage />} /> {/* ✅ 추가 */}
-        <Route path="/forgot-password" element={<ForgotPasswordPage />} /> {/* ✅ 2. 새 경로 추가 */}
-
-        <Route path="/community" element={<CommunityPage />} />
-        <Route path="/community/new" element={<NewPostPage />} /> {/* :postId 보다 위에 있어야 합니다! */}
-        <Route path="/community/:postId" element={<PostDetailPage />} />
-
-        <Route path="/admin/scanner" element={<AdminScannerPage />} /> {/* ✅ 스캐너 페이지 경로 추가 */}
-
-
-      </Routes>
-    </Router>
+    // ✅ UserProvider로 전체를 감싸줍니다.
+    <UserProvider>
+      <Router>
+        <MainHeader />
+        <Routes>
+          <Route path="/" element={<MainPage />} />
+          <Route path="/about-us" element={<BrandStoryPage />} />
+          <Route path="/events" element={<EventsPage />} />
+          <Route path="/events/:eventId" element={<EventDetailPage />} />
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/signup" element={<SignupPage />} />
+          <Route path="/mypage" element={<MyPage />} />
+          <Route path="/partnership" element={<PartnershipPage />} />
+          <Route path="/Membership" element={<MembershipPage />} />
+          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+          <Route path="/community" element={<CommunityPage />} />
+          <Route path="/community/new" element={<NewPostPage />} />
+          <Route path="/community/:postId" element={<PostDetailPage />} />
+          <Route path="/admin/scanner" element={<AdminScannerPage />} />
+        </Routes>
+      </Router>
+    </UserProvider>
   );
 }

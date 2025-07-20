@@ -1,20 +1,19 @@
-// src/pages/LoginPage.jsx
 import React, { useState } from "react";
-import { login } from "../api/auth"; // 로그인 API
-import { Link, useNavigate } from "react-router-dom"; // ✅ Link를 import 합니다.
+import { Link, useNavigate } from "react-router-dom";
+import { useUser } from '../context/UserContext';
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const navigate = useNavigate();
+  const { login } = useUser();
 
   const handleLogin = async (e) => {
     e.preventDefault();
     try {
-      const result = await login(email, password); // 로그인 요청
+      await login(email, password);
       alert("Login successful!");
-      console.log(result); // 토큰 확인 등
-      navigate("/"); // 메인 페이지로 이동
+      navigate("/"); // ✅ 상태 업데이트 후 자연스럽게 메인 페이지로 이동합니다.
     } catch (error) {
       alert("Login failed: " + (error?.message || "Please check your email and password."));
       console.error("Login error:", error);
@@ -48,8 +47,6 @@ export default function LoginPage() {
         <button type="submit" className="w-full bg-blue-500 text-white py-2 rounded hover:bg-blue-600">
           Log In
         </button>
-        
-        {/* ✅ '비밀번호 찾기'와 '회원가입' 링크 추가 */}
         <div className="text-center text-sm mt-6">
           <Link to="/forgot-password" className="text-gray-600 hover:text-blue-600 hover:underline">
             Forgot Password?
