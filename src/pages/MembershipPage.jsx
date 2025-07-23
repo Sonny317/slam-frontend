@@ -5,8 +5,8 @@ import axios from '../api/axios';
 const MOCK_API_DATA = {
   totalCapacity: 80,
   earlyBirdCap: 20,
-  currentMembers: 21,
-  registrationCloseDate: '2025-09-12T23:59:59',
+  currentMembers: 21, // ⬅️ 이 숫자를 15, 21, 75 등으로 바꿔가며 테스트해보세요!
+  registrationCloseDate: '2025-09-12T23:59:59', // 마감 날짜
 };
 // --------------------------------------------------------------------
 
@@ -126,18 +126,18 @@ export default function MembershipPage() {
         return alert("Please enter the last 5 digits of your bank account.");
     }
 
-    const submissionData = {
-        selectedBranch: selectedBranch,
-        paymentMethod: paymentMethod,
-        ...formData,
-    };
+    const submissionData = {
+        selectedBranch: selectedBranch,
+        paymentMethod: paymentMethod,
+        ...formData,
+    };
 
-    try {
-        const response = await axios.post("/api/memberships/apply", submissionData);
-        alert(`Application submitted successfully! Application ID: ${response.data.applicationId}`);
-    } catch (error) {
-        alert("An error occurred during submission: " + (error.response?.data || error.message));
-    }
+    try {
+        const response = await axios.post("/api/memberships/apply", submissionData);
+        alert(`Application submitted successfully! Application ID: ${response.data.applicationId}`);
+    } catch (error) {
+        alert("An error occurred during submission: " + (error.response?.data || error.message));
+    }
   };
 
   const renderInfoForm = () => (
@@ -229,18 +229,18 @@ export default function MembershipPage() {
           <div>
             <h2 className="text-3xl font-bold text-center mb-2">Join the SLAM Family!</h2>
             <p className="text-center text-gray-600 mb-8">First, which community are you joining?</p>
-            {/* ✅ 이 부분의 className을 수정하여 레이아웃 문제를 해결합니다. */}
-            <div className="flex flex-col md:flex-row gap-4">
-              {Object.keys(membershipDetails).map(branch => (
-                <button 
-                  key={branch} 
-                  onClick={() => { setSelectedBranch(branch); setStep(2); }} 
-                  className="p-6 border rounded-lg text-center hover:shadow-lg hover:border-blue-500 transition w-full whitespace-nowrap"
-                >
-                  <h3 className="text-xl font-bold">{branch}</h3>
-                </button>
-              ))}
-            </div>
+            {/* ✅ 이 부분의 className을 수정하여 레이아웃 문제를 해결했습니다. */}
+            <div className="flex flex-col md:flex-row gap-4">
+              {Object.keys(membershipDetails).map(branch => (
+                <button 
+                  key={branch} 
+                  onClick={() => { setSelectedBranch(branch); setStep(2); }} 
+                  className="p-6 border rounded-lg text-center hover:shadow-lg hover:border-blue-500 transition w-full whitespace-nowrap"
+                >
+                  <h3 className="text-xl font-bold">{branch}</h3>
+                </button>
+              ))}
+            </div>
           </div>
         )}
         {step === 2 && (

@@ -1,39 +1,37 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import axios from '../api/axios'; // ✅ axios를 임포트합니다.
-import { useUser } from '../context/UserContext'; // ✅ UserContext를 임포트합니다.
+import axios from '../api/axios';
+import { useUser } from '../context/UserContext';
 
 export default function EventsPage() {
-  const [events, setEvents] = useState([]); // ✅ API로부터 받아온 이벤트를 저장할 state
+  const [events, setEvents] = useState([]);
   const [filter, setFilter] = useState('All');
-  const [loading, setLoading] = useState(true); // ✅ 로딩 상태를 관리할 state
-  const { user } = useUser(); // ✅ 전역 user 상태를 가져옵니다.
+  const [loading, setLoading] = useState(true);
+  const { user } = useUser();
+  const backendUrl = "http://localhost:8080"; // ✅ 백엔드 주소
 
-  // 🔴 userMemberships는 나중에 실제 사용자 정보에서 가져와야 합니다.
+  // TODO: userMemberships는 실제 사용자 정보에서 가져와야 합니다.
   const userMemberships = ['NCCU']; // 임시 데이터
 
   useEffect(() => {
     const fetchEvents = async () => {
-      setLoading(true); // 데이터 요청 시작 시 로딩 상태로 설정
+      setLoading(true);
       try {
-        // 필터가 'All'이 아니면 쿼리 파라미터로 지부 정보를 함께 보냅니다.
         const endpoint = filter === 'All' ? '/api/events' : `/api/events?branch=${filter}`;
         const response = await axios.get(endpoint);
-        setEvents(response.data); // 받아온 데이터로 state 업데이트
+        setEvents(response.data);
       } catch (error) {
         console.error("Failed to fetch events:", error);
         alert("이벤트 목록을 불러오는 데 실패했습니다.");
       } finally {
-        setLoading(false); // 데이터 요청 완료 시 로딩 상태 해제
+        setLoading(false);
       }
     };
-
     fetchEvents();
-  }, [filter]); // ✅ filter state가 변경될 때마다 이 useEffect가 다시 실행됩니다.
+  }, [filter]);
 
   const branches = ['All', 'TAIPEI', 'NCCU', 'NTU'];
 
-  // 날짜 형식을 예쁘게 바꿔주는 함수
   const formatDate = (isoString) => {
     const date = new Date(isoString);
     return date.toLocaleDateString('en-US', {
@@ -61,14 +59,18 @@ export default function EventsPage() {
           ))}
         </div>
 
-        {/* 로딩 중일 때 표시될 스켈레톤 UI */}
         {loading ? (
           <p className="text-center text-gray-500">Loading events...</p>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {events.map(event => (
               <div key={event.id} className="bg-white rounded-lg shadow-lg flex flex-col">
-                <img src={event.imageUrl || "/default_event_image.jpg"} alt={event.title} className="w-full h-48 object-cover rounded-t-lg" />
+                {/* ✅ 이미지 src를 백엔드 전체 주소로 수정 */}
+                <img 
+                  src={event.imageUrl ? `${backendUrl}${event.imageUrl}` : "/default_event_image.jpg"} 
+                  alt={event.title} 
+                  className="w-full h-48 object-cover rounded-t-lg" 
+                />
                 <div className="p-6 flex flex-col flex-grow">
                   <span className={`inline-block px-3 py-1 text-xs font-semibold rounded-full mb-3 self-start ${
                     event.branch === 'TAIPEI' ? 'bg-green-200 text-green-800' :
