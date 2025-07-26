@@ -41,13 +41,11 @@ export default function SignupPage() {
   const handleSignup = async (e) => {
     e.preventDefault();
 
-    // ✅ 2. 비밀번호 일치 여부 검사
     if (formData.password !== formData.passwordConfirm) {
       alert("Passwords do not match. Please check again.");
       return;
     }
 
-    // ✅ 3. 비밀번호 규칙 검사 (8자 이상, 영문+숫자)
     const passwordRegex = /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{8,}$/;
     if (!passwordRegex.test(formData.password)) {
       alert("Password must be at least 8 characters long and include both letters and numbers.");
@@ -63,8 +61,10 @@ export default function SignupPage() {
       return;
     }
     try {
-      const { name, email, password, code } = formData;
-      await register({ name, email, password, code });
+      // ✅ 수정: formData에 있는 모든 정보를 한꺼번에 전송합니다.
+      // 이렇게 하면 약관 동의 여부(boolean) 값들도 함께 전송됩니다.
+      await register(formData);
+      
       alert("Signup successful! Please log in.");
       navigate("/login");
     } catch (err) {

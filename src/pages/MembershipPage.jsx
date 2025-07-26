@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from '../api/axios';
+import { useNavigate } from 'react-router-dom'; // ✅ 1. useNavigate를 임포트합니다.
 
 // --- 가짜 데이터 (나중에 이 모든 데이터를 백엔드 API로부터 받아옵니다) ---
 const MOCK_API_DATA = {
@@ -24,6 +25,7 @@ const UrgencyMessage = ({ data }) => {
   const price = currentMembers < earlyBirdCap ? 800 : 900;
   const spotsLeft = totalCapacity - currentMembers;
 
+  // 남은 시간 계산
   const [timeLeft, setTimeLeft] = useState("");
   useEffect(() => {
     const interval = setInterval(() => {
@@ -43,6 +45,7 @@ const UrgencyMessage = ({ data }) => {
 
   let message;
   if (spotsLeft <= 0) {
+    // 4단계: 마감
     message = (
       <div className="bg-gray-200 border-l-4 border-gray-500 text-gray-700 p-4">
         <p className="font-bold">Registration for this semester is now closed.</p>
@@ -50,6 +53,7 @@ const UrgencyMessage = ({ data }) => {
       </div>
     );
   } else if (currentMembers < earlyBirdCap) {
+    // 1단계: 얼리버드
     message = (
       <div className="bg-green-100 border-l-4 border-green-500 text-green-700 p-4">
         <p className="font-bold">🔥 Early Bird Special: {earlyBirdCap - currentMembers} spots left!</p>
@@ -57,6 +61,7 @@ const UrgencyMessage = ({ data }) => {
       </div>
     );
   } else if (spotsLeft > 10) {
+    // 2단계: 정가 - 시간제한
     message = (
       <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4">
         <p className="font-bold">🎉 Early Bird SOLD OUT!</p>
@@ -64,6 +69,7 @@ const UrgencyMessage = ({ data }) => {
       </div>
     );
   } else {
+    // 3단계: 정가 - 수량제한
     message = (
       <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 animate-pulse">
         <p className="font-bold">😱 LAST CHANCE! Only {spotsLeft} spots left!</p>
@@ -89,6 +95,7 @@ const UrgencyMessage = ({ data }) => {
 
 
 export default function MembershipPage() {
+  const navigate = useNavigate(); // ✅ 2. navigate 함수를 사용할 수 있도록 설정합니다.
   const [step, setStep] = useState(1);
   const [selectedBranch, setSelectedBranch] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('');
@@ -135,6 +142,7 @@ export default function MembershipPage() {
     try {
         const response = await axios.post("/api/memberships/apply", submissionData);
         alert(`Application submitted successfully! Application ID: ${response.data.applicationId}`);
+      navigate('/events'); // ✅ 3. 신청 성공 후 이벤트 목록 페이지로 이동합니다.
     } catch (error) {
         alert("An error occurred during submission: " + (error.response?.data || error.message));
     }
@@ -229,7 +237,6 @@ export default function MembershipPage() {
           <div>
             <h2 className="text-3xl font-bold text-center mb-2">Join the SLAM Family!</h2>
             <p className="text-center text-gray-600 mb-8">First, which community are you joining?</p>
-            {/* ✅ 이 부분의 className을 수정하여 레이아웃 문제를 해결했습니다. */}
             <div className="flex flex-col md:flex-row gap-4">
               {Object.keys(membershipDetails).map(branch => (
                 <button 

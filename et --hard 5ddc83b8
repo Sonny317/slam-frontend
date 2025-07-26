@@ -1,0 +1,18 @@
+[33m1e98c221[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m HEAD@{0}: pull: Fast-forward
+[33m5ddc83b8[m HEAD@{1}: commit: Chore: Force update .gitignore tracking
+[33m7b306c70[m HEAD@{2}: commit: Feat: Build community pages and enhance UI/UX
+[33mbed5a76f[m HEAD@{3}: commit: event page logic
+[33mcb5ac3ac[m HEAD@{4}: commit (amend): Feat: Update a landing page with updated video
+[33m32c44b24[m HEAD@{5}: commit: Feat: Update a landing page
+[33mc32d4ff6[m HEAD@{6}: commit: Feat: Implement event list and detail pages
+[33m07ce5169[m HEAD@{7}: pull: Fast-forward
+[33m42565f1d[m HEAD@{8}: reset: moving to HEAD
+[33m42565f1d[m HEAD@{9}: commit (merge): Merge remote and resolve all conflicts
+[33m15b31587[m HEAD@{10}: commit: Fix: Clean up .gitignore tracking
+[33m4ce41e84[m HEAD@{11}: reset: moving to HEAD
+[33m4ce41e84[m HEAD@{12}: reset: moving to HEAD
+[33m4ce41e84[m HEAD@{13}: commit: Feat: Add image slider and apply new design style
+[33mdc14be15[m HEAD@{14}: pull: Fast-forward
+[33mad5aaca5[m HEAD@{15}: reset: moving to HEAD
+[33mad5aaca5[m HEAD@{16}: checkout: moving from main to main
+[33mad5aaca5[m HEAD@{17}: clone: from https://github.com/Sonny317/slam-frontend.git

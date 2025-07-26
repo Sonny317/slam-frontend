@@ -1,45 +1,64 @@
+// src/App.jsx
 import React from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import MainHeader from "./components/MainHeader";
+import AdminLayout from "./components/AdminLayout"; // ✅ 관리자 레이아웃 import
+
+// --- Public Pages ---
 import MainPage from "./pages/MainPage";
+import BrandStoryPage from './pages/BrandStoryPage';
+import EventsPage from './pages/EventsPage';
+import EventDetailPage from './pages/EventDetailPage';
+import MembershipPage from './pages/MembershipPage';
+import PartnershipPage from './pages/PartnershipPage';
 import LoginPage from "./pages/LoginPage";
 import SignupPage from "./pages/SignupPage";
 import MyPage from "./pages/MyPage";
-import EventDetailPage from "./pages/EventDetailPage";
-import MainHeader from './components/MainHeader';
-import EventsPage from './pages/EventsPage';
-import PartnershipPage from './pages/PartnershipPage';
-import BrandStoryPage from './pages/BrandStoryPage';
-import MembershipPage from './pages/MembershipPage';
 import ForgotPasswordPage from './pages/ForgotPasswordPage';
-import CommunityPage from './pages/CommunityPage';
-import PostDetailPage from './pages/PostDetailPage';
-import NewPostPage from './pages/NewPostPage';
+
+// --- Admin Pages ---
+import AdminDashboardPage from './pages/AdminDashboardPage';
 import AdminScannerPage from './pages/AdminScannerPage';
-import { UserProvider } from './context/UserContext'; // ✅ UserProvider를 임포트합니다.
+import AdminActionPlanPage from './pages/AdminActionPlanPage';
+import AdminResourcesPage from './pages/AdminResourcesPage';
+import AdminFeedbackPage from './pages/AdminFeedbackPage';
+import AdminStaffInfoPage from './pages/AdminStaffInfoPage';
+import AdminMemberManagementPage from './pages/AdminMemberManagementPage';
+// --- Public Layout Component ---
+const PublicLayout = ({ children }) => (
+  <>
+    <MainHeader />
+    {children}
+  </>
+);
 
 export default function App() {
   return (
-    // ✅ UserProvider로 전체를 감싸줍니다.
-    <UserProvider>
-      <Router>
-        <MainHeader />
-        <Routes>
-          <Route path="/" element={<MainPage />} />
-          <Route path="/about-us" element={<BrandStoryPage />} />
-          <Route path="/events" element={<EventsPage />} />
-          <Route path="/events/:eventId" element={<EventDetailPage />} />
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/signup" element={<SignupPage />} />
-          <Route path="/mypage" element={<MyPage />} />
-          <Route path="/partnership" element={<PartnershipPage />} />
-          <Route path="/Membership" element={<MembershipPage />} />
-          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-          <Route path="/community" element={<CommunityPage />} />
-          <Route path="/community/new" element={<NewPostPage />} />
-          <Route path="/community/:postId" element={<PostDetailPage />} />
-          <Route path="/admin/scanner" element={<AdminScannerPage />} />
-        </Routes>
-      </Router>
-    </UserProvider>
+    <Router>
+      <Routes>
+        {/* Public Routes */}
+        <Route path="/" element={<PublicLayout><MainPage /></PublicLayout>} />
+        <Route path="/about-us" element={<PublicLayout><BrandStoryPage /></PublicLayout>} />
+        <Route path="/events" element={<PublicLayout><EventsPage /></PublicLayout>} />
+        <Route path="/events/:eventId" element={<PublicLayout><EventDetailPage /></PublicLayout>} />
+        <Route path="/membership" element={<PublicLayout><MembershipPage /></PublicLayout>} />
+        <Route path="/partnership" element={<PublicLayout><PartnershipPage /></PublicLayout>} />
+        <Route path="/login" element={<PublicLayout><LoginPage /></PublicLayout>} />
+        <Route path="/signup" element={<PublicLayout><SignupPage /></PublicLayout>} />
+        <Route path="/mypage" element={<PublicLayout><MyPage /></PublicLayout>} />
+        <Route path="/forgot-password" element={<PublicLayout><ForgotPasswordPage /></PublicLayout>} />
+
+        {/* Admin Routes (Nested inside AdminLayout) */}
+        <Route path="/admin" element={<AdminLayout />}>
+          <Route path="dashboard" element={<AdminDashboardPage />} />
+          <Route path="scanner" element={<AdminScannerPage />} />
+          <Route path="tasks" element={<AdminActionPlanPage />} />
+          <Route path="resources" element={<AdminResourcesPage />} />
+          <Route path="feedback" element={<AdminFeedbackPage />} />
+          <Route path="staff" element={<AdminStaffInfoPage />} />
+          <Route path="members" element={<AdminMemberManagementPage />} />
+        </Route>
+      </Routes>
+    </Router>
   );
 }
