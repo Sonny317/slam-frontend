@@ -44,17 +44,16 @@ export default function MyPage() {
         }
     }, [user.isLoggedIn]); // 로그인 상태가 변경될 때 데이터를 다시 불러옵니다.
 
-    const handleImageSelectAndUpload = async (e) => {
+   const handleImageSelectAndUpload = async (e) => {
         const file = e.target.files[0];
         if (!file) return;
-
-        // ✅ JWT 인증을 사용하므로 email을 직접 보낼 필요가 없습니다.
+        
         const formData = new FormData();
         formData.append("file", file);
 
         try {
-            // ✅ API 경로를 /api/** 로 수정
-            const response = await axios.post("/api/users/profile/update", formData, {
+            // ✅ 이미지 전용 API 주소로 수정
+            const response = await axios.post("/api/users/profile/image", formData, {
                 headers: { "Content-Type": "multipart/form-data" },
             });
             alert("Profile image updated successfully.");
@@ -68,15 +67,13 @@ export default function MyPage() {
         }
     };
 
-    const handleBioSave = async () => {
+     const handleBioSave = async () => {
         try {
-            // ✅ API 경로를 /api/** 로 수정하고, email 전송 로직 제거
-            const response = await axios.post("/api/users/profile/update", {
+            // ✅ 자기소개 전용 API 주소로 수정
+            const response = await axios.post("/api/users/profile/bio", {
                 bio: userDetails.bio,
             });
             alert("Bio saved successfully.");
-            
-            // 응답으로 받은 최신 bio 정보로 화면 업데이트
             setUserDetails(prev => ({ ...prev, bio: response.data.bio }));
         } catch (error) {
             alert("Save failed: " + (error.response?.data || "An error occurred."));
