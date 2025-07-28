@@ -1,6 +1,7 @@
 // src/pages/ForgotPasswordPage.jsx
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
+import axios from '../api/axios'; // ✅ axios 임포트
 // 나중에는 실제 API 함수를 import 해야 합니다.
 // import { requestPasswordReset } from '../api/auth'; 
 
@@ -15,21 +16,16 @@ export default function ForgotPasswordPage() {
     setMessage('');
 
     try {
-      // 이 부분에서 실제 백엔드 API를 호출하게 됩니다.
-      // await requestPasswordReset(email); 
-      
-      // 지금은 성공했다고 가정하고 시뮬레이션합니다.
-      console.log(`Password reset link requested for: ${email}`);
-      setMessage('If an account with that email exists, a password reset link has been sent.');
-    } catch (error) {
-      // 실제 앱에서는 보안을 위해 이메일 존재 여부를 알려주지 않으므로,
-      // 성공/실패 여부와 관계없이 동일한 메시지를 보여주는 것이 좋습니다.
-      setMessage('If an account with that email exists, a password reset link has been sent.');
-      console.error("Password reset error:", error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+      // ✅ 실제 백엔드 API를 호출합니다.
+      const response = await axios.post('/auth/forgot-password', { email });
+      setMessage(response.data.message);
+    } catch (error) {
+      setMessage('An error occurred. Please try again later.');
+      console.error("Password reset error:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-gray-100">

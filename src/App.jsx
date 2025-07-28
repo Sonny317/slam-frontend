@@ -14,6 +14,7 @@ import LoginPage from "./pages/LoginPage";
 import SignupPage from "./pages/SignupPage";
 import MyPage from "./pages/MyPage";
 import ForgotPasswordPage from './pages/ForgotPasswordPage';
+import ResetPasswordPage from './pages/ResetPasswordPage'; // ✅ 새 페이지 임포트
 
 // --- Admin Pages ---
 import AdminDashboardPage from './pages/AdminDashboardPage';
@@ -47,6 +48,7 @@ export default function App() {
         <Route path="/login" element={<PublicLayout><LoginPage /></PublicLayout>} />
         <Route path="/signup" element={<PublicLayout><SignupPage /></PublicLayout>} />
         <Route path="/mypage" element={<PublicLayout><MyPage /></PublicLayout>} />
+        <Route path="/reset-password" element={<ResetPasswordPage />} /> {/* ✅ 새 경로 추가 */}
         <Route path="/forgot-password" element={<PublicLayout><ForgotPasswordPage /></PublicLayout>} />
 
         {/* Admin Routes (Nested inside AdminLayout) */}
