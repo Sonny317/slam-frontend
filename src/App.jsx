@@ -1,8 +1,7 @@
-// src/App.jsx
 import React from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import MainHeader from "./components/MainHeader";
-import AdminLayout from "./components/AdminLayout"; // ✅ 관리자 레이아웃 import
+import AdminLayout from "./components/AdminLayout";
 
 // --- Public Pages ---
 import MainPage from "./pages/MainPage";
@@ -24,6 +23,7 @@ import AdminResourcesPage from './pages/AdminResourcesPage';
 import AdminFeedbackPage from './pages/AdminFeedbackPage';
 import AdminStaffInfoPage from './pages/AdminStaffInfoPage';
 import AdminMemberManagementPage from './pages/AdminMemberManagementPage';
+
 // --- Public Layout Component ---
 const PublicLayout = ({ children }) => (
   <>
@@ -34,6 +34,7 @@ const PublicLayout = ({ children }) => (
 
 export default function App() {
   return (
+    // ❌ UserProvider는 index.js로 옮겼으므로 여기서는 사용하지 않습니다.
     <Router>
       <Routes>
         {/* Public Routes */}
