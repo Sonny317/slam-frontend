@@ -29,10 +29,11 @@ export default function AdminDashboardPage() {
     fetchApplications();
   }, []);
 
-  const handleApprove = async (applicationId) => {
+  const handleApprove = async (applicationId, userName, branch) => {
     try {
       await axios.post(`/api/admin/applications/${applicationId}/approve`);
-      alert(`Approving application ID: ${applicationId}`);
+      // ✅ 사용자 경험을 위해 어떤 신청이 승인되었는지 명확히 알려줍니다.
+      alert(`${userName}'s application for ${branch} has been approved.`);
       setApplications(prev => prev.filter(app => app.id !== applicationId));
     } catch (error) {
       console.error("Failed to approve application:", error);
@@ -79,9 +80,8 @@ export default function AdminDashboardPage() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <button 
-                        onClick={() => handleApprove(app.id)}
-                        className="bg-green-500 text-white text-xs font-bold py-1 px-3 rounded-full hover:bg-green-600"
-                      >
+                        onClick={() => handleApprove(app.id, app.userName, app.selectedBranch)}
+                        className="bg-green-500 text-white text-xs font-bold py-1 px-3 rounded-full hover:bg-green-600">
                         Approve
                       </button>
                     </td>

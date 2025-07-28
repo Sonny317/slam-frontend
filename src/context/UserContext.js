@@ -1,4 +1,5 @@
 import React, { createContext, useState, useEffect, useContext } from 'react';
+import axios from '../api/axios';
 import { login as apiLogin } from '../api/auth';
 
 const UserContext = createContext(null);
@@ -9,42 +10,55 @@ export const UserProvider = ({ children }) => {
   const backendUrl = "http://localhost:8080";
   const defaultProfileImage = "/default_profile.jpg";
 
-  // ✅ 사용자 정보를 하나의 'user' 객체로 관리하여 동기화 문제를 원천 차단합니다.
   const [user, setUser] = useState(() => {
     const token = localStorage.getItem('jwtToken');
     const email = localStorage.getItem('userEmail');
     const imagePath = localStorage.getItem('profileImage');
-    const role = localStorage.getItem('userRole'); // ✅ role 정보 읽기
+    const role = localStorage.getItem('userRole');
 
-    // 앱이 처음 로드될 때 localStorage를 기반으로 초기 상태를 완벽하게 설정합니다.
     if (token && email) {
       return {
         isLoggedIn: true,
         email: email,
         profileImage: imagePath ? `${backendUrl}${imagePath}` : defaultProfileImage,
-        role: role, // ✅ 초기 상태에 role 포함
+        role: role,
+        memberships: [], // ✅ 멤버십 목록을 위한 초기값 추가
       };
     }
-    return { isLoggedIn: false, email: null, profileImage: defaultProfileImage };
+    return { isLoggedIn: false, email: null, profileImage: defaultProfileImage, role: null, memberships: [] };
   });
 
-  // 로그인 함수: Context가 직접 API를 호출하고 상태를 한 번에 업데이트합니다.
+  // ✅ 로그인 상태가 되면, 사용자의 상세 정보를 불러와 멤버십을 업데이트합니다.
+  useEffect(() => {
+    const fetchUserMemberships = async () => {
+      if (user.isLoggedIn) {
+        try {
+          const response = await axios.get("/api/users/me");
+          setUser(prevUser => ({
+            ...prevUser,
+            memberships: response.data.memberships || [], // API 응답에서 멤버십 목록을 가져옵니다.
+          }));
+        } catch (error) {
+          console.error("Context에서 사용자 멤버십 정보를 불러오는 데 실패했습니다:", error);
+        }
+      }
+    };
+    fetchUserMemberships();
+  }, [user.isLoggedIn]); // isLoggedIn 상태가 바뀔 때마다 실행됩니다.
+
   const login = async (email, password) => {
     try {
-      const userData = await apiLogin(email, password); // 기존 auth.js의 login 함수 호출
-      
-      // 로그인 성공 시, 새로운 user 객체로 상태를 원자적으로 업데이트합니다.
+      const userData = await apiLogin(email, password);
       setUser({
         isLoggedIn: true,
         email: userData.email,
         profileImage: userData.profileImage ? `${backendUrl}${userData.profileImage}` : defaultProfileImage,
-        role: userData.role, // ✅ 로그인 시 role 상태 업데이트
+        role: userData.role,
+        memberships: [], // 로그 직후에는 비어있다가, 위의 useEffect가 채워줍니다.
       });
-
-      return userData; // 성공 시 사용자 데이터 반환
+      return userData;
     } catch (error) {
-      // 실패 시 상태를 확실하게 로그아웃 상태로 만듭니다.
-      setUser({ isLoggedIn: false, email: null, profileImage: defaultProfileImage });
+      setUser({ isLoggedIn: false, email: null, profileImage: defaultProfileImage, role: null, memberships: [] });
       throw error;
     }
   };
@@ -53,20 +67,17 @@ export const UserProvider = ({ children }) => {
     localStorage.removeItem("jwtToken");
     localStorage.removeItem("userEmail");
     localStorage.removeItem("profileImage");
-    // 로그아웃 시에도 user 객체를 한 번에 업데이트합니다.
-    setUser({ isLoggedIn: false, email: null, profileImage: defaultProfileImage });
-    window.location.href = '/'; // 로그아웃 후에는 홈으로 이동
+    localStorage.removeItem("userRole");
+    setUser({ isLoggedIn: false, email: null, profileImage: defaultProfileImage, role: null, memberships: [] });
+    window.location.href = '/';
   };
   
-  // MyPage에서 프로필 이미지 변경 시 호출될 함수
   const updateUserImage = (newImagePath) => {
       if(user.isLoggedIn && newImagePath) {
-          // 기존 사용자 정보는 유지하면서 프로필 이미지만 업데이트합니다.
           setUser(prevUser => ({ ...prevUser, profileImage: `${backendUrl}${newImagePath}`}));
       }
   }
 
-  // Context를 통해 제공될 값들
   const value = { user, login, logout, updateUserImage };
 
   return (

@@ -7,11 +7,10 @@ export default function EventsPage() {
   const [events, setEvents] = useState([]);
   const [filter, setFilter] = useState('All');
   const [loading, setLoading] = useState(true);
-  const { user } = useUser();
-  const backendUrl = "http://localhost:8080"; // ✅ 백엔드 주소
+  const { user } = useUser(); // ✅ Context에서 user 객체를 통째로 가져옵니다.
+  const backendUrl = "http://localhost:8080";
 
-  // TODO: userMemberships는 실제 사용자 정보에서 가져와야 합니다.
-  const userMemberships = ['NCCU']; // 임시 데이터
+  // ❌ const userMemberships = ['NCCU']; // ⬅️ 임시 데이터를 삭제합니다.
 
   useEffect(() => {
     const fetchEvents = async () => {
@@ -65,7 +64,6 @@ export default function EventsPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {events.map(event => (
               <div key={event.id} className="bg-white rounded-lg shadow-lg flex flex-col">
-                {/* ✅ 이미지 src를 백엔드 전체 주소로 수정 */}
                 <img 
                   src={event.imageUrl ? `${backendUrl}${event.imageUrl}` : "/default_event_image.jpg"} 
                   alt={event.title} 
@@ -82,7 +80,8 @@ export default function EventsPage() {
                   
                   <div className="mt-auto pt-4 border-t border-gray-100">
                     {user.isLoggedIn ? (
-                      userMemberships.includes(event.branch) ? (
+                      // ✅ Context에서 가져온 실제 멤버십 목록(user.memberships)을 사용합니다.
+                      user.memberships.includes(event.branch) ? (
                         <Link to={`/events/${event.id}`} className="block w-full text-center bg-green-500 text-white font-bold py-2 rounded-lg hover:bg-green-600 transition-colors">
                           I'm Going! (RSVP)
                         </Link>
