@@ -13,6 +13,12 @@ export default function MainHeader() {
     navigate("/mypage");
   };
 
+  // ✅ 추가: 관리자 페이지로 이동하는 함수
+  const handleAdminPage = () => {
+    setShowMenu(false);
+    navigate("/admin/dashboard"); // 관리자 페이지의 첫 화면으로 이동
+  };
+
   return (
     <header className="flex items-center justify-between px-6 py-4 shadow bg-white relative">
       <Link to="/" className="flex items-center gap-2">
@@ -47,6 +53,14 @@ export default function MainHeader() {
                 <button onClick={handleMyPage} className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
                   마이페이지
                 </button>
+                
+                {/* ✅ user.role이 'ADMIN'일 때만 이 버튼이 보입니다. */}
+                {user.role === 'ADMIN' && (
+                  <button onClick={handleAdminPage} className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                    Admin Page
+                  </button>
+                )}
+
                 <button onClick={logout} className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
                   로그아웃
                 </button>

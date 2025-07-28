@@ -14,6 +14,7 @@ export const UserProvider = ({ children }) => {
     const token = localStorage.getItem('jwtToken');
     const email = localStorage.getItem('userEmail');
     const imagePath = localStorage.getItem('profileImage');
+    const role = localStorage.getItem('userRole'); // ✅ role 정보 읽기
 
     // 앱이 처음 로드될 때 localStorage를 기반으로 초기 상태를 완벽하게 설정합니다.
     if (token && email) {
@@ -21,6 +22,7 @@ export const UserProvider = ({ children }) => {
         isLoggedIn: true,
         email: email,
         profileImage: imagePath ? `${backendUrl}${imagePath}` : defaultProfileImage,
+        role: role, // ✅ 초기 상태에 role 포함
       };
     }
     return { isLoggedIn: false, email: null, profileImage: defaultProfileImage };
@@ -36,6 +38,7 @@ export const UserProvider = ({ children }) => {
         isLoggedIn: true,
         email: userData.email,
         profileImage: userData.profileImage ? `${backendUrl}${userData.profileImage}` : defaultProfileImage,
+        role: userData.role, // ✅ 로그인 시 role 상태 업데이트
       });
 
       return userData; // 성공 시 사용자 데이터 반환
