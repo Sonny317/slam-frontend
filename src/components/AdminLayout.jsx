@@ -5,6 +5,7 @@ import { NavLink, Outlet, Link } from 'react-router-dom';
 const adminNavLinks = [
   { name: 'Dashboard', path: '/admin/dashboard' },
   { name: 'Member Management', path: '/admin/members' },
+  { name: 'Event Management', path: '/admin/events' },
   { name: 'QR Scanner', path: '/admin/scanner' },
   { name: 'Action Plan', path: '/admin/tasks' },
   { name: 'Feedback', path: '/admin/feedback' },

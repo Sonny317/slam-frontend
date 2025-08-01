@@ -16,6 +16,7 @@ import MyPage from "./pages/MyPage";
 import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import ResetPasswordPage from './pages/ResetPasswordPage'; // ✅ 새 페이지 임포트
 
+
 // --- Admin Pages ---
 import AdminDashboardPage from './pages/AdminDashboardPage';
 import AdminScannerPage from './pages/AdminScannerPage';
@@ -24,6 +25,11 @@ import AdminResourcesPage from './pages/AdminResourcesPage';
 import AdminFeedbackPage from './pages/AdminFeedbackPage';
 import AdminStaffInfoPage from './pages/AdminStaffInfoPage';
 import AdminMemberManagementPage from './pages/AdminMemberManagementPage';
+import AdminEventsPage from './pages/AdminEventsPage';
+
+//Feedbackform
+import FeedbackFormPage from './pages/FeedbackFormPage'; // ✅ 피드백 폼 페이지 import
+
 
 // --- Public Layout Component ---
 const PublicLayout = ({ children }) => (
@@ -51,6 +57,9 @@ export default function App() {
         <Route path="/reset-password" element={<ResetPasswordPage />} /> {/* ✅ 새 경로 추가 */}
         <Route path="/forgot-password" element={<PublicLayout><ForgotPasswordPage /></PublicLayout>} />
 
+        {/* Standalone Feedback Form Page */}
+        <Route path="/feedback/event/:eventId" element={<FeedbackFormPage />} />
+        
         {/* Admin Routes (Nested inside AdminLayout) */}
         <Route path="/admin" element={<AdminLayout />}>
           <Route path="dashboard" element={<AdminDashboardPage />} />
@@ -60,6 +69,8 @@ export default function App() {
           <Route path="feedback" element={<AdminFeedbackPage />} />
           <Route path="staff" element={<AdminStaffInfoPage />} />
           <Route path="members" element={<AdminMemberManagementPage />} />
+          <Route path="events" element={<AdminEventsPage />} />
+
         </Route>
       </Routes>
     </Router>

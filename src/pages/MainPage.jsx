@@ -36,11 +36,11 @@ export default function App() { // 또는 MainPage()
             </video>
             <div className="absolute inset-0 bg-gradient-to-b from-black/40 to-black/60 z-10"></div>
             <div className="relative z-20 max-w-5xl mx-auto">
-            <h1 className="text-5xl md:text-6xl font-black leading-tight mb-6">
+            <h1 className="text-4xl md:text-5xl lg:text-6xl font-black leading-tight mb-6 whitespace-pre-wrap">
                 Study Less, Achieve More? <br /> We pack <span className="text-blue-400">a world of connections</span> into a 2-hour meetup.
             </h1>
             <p className="text-lg md:text-xl text-gray-200 max-w-4xl mx-auto leading-relaxed">
-                <span className="font-semibold">Discover in 3 minutes:</span> The secret formula for connecting locals and foreigners in just 2 hours.
+                <span className="font-semibold">Discover in 3 minutes:</span> The secret to connecting locals and foreigners in just 2 hours.
             </p>
             <div className="mt-12">
                 <Link to="/events" className="bg-blue-600 text-white font-bold py-3 px-10 rounded-full text-lg hover:bg-blue-700 transition-all duration-300 transform hover:scale-105 shadow-lg">
@@ -61,7 +61,7 @@ export default function App() { // 또는 MainPage()
                 From 6 to <span className="text-blue-600 font-bold">500+ members</span> in 3 years. Taipei's fastest-growing international community.
             </p>
             <br></br>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 md:gap-12">
                 <div className="flex flex-col items-center">
                     <GlobeIcon />
                     <h3 className="font-bold text-xl mt-2">A Global Melting Pot</h3>
@@ -79,8 +79,8 @@ export default function App() { // 또는 MainPage()
                 </div>
             </div>
             <br></br>
-            <div className="px-6 pt-20">
-                <img src="/group_photo.jpg" alt="SLAM Group Photo" className="rounded-xl shadow-lg max-w-4xl mx-auto" />
+            <div className="px-4 pt-12 md:px-6 md:pt-20">
+                <img src="/group_photo.jpg" alt="SLAM Group Photo" className="rounded-xl shadow-lg w-full md:max-w-4xl mx-auto" />
             </div>
         </div>
       </section>
@@ -90,7 +90,7 @@ export default function App() { // 또는 MainPage()
       ================================================================== */}
       <section className="py-20 px-6 bg-gray-50">
         <div className="max-w-4xl mx-auto text-center">
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-8">
+            <h2 className="text-2xl md:text-4xl font-bold text-gray-900 mb-8">
                 <span className="text-blue-600">Ever Felt This Way in Taipei?</span>
             </h2>
             <div className="space-y-4 text-lg text-gray-700 mb-12 leading-relaxed">
@@ -99,7 +99,7 @@ export default function App() { // 또는 MainPage()
                 <p>"It's hard to break into a new social circle, especially for working professionals in a new city..."</p>
             </div>
             <br></br>
-            <h3 className="text-2xl md:text-3xl font-bold text-gray-800 mb-4">
+            <h3 className="text-xl md:text-3xl font-bold text-gray-800 mb-4">
                 What's SLAM's <span className="text-blue-600">secret formula</span> that connects locals and foreigners in 2 hours?
             </h3>
             <br></br>
@@ -120,7 +120,7 @@ export default function App() { // 또는 MainPage()
       <section className="py-20 px-6 bg-white">
         <div className="max-w-5xl mx-auto">
             <div className="text-center mb-16">
-                <h2 className="text-3xl md:text-4xl font-bold">Why SLAM? Here’s a side-by-side look.</h2>
+                <h2 className="text-2xl md:text-4xl font-bold">Why SLAM? Here’s a side-by-side look.</h2>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <div className="border-2 border-green-300 bg-green-50 p-8 rounded-xl shadow-md">
@@ -144,7 +144,7 @@ export default function App() { // 또는 MainPage()
             </div>
 
             <div className="text-center mt-24 mb-12">
-                <h2 className="text-3xl md:text-4xl font-bold">Don't Just Take Our Word For It.</h2>
+                <h2 className="text-2xl md:text-4xl font-bold">Don't Just Take Our Word For It.</h2>
                 <p className="text-lg text-gray-600 mt-2">Hear From Our Members.</p>
             </div>
             
@@ -180,7 +180,7 @@ export default function App() { // 또는 MainPage()
             </div>
 
             <section className="py-20 px-6">
-                <h2 className="text-3xl md:text-4xl font-bold text-center mb-12">Our Growing Network Across Taipei</h2>
+                <h2 className="text-2xl md:text-4xl font-bold text-center mb-12">Our Growing Network Across Taipei</h2>
                 <div className="max-w-5xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-8 text-center">
                     <div className="p-6">
                         <h3 className="text-2xl font-semibold mb-2">SLAM NCCU</h3>
@@ -204,7 +204,7 @@ export default function App() { // 또는 MainPage()
       ================================================================== */}
       <section className="py-20 px-6 bg-gray-50">
         <div className="max-w-3xl mx-auto">
-            <h2 className="text-3xl md:text-4xl font-bold text-center mb-12">Still Hesitating? Let's Clear Things Up.</h2>
+            <h2 className="text-2xl md:text-4xl font-bold text-center mb-12">Still Hesitating? Let's Clear Things Up.</h2>
             <div className="space-y-8">
                 <div className="border-b pb-6">
                     <h3 className="font-bold text-xl text-blue-600">Q. My English/Chinese isn't fluent. Is that okay?</h3>
@@ -218,6 +218,14 @@ export default function App() { // 또는 MainPage()
                     <h3 className="font-bold text-xl text-blue-600">Q. Is this only for students?</h3>
                     <p className="mt-2 text-gray-700 leading-relaxed">A. Not at all! While SLAM started at universities, `SLAM TAIPEI` is our open community for students, young professionals, and anyone in the city looking for genuine connections and growth.</p>
                 </div>
+                <div>
+                    <h3 className="font-bold text-lg sm:text-xl text-blue-600">Q. How to Join SLAM?</h3>
+                    <div className="mt-2 text-base sm:text-lg text-gray-700 leading-relaxed space-y-2">
+                        <p><strong>Step 1: Sign Up (30 seconds) →</strong> Create your free account.</p>
+                        <p><strong>Step 2: Book Your Spot (2 minutes) →</strong> Browse events, choose your branch, and complete the membership payment to secure your spot.</p>
+                        <p><strong>Step 3: Show Up & Connect (2 hours) →</strong> <span className="font-semibold">Walk in nervous, walk out with new best friends.</span></p>
+                </div>
+                </div>
             </div>
         </div>
       </section>
@@ -225,12 +233,12 @@ export default function App() { // 또는 MainPage()
       {/* ==================================================================
           [6단계: 부담 없는 최종 제안 - The Final CTA]
       ================================================================== */}
-      <section className="py-24 px-6 text-center bg-gray-800 text-white">
+      <section className="py-16 px-6 text-center bg-gray-800 text-white md:py-24">
         <div className="max-w-3xl mx-auto">
-            <h2 className="text-3xl md:text-4xl font-bold mb-4 text-blue-400">
+            <h2 className="text-2xl md:text-4xl font-bold mb-4 text-blue-400">
                 Haven't signed up for SLAM yet?<div></div>Your social life deserves better.
             </h2>
-            <p className="text-lg text-gray-300 mb-10 leading-relaxed">
+            <p className="text-base md:text-lg text-gray-300 mb-8 md:mb-10 leading-relaxed">
                 Sign up to get involved in the unique commuity in Taipei.
             </p>
             <Link to="/signup" className="bg-blue-500 text-white font-bold py-4 px-10 rounded-full text-xl hover:bg-blue-600 transition-all duration-300 transform hover:scale-105 shadow-lg">
