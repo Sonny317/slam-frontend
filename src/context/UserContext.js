@@ -13,20 +13,20 @@ export const UserProvider = ({ children }) => {
   const defaultProfileImage = "/default_profile.jpg";
 
   const [user, setUser] = useState(() => {
-    const token = localStorage.getItem('jwtToken');
-    const email = localStorage.getItem('userEmail');
-    const imagePath = localStorage.getItem('profileImage');
-    const role = localStorage.getItem('userRole'); // ✅ 1. localStorage에서 role을 읽어옵니다.
+    // ✅ localStorage -> sessionStorage 로 변경
+    const token = sessionStorage.getItem('jwtToken');
+    const email = sessionStorage.getItem('userEmail');
+    const imagePath = sessionStorage.getItem('profileImage');
+    const role = sessionStorage.getItem('userRole');
 
     if (token && email) {
       return {
         isLoggedIn: true,
         email: email,
         profileImage: imagePath ? `${backendUrl}${imagePath}` : defaultProfileImage,
-        role: role, // ✅ 2. 초기 user 상태에 role을 포함시킵니다.
+        role: role,
       };
     }
-    // 로그아웃 상태일 때의 기본값
     return { isLoggedIn: false, email: null, profileImage: defaultProfileImage, role: null };
   });
 
@@ -37,7 +37,7 @@ export const UserProvider = ({ children }) => {
         isLoggedIn: true,
         email: userData.email,
         profileImage: userData.profileImage ? `${backendUrl}${userData.profileImage}` : defaultProfileImage,
-        role: userData.role, // ✅ 3. 로그인 성공 시 API 응답에서 받은 role로 상태를 업데이트합니다.
+        role: userData.role,
       });
       return userData;
     } catch (error) {
@@ -47,16 +47,16 @@ export const UserProvider = ({ children }) => {
   };
 
   const logout = () => {
-    localStorage.removeItem("jwtToken");
-    localStorage.removeItem("userEmail");
-    localStorage.removeItem("profileImage");
-    localStorage.removeItem("userRole"); // ✅ 로그아웃 시 role도 삭제
+    // ✅ localStorage -> sessionStorage 로 변경 (clear()로 한번에 삭제)
+    sessionStorage.clear();
     setUser({ isLoggedIn: false, email: null, profileImage: defaultProfileImage, role: null });
     window.location.href = '/';
   };
   
   const updateUserImage = (newImagePath) => {
       if(user.isLoggedIn && newImagePath) {
+          // ✅ localStorage -> sessionStorage 로 변경
+          sessionStorage.setItem("profileImage", newImagePath);
           setUser(prevUser => ({ ...prevUser, profileImage: `${backendUrl}${newImagePath}`}));
       }
   }
