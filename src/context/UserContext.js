@@ -1,4 +1,5 @@
-import React, { createContext, useState, useContext } from 'react';
+import React, { createContext, useState, useEffect, useContext } from 'react';
+import axios from '../api/axios';
 import { login as apiLogin } from '../api/auth';
 
 const UserContext = createContext(null);
@@ -13,11 +14,10 @@ export const UserProvider = ({ children }) => {
   const defaultProfileImage = "/default_profile.jpg";
 
   const [user, setUser] = useState(() => {
-    // ✅ localStorage -> sessionStorage 로 변경
-    const token = sessionStorage.getItem('jwtToken');
-    const email = sessionStorage.getItem('userEmail');
-    const imagePath = sessionStorage.getItem('profileImage');
-    const role = sessionStorage.getItem('userRole');
+    const token = localStorage.getItem('jwtToken');
+    const email = localStorage.getItem('userEmail');
+    const imagePath = localStorage.getItem('profileImage');
+    const role = localStorage.getItem('userRole');
 
     if (token && email) {
       return {
@@ -25,10 +25,29 @@ export const UserProvider = ({ children }) => {
         email: email,
         profileImage: imagePath ? `${backendUrl}${imagePath}` : defaultProfileImage,
         role: role,
+        memberships: [], // ✅ 멤버십 목록을 위한 초기값 추가
       };
     }
-    return { isLoggedIn: false, email: null, profileImage: defaultProfileImage, role: null };
+    return { isLoggedIn: false, email: null, profileImage: defaultProfileImage, role: null, memberships: [] };
   });
+
+  // ✅ 로그인 상태가 되면, 사용자의 상세 정보를 불러와 멤버십을 업데이트합니다.
+  useEffect(() => {
+    const fetchUserMemberships = async () => {
+      if (user.isLoggedIn) {
+        try {
+          const response = await axios.get("/api/users/me");
+          setUser(prevUser => ({
+            ...prevUser,
+            memberships: response.data.memberships || [], // API 응답에서 멤버십 목록을 가져옵니다.
+          }));
+        } catch (error) {
+          console.error("Context에서 사용자 멤버십 정보를 불러오는 데 실패했습니다:", error);
+        }
+      }
+    };
+    fetchUserMemberships();
+  }, [user.isLoggedIn]); // isLoggedIn 상태가 바뀔 때마다 실행됩니다.
 
   const login = async (email, password) => {
     try {
@@ -38,25 +57,26 @@ export const UserProvider = ({ children }) => {
         email: userData.email,
         profileImage: userData.profileImage ? `${backendUrl}${userData.profileImage}` : defaultProfileImage,
         role: userData.role,
+        memberships: [], // 로그인 직후에는 비어있다가, 위의 useEffect가 채워줍니다.
       });
       return userData;
     } catch (error) {
-      setUser({ isLoggedIn: false, email: null, profileImage: defaultProfileImage, role: null });
+      setUser({ isLoggedIn: false, email: null, profileImage: defaultProfileImage, role: null, memberships: [] });
       throw error;
     }
   };
 
   const logout = () => {
-    // ✅ localStorage -> sessionStorage 로 변경 (clear()로 한번에 삭제)
-    sessionStorage.clear();
-    setUser({ isLoggedIn: false, email: null, profileImage: defaultProfileImage, role: null });
+    localStorage.removeItem("jwtToken");
+    localStorage.removeItem("userEmail");
+    localStorage.removeItem("profileImage");
+    localStorage.removeItem("userRole");
+    setUser({ isLoggedIn: false, email: null, profileImage: defaultProfileImage, role: null, memberships: [] });
     window.location.href = '/';
   };
   
   const updateUserImage = (newImagePath) => {
       if(user.isLoggedIn && newImagePath) {
-          // ✅ localStorage -> sessionStorage 로 변경
-          sessionStorage.setItem("profileImage", newImagePath);
           setUser(prevUser => ({ ...prevUser, profileImage: `${backendUrl}${newImagePath}`}));
       }
   }

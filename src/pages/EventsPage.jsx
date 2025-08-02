@@ -7,7 +7,7 @@ export default function EventsPage() {
   const [events, setEvents] = useState([]);
   const [filter, setFilter] = useState('All');
   const [loading, setLoading] = useState(true);
-  const { user } = useUser(); // ✅ Context에서 user 객체를 통째로 가져옵니다.
+  const { user } = useUser();
   const backendUrl = "http://localhost:8080";
 
   // ❌ const userMemberships = ['NCCU']; // ⬅️ 임시 데이터를 삭제합니다.
