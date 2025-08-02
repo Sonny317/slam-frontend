@@ -120,6 +120,23 @@ export default function BrandStoryPage() {
           </div>
         </section>
 
+        <section className="relative text-center py-24 sm:py-28 px-4 flex items-center justify-center min-h-screen text-white">
+          <div className="max-w-5xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-8 text-center">
+              <div>
+                  <h4 className="text-2xl font-semibold mb-2 text-blue-600">SLAM NCCU</h4>
+                  <p className="text-gray-600 leading-relaxed">The vibrant <span className="text-blue-600 font-semibold">starting point</span> of our community, uniting students at National Chengchi University.</p>
+              </div>
+              <div>
+                  <h4 className="text-2xl font-semibold mb-2 text-blue-600">SLAM NTU</h4>
+                  <p className="text-gray-600 leading-relaxed">Expanding our reach to <span className="text-blue-600 font-semibold">Taiwan's top university</span>, creating even more dynamic opportunities.</p>
+              </div>
+              <div>
+                  <h4 className="text-2xl font-semibold mb-2 text-blue-600">SLAM TAIPEI</h4>
+                  <p className="text-gray-600 leading-relaxed">Our <span className="text-blue-600 font-semibold">newest branch</span> for students and young professionals across the city to connect.</p>
+              </div>
+          </div>
+        </section>
+
         {/* Final CTA */}
         <section className="text-center bg-gray-800 text-white p-16 sm:p-24 my-10">
           <div className="max-w-6xl mx-auto px-6">

@@ -1,31 +1,68 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useUser } from '../context/UserContext';
 
 export default function MainHeader() {
   const navigate = useNavigate();
-  const [showMenu, setShowMenu] = useState(false);
+  const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
   const { user, logout } = useUser();
   const defaultProfileImage = "/default_profile.jpg";
 
+  // 화면 크기 변경 감지하여 모바일 메뉴 상태 초기화
+  useEffect(() => {
+    const handleResize = () => {
+      const isMobileView = window.innerWidth < 768;
+      setIsMobile(isMobileView);
+      
+      if (!isMobileView) {
+        setIsMobileMenuOpen(false);
+      }
+    };
+
+    window.addEventListener('resize', handleResize);
+    
+    // 컴포넌트 마운트 시에도 한 번 체크
+    handleResize();
+
+    return () => {
+      window.removeEventListener('resize', handleResize);
+    };
+  }, []);
+
   const handleMyPage = () => {
-    setShowMenu(false);
+    setShowProfileMenu(false);
+    setIsMobileMenuOpen(false);
     navigate("/mypage");
   };
 
-  // ✅ 추가: 관리자 페이지로 이동하는 함수
   const handleAdminPage = () => {
-    setShowMenu(false);
-    navigate("/admin/dashboard"); // 관리자 페이지의 첫 화면으로 이동
+    setShowProfileMenu(false);
+    setIsMobileMenuOpen(false);
+    navigate("/admin/dashboard");
   };
 
+  const handleLogout = () => {
+    setShowProfileMenu(false);
+    setIsMobileMenuOpen(false);
+    logout();
+  }
+
+  const closeMobileMenu = () => {
+    setIsMobileMenuOpen(false);
+  }
+
   return (
-    <header className="flex items-center justify-between px-6 py-4 shadow bg-white relative">
+    <header className="flex items-center justify-between px-6 py-4 shadow bg-white relative z-20">
       <Link to="/" className="flex items-center gap-2">
         <img src="/slam_logo_web_rgb.jpg" alt="SLAM Logo" className="w-8 h-8 rounded-full object-cover" />
         <span className="text-lg font-semibold">SLAM</span>
       </Link>
-      <nav className="flex items-center gap-6 text-sm font-medium">
+
+      {/* --- Desktop Menu --- */}
+      {!isMobile && (
+        <nav className="flex items-center gap-6 text-sm font-medium">
         <Link to="/about-us">About Us</Link>
         <Link to="/community">Community</Link>
         <Link to="/events">Events</Link>
@@ -39,29 +76,28 @@ export default function MainHeader() {
         ) : (
           <div className="relative">
             <img
-              src={user.profileImage}
+              src={user.profileImage || defaultProfileImage}
               alt="프로필"
               className="w-8 h-8 rounded-full cursor-pointer object-cover"
-              onClick={() => setShowMenu(!showMenu)}
+              onClick={() => setShowProfileMenu(!showProfileMenu)}
               onError={(e) => { e.target.onerror = null; e.target.src = defaultProfileImage; }}
             />
-            {showMenu && (
+            {showProfileMenu && (
               <div 
-                className="absolute right-0 top-full mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-20"
-                onMouseLeave={() => setShowMenu(false)}
+                className="absolute right-0 top-full mt-2 w-48 bg-white rounded-md shadow-lg py-1"
+                onMouseLeave={() => setShowProfileMenu(false)}
               >
                 <button onClick={handleMyPage} className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
                   마이페이지
                 </button>
                 
-                {/* ✅ user.role이 'ADMIN'일 때만 이 버튼이 보입니다. */}
                 {user.role === 'ADMIN' && (
                   <button onClick={handleAdminPage} className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
                     Admin Page
                   </button>
                 )}
 
-                <button onClick={logout} className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                <button onClick={handleLogout} className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
                   로그아웃
                 </button>
               </div>
@@ -69,6 +105,53 @@ export default function MainHeader() {
           </div>
         )}
       </nav>
+      )}
+
+      {/* --- Mobile Menu Button --- */}
+      {isMobile && (
+        <div>
+        <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}>
+          {isMobileMenuOpen ? (
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          ) : (
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" />
+            </svg>
+          )}
+        </button>
+      </div>
+      )}
+
+      {/* --- Mobile Menu Panel --- */}
+      {isMobile && isMobileMenuOpen && (
+        <div className="absolute top-full left-0 w-full bg-white shadow-md">
+          <nav className="flex flex-col items-center gap-4 py-4">
+            <Link to="/about-us" onClick={closeMobileMenu}>About Us</Link>
+            <Link to="/community" onClick={closeMobileMenu}>Community</Link>
+            <Link to="/events" onClick={closeMobileMenu}>Events</Link>
+            <Link to="/partnership" onClick={closeMobileMenu}>Partners</Link>
+
+            <hr className="w-11/12" />
+
+            {!user.isLoggedIn ? (
+              <>
+                <Link to="/signup" onClick={closeMobileMenu} className="px-4 py-2 rounded-full bg-blue-100 text-blue-800 hover:bg-blue-200 w-11/12 text-center">Sign Up</Link>
+                <Link to="/login" onClick={closeMobileMenu} className="px-4 py-2 rounded-full border border-gray-300 hover:bg-gray-100 w-11/12 text-center">Log In</Link>
+              </>
+            ) : (
+              <>
+                <button onClick={handleMyPage} className="w-full text-center py-2">마이페이지</button>
+                {user.role === 'ADMIN' && (
+                  <button onClick={handleAdminPage} className="w-full text-center py-2">Admin Page</button>
+                )}
+                <button onClick={handleLogout} className="w-full text-center py-2 text-red-500">로그아웃</button>
+              </>
+            )}
+          </nav>
+        </div>
+      )}
     </header>
   );
 }
