@@ -8,7 +8,9 @@ export default function EventsPage() {
   const [filter, setFilter] = useState('All');
   const [loading, setLoading] = useState(true);
   const { user } = useUser();
-  const backendUrl = "http://localhost:8080";
+  const backendUrl = process.env.NODE_ENV === 'production' 
+    ? "https://slam-backend.onrender.com" 
+    : "http://localhost:8080";
 
   // ❌ const userMemberships = ['NCCU']; // ⬅️ 임시 데이터를 삭제합니다.
 

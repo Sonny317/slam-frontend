@@ -23,13 +23,17 @@ export default function MyPage() {
             try {
                 const response = await axios.get("/api/users/me");
                 const data = response.data;
+
+                // ✅ data.memberships가 유효한 배열인지 더 안전하게 확인합니다.
+                const hasMembership = data.memberships && Array.isArray(data.memberships) && data.memberships.length > 0;
+
                 setUserDetails({
                     userId: data.userId,
                     name: data.name,
                     bio: data.bio || "자기소개를 작성해주세요.",
                     posts: [{ id: 1, title: "My 3-day trip itinerary for Hualien", date: "2025-07-12" }],
                     comments: [{ id: 1, content: "Sounds fun! I can join after 3 PM.", postTitle: "Anyone up for bouldering..." }],
-                    membership: data.memberships && data.memberships.length > 0 ? { branch: data.memberships.join(', '), validUntil: "2025-12-31" } : null,
+                    membership: hasMembership ? { branch: data.memberships.join(', '), validUntil: "2025-12-31" } : null,
                 });
             } catch (error) {
                 console.error("Failed to fetch user data:", error);
