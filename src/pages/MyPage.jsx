@@ -7,7 +7,6 @@ import { useUser } from '../context/UserContext';
 export default function MyPage() {
     const { user, updateUserImage } = useUser();
     
-    // API로부터 받아올 상세 정보를 저장할 별도의 state
     const [userDetails, setUserDetails] = useState({
         userId: null,
         name: "",
@@ -17,7 +16,6 @@ export default function MyPage() {
         membership: null,
     });
     const [showQrCode, setShowQrCode] = useState(false);
-
     const qrCodeValue = JSON.stringify({ userId: userDetails.userId, name: userDetails.name });
 
     useEffect(() => {
@@ -29,7 +27,6 @@ export default function MyPage() {
                     userId: data.userId,
                     name: data.name,
                     bio: data.bio || "자기소개를 작성해주세요.",
-                    // TODO: 나중에 실제 데이터로 교체
                     posts: [{ id: 1, title: "My 3-day trip itinerary for Hualien", date: "2025-07-12" }],
                     comments: [{ id: 1, content: "Sounds fun! I can join after 3 PM.", postTitle: "Anyone up for bouldering..." }],
                     membership: data.memberships && data.memberships.length > 0 ? { branch: data.memberships.join(', '), validUntil: "2025-12-31" } : null,
@@ -38,7 +35,6 @@ export default function MyPage() {
                 console.error("Failed to fetch user data:", error);
             }
         };
-
         if(user.isLoggedIn) {
             fetchUserData();
         }
@@ -48,9 +44,12 @@ export default function MyPage() {
         const file = e.target.files[0];
         if (!file) return;
         
+        // ✅ sessionStorage -> localStorage 로 변경
+        const currentEmail = localStorage.getItem("userEmail");
+        if (!currentEmail) return alert("Login information not found.");
+
         const formData = new FormData();
         formData.append("file", file);
-
         try {
             const response = await axios.post("/api/users/profile/image", formData, {
                 headers: { "Content-Type": "multipart/form-data" },
@@ -71,20 +70,7 @@ export default function MyPage() {
                 bio: userDetails.bio,
             });
             alert("Bio saved successfully.");
-            
-            // ✅ 백엔드가 보내준 최신 정보 전체로 userDetails 상태를 업데이트합니다.
-            const updatedUserData = response.data;
-            setUserDetails(prevDetails => ({
-                ...prevDetails, // 기존 posts, comments 등은 유지
-                name: updatedUserData.name,
-                bio: updatedUserData.bio,
-            }));
-            
-            // ✅ Context의 프로필 이미지도 최신 정보로 업데이트합니다.
-            if (updatedUserData.profileImage) {
-                updateUserImage(updatedUserData.profileImage);
-            }
-
+            setUserDetails(prev => ({ ...prev, bio: response.data.bio }));
         } catch (error) {
             alert("Save failed: " + (error.response?.data || "An error occurred."));
         }
@@ -100,7 +86,6 @@ export default function MyPage() {
                 <h1 className="text-4xl font-bold mb-10 text-center text-gray-800">My Page</h1>
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                     <div className="lg:col-span-1 space-y-8">
-                        {/* Profile Card */}
                         <div className="bg-white p-6 rounded-lg shadow-md text-center">
                             <div className="relative w-32 h-32 mx-auto">
                                 <img
@@ -132,8 +117,6 @@ export default function MyPage() {
                                 </Link>
                             </div>
                         </div>
-
-                        {/* Digital Membership & QR Code Card */}
                         {userDetails.membership && (
                             <div className="bg-white p-6 rounded-lg shadow-md">
                                 <div className="bg-gradient-to-br from-blue-600 to-blue-800 p-6 rounded-lg shadow-xl text-white">
@@ -153,7 +136,6 @@ export default function MyPage() {
                                         </div>
                                     </div>
                                 </div>
-                                
                                 <div className="text-center mt-4">
                                     {showQrCode ? (
                                         <>
@@ -172,8 +154,6 @@ export default function MyPage() {
                             </div>
                         )}
                     </div>
-                    
-                    {/* Activity Feed */}
                     <div className="lg:col-span-2 space-y-8">
                         <section className="bg-white p-6 rounded-lg shadow-md">
                             <h2 className="text-xl font-semibold mb-4 border-b pb-2">📌 My Posts</h2>

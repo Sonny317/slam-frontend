@@ -9,20 +9,20 @@ export const login = async (email, password) => {
 
     const { token, profileImage, name, role } = response.data;
 
-    // ✅ localStorage -> sessionStorage 로 변경
-    sessionStorage.setItem("userEmail", email);
-    sessionStorage.setItem("jwtToken", token);
-    sessionStorage.setItem("userName", name);
-    sessionStorage.setItem("userRole", role);
+    // ✅ sessionStorage -> localStorage 로 변경
+    localStorage.setItem("userEmail", email);
+    localStorage.setItem("jwtToken", token);
+    localStorage.setItem("userName", name);
+    localStorage.setItem("userRole", role);
     
     if (profileImage) {
-      sessionStorage.setItem("profileImage", profileImage);
+      localStorage.setItem("profileImage", profileImage);
     }
     
     return response.data;
   } catch (error) {
     // 에러 발생 시 모든 정보 삭제
-    sessionStorage.clear();
+    localStorage.clear();
     throw error.response?.data || error;
   }
 };
