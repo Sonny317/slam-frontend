@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import axios from '../api/axios';
+import { useUser } from '../context/UserContext'; // ✅ UserContext를 임포트합니다.
 
 const mockEvents = [
     { id: 1, title: "SLAM TAIPEI: 1st Pilot Event", rsvps: 75, checkedIn: 12 },
@@ -12,6 +13,7 @@ export default function AdminDashboardPage() {
   const [applications, setApplications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedEvent, setSelectedEvent] = useState(mockEvents[0]);
+  const { refetchUser } = useUser(); // ✅ Context에서 refetchUser 함수를 가져옵니다.
 
   useEffect(() => {
     const fetchApplications = async () => {
@@ -32,9 +34,12 @@ export default function AdminDashboardPage() {
   const handleApprove = async (applicationId, userName, branch) => {
     try {
       await axios.post(`/api/admin/applications/${applicationId}/approve`);
-      // ✅ 사용자 경험을 위해 어떤 신청이 승인되었는지 명확히 알려줍니다.
       alert(`${userName}'s application for ${branch} has been approved.`);
       setApplications(prev => prev.filter(app => app.id !== applicationId));
+      
+      // ✅ 승인 성공 후, Context의 사용자 정보를 강제로 새로고침합니다.
+      await refetchUser(); 
+
     } catch (error) {
       console.error("Failed to approve application:", error);
       alert("승인 처리 중 오류가 발생했습니다.");
@@ -61,7 +66,7 @@ export default function AdminDashboardPage() {
           </div>
           <div className="overflow-x-auto">
             {loading ? <p>Loading applications...</p> : (
-            <table className="min-w-full divide-y divide-gray-200">{/* ✅ 공백 제거 */}
+            <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
@@ -81,7 +86,8 @@ export default function AdminDashboardPage() {
                     <td className="px-6 py-4 whitespace-nowrap">
                       <button 
                         onClick={() => handleApprove(app.id, app.userName, app.selectedBranch)}
-                        className="bg-green-500 text-white text-xs font-bold py-1 px-3 rounded-full hover:bg-green-600">
+                        className="bg-green-500 text-white text-xs font-bold py-1 px-3 rounded-full hover:bg-green-600"
+                      >
                         Approve
                       </button>
                     </td>

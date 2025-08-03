@@ -1,4 +1,5 @@
-import React, { createContext, useState, useContext } from 'react';
+import React, { createContext, useState, useEffect, useContext } from 'react';
+import axios from '../api/axios';
 import { login as apiLogin } from '../api/auth';
 
 const UserContext = createContext(null);
@@ -13,23 +14,41 @@ export const UserProvider = ({ children }) => {
   const defaultProfileImage = "/default_profile.jpg";
 
   const [user, setUser] = useState(() => {
-    // ✅ 1. localStorage에서 role을 읽어옵니다.
     const token = localStorage.getItem('jwtToken');
     const email = localStorage.getItem('userEmail');
     const imagePath = localStorage.getItem('profileImage');
-    const role = localStorage.getItem('userRole'); 
+    const role = localStorage.getItem('userRole');
 
     if (token && email) {
       return {
         isLoggedIn: true,
         email: email,
         profileImage: imagePath ? `${backendUrl}${imagePath}` : defaultProfileImage,
-        role: role, // ✅ 2. 초기 user 상태에 role을 포함시킵니다.
+        role: role,
+        memberships: [],
       };
     }
-    // 로그아웃 상태일 때의 기본값
-    return { isLoggedIn: false, email: null, profileImage: defaultProfileImage, role: null };
+    return { isLoggedIn: false, email: null, profileImage: defaultProfileImage, role: null, memberships: [] };
   });
+
+  // ✅ 사용자 정보를 서버로부터 다시 불러오는 함수
+  const refetchUser = async () => {
+    if (user.isLoggedIn) {
+      try {
+        const response = await axios.get("/api/users/me");
+        setUser(prevUser => ({
+          ...prevUser,
+          memberships: response.data.memberships || [],
+        }));
+      } catch (error) {
+        console.error("Context에서 사용자 정보를 새로고침하는 데 실패했습니다:", error);
+      }
+    }
+  };
+
+  useEffect(() => {
+    refetchUser(); // 로그인 상태가 변경될 때마다 실행
+  }, [user.isLoggedIn]);
 
   const login = async (email, password) => {
     try {
@@ -38,21 +57,19 @@ export const UserProvider = ({ children }) => {
         isLoggedIn: true,
         email: userData.email,
         profileImage: userData.profileImage ? `${backendUrl}${userData.profileImage}` : defaultProfileImage,
-        role: userData.role, // ✅ 3. 로그인 성공 시 API 응답에서 받은 role로 상태를 업데이트합니다.
+        role: userData.role,
+        memberships: [],
       });
       return userData;
     } catch (error) {
-      setUser({ isLoggedIn: false, email: null, profileImage: defaultProfileImage, role: null });
+      setUser({ isLoggedIn: false, email: null, profileImage: defaultProfileImage, role: null, memberships: [] });
       throw error;
     }
   };
 
   const logout = () => {
-    localStorage.removeItem("jwtToken");
-    localStorage.removeItem("userEmail");
-    localStorage.removeItem("profileImage");
-    localStorage.removeItem("userRole"); // ✅ 로그아웃 시 role도 삭제
-    setUser({ isLoggedIn: false, email: null, profileImage: defaultProfileImage, role: null });
+    localStorage.clear();
+    setUser({ isLoggedIn: false, email: null, profileImage: defaultProfileImage, role: null, memberships: [] });
     window.location.href = '/';
   };
   
@@ -63,7 +80,8 @@ export const UserProvider = ({ children }) => {
       }
   }
 
-  const value = { user, login, logout, updateUserImage };
+  // ✅ refetchUser 함수를 value에 추가
+  const value = { user, login, logout, updateUserImage, refetchUser };
 
   return (
     <UserContext.Provider value={value}>
