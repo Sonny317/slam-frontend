@@ -7,12 +7,19 @@ export default function EventsPage() {
   const [events, setEvents] = useState([]);
   const [filter, setFilter] = useState('All');
   const [loading, setLoading] = useState(true);
-  const { user } = useUser();
+  
+  const { user, refetchUser } = useUser(); // ✅ refetchUser 함수를 가져옵니다.
   const backendUrl = process.env.NODE_ENV === 'production' 
     ? "https://slam-backend.onrender.com" 
     : "http://localhost:8080";
 
   // ❌ const userMemberships = ['NCCU']; // ⬅️ 임시 데이터를 삭제합니다.
+
+  useEffect(() => {
+    if (user.isLoggedIn) {
+      refetchUser();
+    }
+  }, []); // 이 페이지가 로드될 때 한 번만 실행됩니다.
 
   useEffect(() => {
     const fetchEvents = async () => {
@@ -23,7 +30,6 @@ export default function EventsPage() {
         setEvents(response.data);
       } catch (error) {
         console.error("Failed to fetch events:", error);
-        alert("이벤트 목록을 불러오는 데 실패했습니다.");
       } finally {
         setLoading(false);
       }

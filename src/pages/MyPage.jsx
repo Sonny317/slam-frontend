@@ -5,44 +5,32 @@ import { QRCodeSVG } from "qrcode.react";
 import { useUser } from '../context/UserContext';
 
 export default function MyPage() {
-    const { user, updateUserImage } = useUser();
+   const { user, updateUserImage, refetchUser } = useUser();
     
     const [userDetails, setUserDetails] = useState({
-        userId: null,
-        name: "",
-        bio: "",
-        posts: [],
-        comments: [],
-        membership: null,
+        name: "", bio: "", posts: [], comments: [], membership: null,
     });
     const [showQrCode, setShowQrCode] = useState(false);
     const qrCodeValue = JSON.stringify({ userId: userDetails.userId, name: userDetails.name });
 
     useEffect(() => {
-        const fetchUserData = async () => {
-            try {
-                const response = await axios.get("/api/users/me");
-                const data = response.data;
+        // ✅ 페이지에 들어올 때마다 Context의 정보를 새로고침합니다.
+        refetchUser(); 
+    }, []); // 이 페이지가 로드될 때 한 번만 실행됩니다.
 
-                // ✅ data.memberships가 유효한 배열인지 더 안전하게 확인합니다.
-                const hasMembership = data.memberships && Array.isArray(data.memberships) && data.memberships.length > 0;
-
-                setUserDetails({
-                    userId: data.userId,
-                    name: data.name,
-                    bio: data.bio || "자기소개를 작성해주세요.",
-                    posts: [{ id: 1, title: "My 3-day trip itinerary for Hualien", date: "2025-07-12" }],
-                    comments: [{ id: 1, content: "Sounds fun! I can join after 3 PM.", postTitle: "Anyone up for bouldering..." }],
-                    membership: hasMembership ? { branch: data.memberships.join(', '), validUntil: "2025-12-31" } : null,
-                });
-            } catch (error) {
-                console.error("Failed to fetch user data:", error);
-            }
-        };
-        if(user.isLoggedIn) {
-            fetchUserData();
+    // ✅ user 상태가 변경될 때마다 userDetails를 업데이트합니다.
+    useEffect(() => {
+        if (user.isLoggedIn) {
+            setUserDetails(prev => ({
+                ...prev,
+                name: user.name || 'Your Name',
+                bio: user.bio || '자기소개를 작성해주세요.',
+                membership: user.memberships && user.memberships.length > 0 
+                    ? { branch: user.memberships.join(', '), validUntil: "2025-12-31" } 
+                    : null,
+            }));
         }
-    }, [user.isLoggedIn]);
+    }, [user]); // Context의 user 객체가 바뀔 때마다 실행
 
     const handleImageSelectAndUpload = async (e) => {
         const file = e.target.files[0];

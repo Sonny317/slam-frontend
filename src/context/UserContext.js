@@ -31,24 +31,26 @@ export const UserProvider = ({ children }) => {
     return { isLoggedIn: false, email: null, profileImage: defaultProfileImage, role: null, memberships: [] };
   });
 
-  // ✅ 사용자 정보를 서버로부터 다시 불러오는 함수
+  // ✅ 외부에서 사용자 정보를 강제로 새로고침하는 함수
   const refetchUser = async () => {
-    if (user.isLoggedIn) {
+    if (localStorage.getItem('jwtToken')) { // 토큰이 있을 때만 실행
       try {
         const response = await axios.get("/api/users/me");
+        const userData = response.data;
         setUser(prevUser => ({
           ...prevUser,
-          memberships: response.data.memberships || [],
+          isLoggedIn: true,
+          email: userData.email,
+          role: userData.role,
+          profileImage: userData.profileImage ? `${backendUrl}${userData.profileImage}` : defaultProfileImage,
+          memberships: userData.memberships || [],
         }));
       } catch (error) {
         console.error("Context에서 사용자 정보를 새로고침하는 데 실패했습니다:", error);
+        logout(); // 실패 시 로그아웃 처리
       }
     }
   };
-
-  useEffect(() => {
-    refetchUser(); // 로그인 상태가 변경될 때마다 실행
-  }, [user.isLoggedIn]);
 
   const login = async (email, password) => {
     try {
@@ -58,7 +60,7 @@ export const UserProvider = ({ children }) => {
         email: userData.email,
         profileImage: userData.profileImage ? `${backendUrl}${userData.profileImage}` : defaultProfileImage,
         role: userData.role,
-        memberships: [],
+        memberships: userData.memberships || [],
       });
       return userData;
     } catch (error) {
@@ -80,7 +82,6 @@ export const UserProvider = ({ children }) => {
       }
   }
 
-  // ✅ refetchUser 함수를 value에 추가
   const value = { user, login, logout, updateUserImage, refetchUser };
 
   return (
