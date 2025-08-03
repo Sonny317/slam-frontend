@@ -29,48 +29,108 @@ export default function MainPage() {
   return (
     <div className="font-sans text-gray-800 bg-white">
      
-      {/* SECTION 1: Hero Hook */}
-      <section className="relative h-screen flex items-center justify-center text-center px-4 sm:px-6 text-white overflow-hidden">
-        <video autoPlay loop muted playsInline className="absolute top-0 left-0 w-full h-full object-cover z-0">
-          <source src="/Landing_page.mp4" type="video/mp4" />
-          Your browser does not support the video tag.
-        </video>
-        <div className="absolute inset-0 bg-gradient-to-b from-black/40 to-black/60 z-10"></div>
-        <div className="relative z-20 max-w-5xl mx-auto">
-          {/* ✅ 카피라이팅 수정 */}
-          <h1 className="text-4xl sm:text-5xl md:text-6xl font-black leading-tight mb-6">
-            Study Less Achieve More.
-          </h1>
-          <p className="text-base sm:text-lg md:text-xl text-gray-200 max-w-3xl mx-auto leading-relaxed">
-            Tired of superficial connections? Discover the secret to transforming your social life in a <span className="text-blue-400 font-bold">2-hour party</span>. We don't just host events; we <span className="text-blue-400 font-bold">design connections</span>.
-          </p>
-          <div className="mt-10">
-            <Link to="/events" className="bg-blue-600 text-white font-bold py-3 px-8 sm:py-4 sm:px-10 rounded-full text-base sm:text-lg hover:bg-blue-700 transition-all duration-300 transform hover:scale-105 shadow-lg">
-              Find Your Next Event
-            </Link>
-          </div>
+    {/* SECTION 1: Hero Hook - Mobile Optimized */}
+    <section className="relative min-h-screen flex items-center justify-center text-center px-4 sm:px-6 text-white overflow-hidden">
+    <video autoPlay loop muted playsInline className="absolute top-0 left-0 w-full h-full object-cover z-0">
+        <source src="/Landing.mp4" type="video/mp4" />
+        Your browser does not support the video tag.
+    </video>
+    
+    {/* Enhanced overlay for better text readability */}
+    <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/50 to-black/70 z-10"></div>
+    
+    {/* Additional dark overlay for mobile */}
+    <div className="absolute inset-0 bg-black/20 sm:bg-black/10 z-15"></div>
+    
+    <div className="relative z-20 max-w-5xl mx-auto py-8 sm:py-0">
+        {/* Main headline with better mobile sizing */}
+        <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-black leading-tight mb-4 sm:mb-6 drop-shadow-lg">
+        Study Less Achieve More
+        </h1>
+        
+        {/* Subtext with improved mobile readability */}
+        <p className="text-sm sm:text-base md:text-lg lg:text-xl text-gray-100 max-w-3xl mx-auto leading-relaxed mb-8 sm:mb-10 px-2 drop-shadow-md">
+        Tired of superficial connections?
+        <br /><br />
+        Transform your social life in a <span className="text-blue-300 font-bold bg-black/30 px-1 rounded">2-hour party</span>.
+        <br /><br />
+        We don't just host events; we <span className="text-blue-300 font-bold bg-black/30 px-1 rounded">design connections</span>.
+        </p>
+        
+        {/* CTA button with enhanced mobile visibility */}
+        <div className="mt-6 sm:mt-8 mb-8 sm:mb-0">
+        <Link 
+            to="/events" 
+            className="inline-block bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 px-8 sm:py-4 sm:px-10 rounded-full text-base sm:text-lg transition-all duration-300 transform hover:scale-105 shadow-2xl border-2 border-blue-500 hover:border-blue-400"
+        >
+            Find Your Next Event
+        </Link>
         </div>
-      </section>
+        
+        {/* Mobile scroll indicator */}
+        <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2 sm:hidden">
+        <div className="animate-bounce">
+            <svg className="w-6 h-6 text-white/70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+            </svg>
+        </div>
+        </div>
+    </div>
+    </section>
 
-      {/* SECTION 2: Problem Trinity */}
-      <section className="py-20 sm:py-24 px-4 sm:px-6 bg-white">
-        <div className="max-w-4xl mx-auto text-center">
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-8">
-                Ever Felt This Way in Taipei?
-            </h2>
-            <div className="space-y-4 text-lg text-gray-700 mb-12 leading-relaxed">
-                <p>"<span className="text-blue-600 font-bold">90% of exchange students</span> only make friends with other exchange students before returning home..."</p>
-                <p>"Local students and professionals want to keep using their English, but can't find the <span className="text-blue-600 font-bold">right environment</span>..."</p>
-                <p>"It's always <span className="text-blue-600 font-bold">awkward to break into</span> a new social circle, especially for working professionals..."</p>
-            </div>
+    {/* SECTION 2: Problem Trinity - Optimized */}
+    <section className="py-20 sm:py-24 px-4 sm:px-6 bg-white">
+    <div className="max-w-4xl mx-auto">
+        {/* Title - Mobile optimized size */}
+        <h2 className="text-3xl sm:text-3xl md:text-4xl font-bold text-gray-900 mb-12 text-left">
+        Ever Felt This Way in Taipei?
+        </h2>
+        
+        {/* Content - Left aligned for better readability */}
+        <div className="space-y-6 text-lg sm:text-xl md:text-2xl text-gray-700 leading-relaxed">
+        <p className="text-left">
+            "<span className="text-blue-600 font-bold">90% of exchange students</span> only make friends with other exchange students before returning home..."
+        </p>
+        
+        <p className="text-left">
+            "Local students and professionals want to keep using their English, but can't find the <span className="text-blue-600 font-bold">right environment</span>..."
+        </p>
+        
+        <p className="text-left">
+            "It's always <span className="text-blue-600 font-bold">awkward to break into</span> a new social circle, especially for working professionals..."
+        </p>
         </div>
-      </section>
+
+    </div>
+    
+    </section>
+
+<section className="relative py-16 md:py-20 px-4 sm:px-6 h-[60vh] md:h-[70vh] lg:h-[80vh]">
+  <div className="absolute inset-0 bg-cover bg-no-repeat" 
+       style={{
+         backgroundImage: "url('/Lonely.jfif')",
+         backgroundPosition: 'center center',
+         backgroundSize: 'cover'
+       }}>
+  </div>
+  <div className="absolute inset-0 bg-black/50"></div>
+  
+  <div className="relative z-10 max-w-3xl mx-auto text-center text-white h-full flex items-center justify-center">
+    <div>
+      <h3 className="text-2xl md:text-3xl lg:text-4xl font-bold mb-6">
+        Sound Familiar?
+      </h3>
+      <p className="text-lg md:text-xl lg:text-2xl leading-relaxed">
+        You're not alone in feeling this way. Thousands of students and professionals in Taipei face the same challenge every day.
+      </p>
+    </div>
+  </div>
+</section>
+
+      
 
       {/* SECTION 3: Solution Steps */}
-                {/* Added Group Photo */}
-          <div className="px-4 pt-12 md:px-6 md:pt-20">
-              <img src="/group_photo.jpg" alt="SLAM Group Photo" className="rounded-xl shadow-lg w-full md:max-w-4xl mx-auto" />
-          </div>
+
       <section className="py-20 sm:py-24 px-4 sm:px-6 bg-gray-50">
         <div className="max-w-6xl mx-auto">
             <div className="text-center mb-16">
@@ -90,6 +150,10 @@ export default function MainPage() {
                     <p className="text-gray-600 leading-relaxed">The party is just the start. Take the friendships you make and build <span className="text-blue-600 font-semibold">unforgettable memories</span>—exploring Taipei, joining sports activities, and creating your own adventures together.</p>
                 </div>
             </div>
+        </div>
+        {/* Added Group Photo */}
+        <div className="px-4 pt-12 md:px-6 md:pt-20">
+            <img src="/group_photo.jpg" alt="SLAM Group Photo" className="rounded-xl shadow-lg w-full md:max-w-4xl mx-auto" />
         </div>
       </section>
     
