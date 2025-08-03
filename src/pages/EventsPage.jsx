@@ -81,7 +81,7 @@ export default function EventsPage() {
                   <div className="mt-auto pt-4 border-t border-gray-100">
                     {user.isLoggedIn ? (
                       // ✅ Context에서 가져온 실제 멤버십 목록(user.memberships)을 사용합니다.
-                      user.memberships.includes(event.branch) ? (
+                      (user.memberships || []).includes(event.branch) ? (
                         <Link to={`/events/${event.id}`} className="block w-full text-center bg-green-500 text-white font-bold py-2 rounded-lg hover:bg-green-600 transition-colors">
                           I'm Going! (RSVP)
                         </Link>
