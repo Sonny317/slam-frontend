@@ -13,6 +13,7 @@ export const UserProvider = ({ children }) => {
     
   const defaultProfileImage = "/default_profile.jpg";
 
+  // ✅ 1. 앱이 시작될 때 localStorage에서 모든 정보를 즉시 읽어와 초기 상태를 완벽하게 설정합니다.
   const [user, setUser] = useState(() => {
     const token = localStorage.getItem('jwtToken');
     const email = localStorage.getItem('userEmail');
@@ -31,42 +32,47 @@ export const UserProvider = ({ children }) => {
     return { isLoggedIn: false, email: null, profileImage: defaultProfileImage, role: null, memberships: [] };
   });
 
-  // ✅ 외부에서 사용자 정보를 강제로 새로고침하는 함수
-  const refetchUser = async () => {
-    if (localStorage.getItem('jwtToken')) { // 토큰이 있을 때만 실행
-      try {
-        const response = await axios.get("/api/users/me");
-        const userData = response.data;
-        setUser(prevUser => ({
-          ...prevUser,
-          isLoggedIn: true,
-          email: userData.email,
-          role: userData.role,
-          profileImage: userData.profileImage ? `${backendUrl}${userData.profileImage}` : defaultProfileImage,
-          memberships: userData.memberships || [],
-        }));
-      } catch (error) {
-        console.error("Context에서 사용자 정보를 새로고침하는 데 실패했습니다:", error);
-        logout(); // 실패 시 로그아웃 처리
+  const [loading, setLoading] = useState(true);
+
+  // ✅ 2. 그 후, 서버에 접속해서 localStorage 정보가 최신인지 다시 한번 확인하고 업데이트합니다.
+  useEffect(() => {
+    const fetchCurrentUser = async () => {
+      // 로그인 상태일 때만 서버에 최신 정보를 요청합니다.
+      if (user.isLoggedIn) {
+        try {
+          const response = await axios.get("/api/users/me");
+          const userData = response.data;
+          
+          // 받아온 최신 정보로 user 상태를 다시 한번 동기화합니다.
+          setUser(prevUser => ({
+            ...prevUser, // 기존 email, isLoggedIn 등은 유지
+            role: userData.role, // 서버의 최신 role로 덮어쓰기
+            profileImage: userData.profileImage ? `${backendUrl}${userData.profileImage}` : prevUser.profileImage,
+            memberships: userData.memberships || [],
+          }));
+        } catch (error) {
+          console.error("Failed to fetch user on load, logging out.", error);
+          logout(); // 토큰이 유효하지 않으면 로그아웃 처리
+        }
       }
-    }
-  };
+      setLoading(false); // 정보 로딩(또는 확인) 완료
+    };
+
+    fetchCurrentUser();
+  }, [user.isLoggedIn]); // 로그인 상태가 바뀔 때(로그인 성공 시) 이 로직이 실행됩니다.
 
   const login = async (email, password) => {
-    try {
-      const userData = await apiLogin(email, password);
-      setUser({
-        isLoggedIn: true,
-        email: userData.email,
-        profileImage: userData.profileImage ? `${backendUrl}${userData.profileImage}` : defaultProfileImage,
-        role: userData.role,
-        memberships: userData.memberships || [],
-      });
-      return userData;
-    } catch (error) {
-      setUser({ isLoggedIn: false, email: null, profileImage: defaultProfileImage, role: null, memberships: [] });
-      throw error;
-    }
+    const userData = await apiLogin(email, password); // auth.js에서 localStorage에 저장
+    // 로그인 성공 후, localStorage에서 다시 읽어와 상태를 설정하여 일관성을 유지합니다.
+    const role = localStorage.getItem('userRole');
+    setUser({
+      isLoggedIn: true,
+      email: userData.email,
+      profileImage: userData.profileImage ? `${backendUrl}${userData.profileImage}` : defaultProfileImage,
+      role: role,
+      memberships: userData.memberships || [],
+    });
+    return userData;
   };
 
   const logout = () => {
@@ -82,7 +88,12 @@ export const UserProvider = ({ children }) => {
       }
   }
 
-  const value = { user, login, logout, updateUserImage, refetchUser };
+  const value = { user, login, logout, updateUserImage, loading };
+
+  // 로딩 중일 때는 아무것도 표시하지 않아 깜빡임을 방지할 수 있습니다.
+  if (loading && user.isLoggedIn) {
+    return null;
+  }
 
   return (
     <UserContext.Provider value={value}>
