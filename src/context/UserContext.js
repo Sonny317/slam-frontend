@@ -46,7 +46,7 @@ export const UserProvider = ({ children }) => {
           // 받아온 최신 정보로 user 상태를 다시 한번 동기화합니다.
           setUser(prevUser => ({
             ...prevUser, // 기존 email, isLoggedIn 등은 유지
-            role: userData.role, // 서버의 최신 role로 덮어쓰기
+            role: userData.role || prevUser.role, // 서버의 최신 role이 있으면 사용, 없으면 기존 role 유지
             profileImage: userData.profileImage ? `${backendUrl}${userData.profileImage}` : prevUser.profileImage,
             memberships: userData.memberships || [],
           }));

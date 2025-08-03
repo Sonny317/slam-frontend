@@ -10,6 +10,13 @@ export default function MainHeader() {
   const { user, logout } = useUser();
   const defaultProfileImage = "/default_profile.jpg";
 
+  // 디버깅을 위한 임시 코드
+  useEffect(() => {
+    console.log('Current user state:', user);
+    console.log('User role:', user.role);
+    console.log('Is logged in:', user.isLoggedIn);
+  }, [user]);
+
   // 화면 크기 변경 감지하여 모바일 메뉴 상태 초기화
   useEffect(() => {
     const handleResize = () => {
