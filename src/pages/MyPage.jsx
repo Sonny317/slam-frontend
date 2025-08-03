@@ -5,18 +5,13 @@ import { QRCodeSVG } from "qrcode.react";
 import { useUser } from '../context/UserContext';
 
 export default function MyPage() {
-   const { user, updateUserImage, refetchUser } = useUser();
+   const { user, updateUserImage } = useUser();
     
     const [userDetails, setUserDetails] = useState({
         name: "", bio: "", posts: [], comments: [], membership: null,
     });
     const [showQrCode, setShowQrCode] = useState(false);
     const qrCodeValue = JSON.stringify({ userId: userDetails.userId, name: userDetails.name });
-
-    useEffect(() => {
-        // ✅ 페이지에 들어올 때마다 Context의 정보를 새로고침합니다.
-        refetchUser(); 
-    }, []); // 이 페이지가 로드될 때 한 번만 실행됩니다.
 
     // ✅ user 상태가 변경될 때마다 userDetails를 업데이트합니다.
     useEffect(() => {
@@ -26,7 +21,13 @@ export default function MyPage() {
                 name: user.name || 'Your Name',
                 bio: user.bio || '자기소개를 작성해주세요.',
                 membership: user.memberships && user.memberships.length > 0 
-                    ? { branch: user.memberships.join(', '), validUntil: "2025-12-31" } 
+                    ? { 
+                        branch: user.memberships.map(membership => {
+                            // "ACTIVE_NCCU" 형태에서 지부 이름만 추출
+                            return membership.includes('_') ? membership.split('_')[1] : membership;
+                        }).join(', '), 
+                        validUntil: "2025-12-31" 
+                    } 
                     : null,
             }));
         }

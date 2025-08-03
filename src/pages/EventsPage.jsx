@@ -8,18 +8,12 @@ export default function EventsPage() {
   const [filter, setFilter] = useState('All');
   const [loading, setLoading] = useState(true);
   
-  const { user, refetchUser } = useUser(); // ✅ refetchUser 함수를 가져옵니다.
+  const { user } = useUser(); // ✅ refetchUser 함수를 제거합니다.
   const backendUrl = process.env.NODE_ENV === 'production' 
     ? "https://slam-backend.onrender.com" 
     : "http://localhost:8080";
 
   // ❌ const userMemberships = ['NCCU']; // ⬅️ 임시 데이터를 삭제합니다.
-
-  useEffect(() => {
-    if (user.isLoggedIn) {
-      refetchUser();
-    }
-  }, []); // 이 페이지가 로드될 때 한 번만 실행됩니다.
 
   useEffect(() => {
     const fetchEvents = async () => {
@@ -89,7 +83,11 @@ export default function EventsPage() {
                   <div className="mt-auto pt-4 border-t border-gray-100">
                     {user.isLoggedIn ? (
                       // ✅ Context에서 가져온 실제 멤버십 목록(user.memberships)을 사용합니다.
-                      (user.memberships || []).includes(event.branch) ? (
+                      (user.memberships || []).some(membership => {
+                        // "ACTIVE_NCCU" 형태에서 지부 이름만 추출
+                        const branchName = membership.includes('_') ? membership.split('_')[1] : membership;
+                        return branchName === event.branch;
+                      }) ? (
                         <Link to={`/events/${event.id}`} className="block w-full text-center bg-green-500 text-white font-bold py-2 rounded-lg hover:bg-green-600 transition-colors">
                           I'm Going! (RSVP)
                         </Link>

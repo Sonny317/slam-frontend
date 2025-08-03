@@ -19,17 +19,20 @@ export const UserProvider = ({ children }) => {
     const email = localStorage.getItem('userEmail');
     const imagePath = localStorage.getItem('profileImage');
     const role = localStorage.getItem('userRole');
+    const name = localStorage.getItem('userName');
 
     if (token && email) {
       return {
         isLoggedIn: true,
         email: email,
+        name: name || '',
+        bio: '',
         profileImage: imagePath ? `${backendUrl}${imagePath}` : defaultProfileImage,
         role: role,
         memberships: [],
       };
     }
-    return { isLoggedIn: false, email: null, profileImage: defaultProfileImage, role: null, memberships: [] };
+    return { isLoggedIn: false, email: null, name: '', bio: '', profileImage: defaultProfileImage, role: null, memberships: [] };
   });
 
   const [loading, setLoading] = useState(true);
@@ -46,6 +49,8 @@ export const UserProvider = ({ children }) => {
           // 받아온 최신 정보로 user 상태를 다시 한번 동기화합니다.
           setUser(prevUser => ({
             ...prevUser, // 기존 email, isLoggedIn 등은 유지
+            name: userData.name || prevUser.name,
+            bio: userData.bio || prevUser.bio,
             role: userData.role || prevUser.role, // 서버의 최신 role이 있으면 사용, 없으면 기존 role 유지
             profileImage: userData.profileImage ? `${backendUrl}${userData.profileImage}` : prevUser.profileImage,
             memberships: userData.memberships || [],
@@ -65,9 +70,12 @@ export const UserProvider = ({ children }) => {
     const userData = await apiLogin(email, password); // auth.js에서 localStorage에 저장
     // 로그인 성공 후, localStorage에서 다시 읽어와 상태를 설정하여 일관성을 유지합니다.
     const role = localStorage.getItem('userRole');
+    const name = localStorage.getItem('userName');
     setUser({
       isLoggedIn: true,
       email: userData.email,
+      name: name || userData.name || '',
+      bio: userData.bio || '',
       profileImage: userData.profileImage ? `${backendUrl}${userData.profileImage}` : defaultProfileImage,
       role: role,
       memberships: userData.memberships || [],
@@ -77,7 +85,7 @@ export const UserProvider = ({ children }) => {
 
   const logout = () => {
     localStorage.clear();
-    setUser({ isLoggedIn: false, email: null, profileImage: defaultProfileImage, role: null, memberships: [] });
+    setUser({ isLoggedIn: false, email: null, name: '', bio: '', profileImage: defaultProfileImage, role: null, memberships: [] });
     window.location.href = '/';
   };
   
