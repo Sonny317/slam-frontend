@@ -19,12 +19,12 @@ export default function EventDetailPage() {
       if (!eventId) return;
       setLoading(true);
       try {
-        const eventResponse = await axios.get(`/api/events/${eventId}`);
+        const eventResponse = await axios.get(`/api/events/detail?eventId=${eventId}`);
         setEventData(eventResponse.data);
 
         if (user.isLoggedIn) {
           try {
-            const rsvpResponse = await axios.get(`/api/events/${eventId}/my-rsvp`);
+            const rsvpResponse = await axios.get(`/api/events/my-rsvp?eventId=${eventId}`);
             if (rsvpResponse.data) {
               setIsAttending(rsvpResponse.data.attending);
               setWantsAfterParty(rsvpResponse.data.afterParty);
@@ -49,7 +49,7 @@ export default function EventDetailPage() {
       return alert("로그인이 필요한 기능입니다.");
     }
     try {
-      const response = await axios.post(`/api/events/${eventId}/rsvp`, {
+      const response = await axios.post(`/api/events/rsvp?eventId=${eventId}`, {
         isAttending: attendingStatus,
         afterParty: attendingStatus ? wantsAfterParty : false,
       });

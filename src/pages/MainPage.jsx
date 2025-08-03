@@ -253,9 +253,7 @@ export default function MainPage() {
                       Your browser does not support the video tag.
                   </video>
               </div>
-              <p className="text-center text-lg font-semibold mt-10 text-gray-800">
-                <h2 className="text-3xl md:text-4xl font-bold text-center mb-16">Members Review</h2>
-              </p>
+              <h2 className="text-3xl md:text-4xl font-bold text-center mb-16">Members Review</h2>
             </div>
 
             {/* Updated Reviews Section - All Testimonials */}

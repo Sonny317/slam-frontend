@@ -21,7 +21,14 @@ export default function EventsPage() {
       try {
         const endpoint = filter === 'All' ? '/api/events' : `/api/events?branch=${filter}`;
         const response = await axios.get(endpoint);
-        setEvents(response.data);
+        console.log('EventsPage - API Response:', response.data);
+        console.log('EventsPage - Total events:', response.data.length);
+        
+        // ✅ 미래의 이벤트만 필터링
+        const now = new Date();
+        const futureEvents = response.data.filter(event => new Date(event.eventDateTime) > now);
+        console.log('EventsPage - Future events:', futureEvents.length);
+        setEvents(futureEvents);
       } catch (error) {
         console.error("Failed to fetch events:", error);
       } finally {

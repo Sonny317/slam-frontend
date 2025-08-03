@@ -89,7 +89,9 @@ export default function AdminEventsPage() {
     const fetchEvents = async () => {
       setLoading(true);
       try {
-        const response = await axios.get('/api/events');
+        const response = await axios.get('/api/admin/events');
+        console.log('AdminEventsPage - API Response:', response.data);
+        console.log('AdminEventsPage - Total events:', response.data.length);
         setEvents(response.data);
       } catch (error) {
         console.error("Failed to fetch events:", error);
@@ -120,30 +122,30 @@ export default function AdminEventsPage() {
     setIsEditing(true);
   };
   
-  const handleSave = async (eventData) => {
-    const isNew = !eventData.id;
-    const url = isNew ? '/api/admin/events' : `/api/admin/events/${eventData.id}`;
-    const method = isNew ? 'post' : 'put';
+    const handleSave = async (eventData) => {
+    const isNew = !eventData.id;
+    const url = isNew ? '/api/admin/events' : `/api/admin/events?eventId=${eventData.id}`;
+    const method = isNew ? 'post' : 'put';
 
-    try {
-      const response = await axios[method](url, eventData);
-      alert(`Event ${isNew ? 'created' : 'updated'} successfully!`);
-      if (isNew) {
-        setEvents(prev => [...prev, response.data]);
-      } else {
-        setEvents(prev => prev.map(e => e.id === eventData.id ? response.data : e));
-      }
-      setIsEditing(false);
-      setCurrentEvent(null);
-    } catch (error) {
-      alert(`Failed to save event: ${error.response?.data?.message || error.message}`);
-    }
-  };
+    try {
+      const response = await axios[method](url, eventData);
+      alert(`Event ${isNew ? 'created' : 'updated'} successfully!`);
+      if (isNew) {
+        setEvents(prev => [...prev, response.data]);
+      } else {
+        setEvents(prev => prev.map(e => e.id === eventData.id ? response.data : e));
+      }
+      setIsEditing(false);
+      setCurrentEvent(null);
+    } catch (error) {
+      alert(`Failed to save event: ${error.response?.data?.message || error.message}`);
+    }
+  };
 
   const handleDelete = async (eventId) => {
     if (window.confirm("Are you sure you want to delete this event? This action cannot be undone.")) {
       try {
-        await axios.delete(`/api/admin/events/${eventId}`);
+        await axios.delete(`/api/admin/events?eventId=${eventId}`);
         alert("Event deleted successfully.");
         setEvents(prev => prev.filter(e => e.id !== eventId));
       } catch (error) {

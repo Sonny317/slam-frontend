@@ -13,7 +13,7 @@ export default function AdminDashboardPage() {
   const [applications, setApplications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedEvent, setSelectedEvent] = useState(mockEvents[0]);
-  const { refetchUser } = useUser(); // ✅ Context에서 refetchUser 함수를 가져옵니다.
+  // const { refetchUser } = useUser(); // refetchUser 함수가 UserContext에 없으므로 주석 처리
 
   useEffect(() => {
     const fetchApplications = async () => {
@@ -31,20 +31,21 @@ export default function AdminDashboardPage() {
     fetchApplications();
   }, []);
 
-  const handleApprove = async (applicationId, userName, branch) => {
-    try {
-      await axios.post(`/api/admin/applications/${applicationId}/approve`);
-      alert(`${userName}'s application for ${branch} has been approved.`);
-      setApplications(prev => prev.filter(app => app.id !== applicationId));
+    const handleApprove = async (applicationId, userName, branch) => {
+    try {
+      await axios.post(`/api/admin/applications/approve?applicationId=${applicationId}`);
+      alert(`${userName}'s application for ${branch} has been approved.`);
+      setApplications(prev => prev.filter(app => app.id !== applicationId));
       
-      // ✅ 승인 성공 후, Context의 사용자 정보를 강제로 새로고침합니다.
-      await refetchUser(); 
+      // ✅ 승인 성공 후, 신청 목록을 새로고침합니다.
+      const response = await axios.get('/api/admin/membership-applications');
+      setApplications(response.data.filter(app => app.status === 'payment_pending'));
 
-    } catch (error) {
+    } catch (error) {
       console.error("Failed to approve application:", error);
       alert("승인 처리 중 오류가 발생했습니다.");
     }
-  };
+  };
 
   const totalRevenue = applications.reduce((sum, app) => sum + 900, 0);
 
