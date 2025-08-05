@@ -1,18 +1,50 @@
 // src/pages/CommunityPage.jsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { mockPosts } from '../data/mockPosts';
-import PostCard from '../components/PostCard'; // ✅ 새로 만든 PostCard 컴포넌트를 불러옵니다.
+import PostCard from '../components/PostCard';
+import axios from '../api/axios';
 
 export default function CommunityPage() {
-  const [category, setCategory] = useState('Free-form');
+  const [category, setCategory] = useState('Taipei Tips');
+  const [posts, setPosts] = useState([]);
+  const [loading, setLoading] = useState(true);
   const categories = ['Free-form', 'Taipei Tips', 'Travel Recs'];
 
-  const filteredPosts = mockPosts.filter(post => post.category === category);
+  // ✅ 백엔드에서 게시글 데이터를 가져옵니다
+  useEffect(() => {
+    const fetchPosts = async () => {
+      try {
+        setLoading(true);
+        const response = await axios.get('/api/posts');
+        setPosts(response.data);
+      } catch (error) {
+        console.error('Error fetching posts:', error);
+        // 에러 발생 시 localStorage에서 가져오기 (fallback)
+        try {
+          const userPosts = JSON.parse(localStorage.getItem('communityPosts') || '[]');
+          setPosts(userPosts);
+        } catch (localError) {
+          console.error('Error loading from localStorage:', localError);
+          setPosts([]);
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchPosts();
+  }, []);
+
+  const filteredPosts = posts.filter(post => post.category === category);
   
   // 고정 게시물과 일반 게시물 분리
   const pinned = filteredPosts.filter(post => post.isPinned);
   const regular = filteredPosts.filter(post => !post.isPinned);
+
+  // 게시글 삭제 핸들러
+  const handleDeletePost = (deletedPostId) => {
+    setPosts(prevPosts => prevPosts.filter(post => post.id !== deletedPostId));
+  };
 
   return (
     <div className="bg-gray-50">
@@ -45,9 +77,9 @@ export default function CommunityPage() {
         {/* ✅ 카드 레이아웃으로 변경 */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {/* 고정 게시물을 먼저 보여줍니다. */}
-          {pinned.map(post => <PostCard key={post.id} post={post} />)}
+          {pinned.map(post => <PostCard key={post.id} post={post} onDelete={handleDeletePost} />)}
           {/* 일반 게시물을 이어서 보여줍니다. */}
-          {regular.map(post => <PostCard key={post.id} post={post} />)}
+          {regular.map(post => <PostCard key={post.id} post={post} onDelete={handleDeletePost} />)}
         </div>
       </div>
     </div>

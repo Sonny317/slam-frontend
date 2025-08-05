@@ -29,6 +29,9 @@ import AdminEventsPage from './pages/AdminEventsPage';
 
 //Feedbackform
 import FeedbackFormPage from './pages/FeedbackFormPage'; // ✅ 피드백 폼 페이지 import
+import CommunityPage from './pages/CommunityPage'; // ✅ 커뮤니티 페이지 import
+import NewPostPage from './pages/NewPostPage'; // ✅ 새 게시글 작성 페이지 import
+import PostDetailPage from './pages/PostDetailPage'; // ✅ 게시글 상세 페이지 import
 
 
 // --- Public Layout Component ---
@@ -51,6 +54,9 @@ export default function App() {
         <Route path="/events/:eventId" element={<PublicLayout><EventDetailPage /></PublicLayout>} />
         <Route path="/membership" element={<PublicLayout><MembershipPage /></PublicLayout>} />
         <Route path="/partnership" element={<PublicLayout><PartnershipPage /></PublicLayout>} />
+        <Route path="/community" element={<PublicLayout><CommunityPage /></PublicLayout>} />
+        <Route path="/community/new" element={<PublicLayout><NewPostPage /></PublicLayout>} />
+        <Route path="/community/:postId" element={<PublicLayout><PostDetailPage /></PublicLayout>} />
         <Route path="/login" element={<PublicLayout><LoginPage /></PublicLayout>} />
         <Route path="/signup" element={<PublicLayout><SignupPage /></PublicLayout>} />
         <Route path="/mypage" element={<PublicLayout><MyPage /></PublicLayout>} />
