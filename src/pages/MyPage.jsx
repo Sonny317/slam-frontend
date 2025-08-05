@@ -30,8 +30,32 @@ export default function MyPage() {
                     } 
                     : null,
             }));
+            
+            // 사용자의 게시글과 댓글 데이터 가져오기
+            fetchUserPosts();
+            fetchUserComments();
         }
     }, [user]); // Context의 user 객체가 바뀔 때마다 실행
+
+    // 사용자 게시글 가져오기
+    const fetchUserPosts = async () => {
+        try {
+            const response = await axios.get('/api/users/me/posts');
+            setUserDetails(prev => ({ ...prev, posts: response.data }));
+        } catch (error) {
+            console.error('Failed to fetch user posts:', error);
+        }
+    };
+
+    // 사용자 댓글 가져오기
+    const fetchUserComments = async () => {
+        try {
+            const response = await axios.get('/api/users/me/comments');
+            setUserDetails(prev => ({ ...prev, comments: response.data }));
+        } catch (error) {
+            console.error('Failed to fetch user comments:', error);
+        }
+    };
 
     const handleImageSelectAndUpload = async (e) => {
         const file = e.target.files[0];
@@ -150,27 +174,40 @@ export default function MyPage() {
                     <div className="lg:col-span-2 space-y-8">
                         <section className="bg-white p-6 rounded-lg shadow-md">
                             <h2 className="text-xl font-semibold mb-4 border-b pb-2">📌 My Posts</h2>
-                            <ul className="space-y-3">
-                                {userDetails.posts.map((post) => (
-                                    <li key={post.id} className="p-3 rounded-md hover:bg-gray-50 transition-colors">
-                                        <p className="font-semibold text-blue-700">{post.title}</p>
-                                        <p className="text-gray-500 text-xs mt-1">{post.date}</p>
-                                    </li>
-                                ))}
-                            </ul>
+                            {userDetails.posts.length > 0 ? (
+                                <ul className="space-y-3">
+                                    {userDetails.posts.map((post) => (
+                                        <li key={post.id} className="p-3 rounded-md hover:bg-gray-50 transition-colors">
+                                            <Link to={`/community/${post.id}`} className="block">
+                                                <p className="font-semibold text-blue-700 hover:text-blue-900">{post.title}</p>
+                                                <p className="text-gray-500 text-xs mt-1">
+                                                    {post.createdAt ? new Date(post.createdAt).toLocaleDateString() : ''} • {post.category}
+                                                </p>
+                                                <p className="text-gray-600 text-sm mt-1 line-clamp-2">{post.summary || post.content}</p>
+                                            </Link>
+                                        </li>
+                                    ))}
+                                </ul>
+                            ) : (
+                                <p className="text-gray-500 text-center py-4">아직 작성한 게시글이 없습니다.</p>
+                            )}
                         </section>
                         <section className="bg-white p-6 rounded-lg shadow-md">
                             <h2 className="text-xl font-semibold mb-4 border-b pb-2">💬 My Comments</h2>
-                            <ul className="space-y-3">
-                                {userDetails.comments.map((comment) => (
-                                    <li key={comment.id} className="p-3 rounded-md hover:bg-gray-50 transition-colors">
-                                        <p className="italic">"{comment.content}"</p>
-                                        <p className="text-gray-500 text-xs mt-1">
-                                            in post <span className="font-semibold">{comment.postTitle}</span>
-                                        </p>
-                                    </li>
-                                ))}
-                            </ul>
+                            {userDetails.comments.length > 0 ? (
+                                <ul className="space-y-3">
+                                    {userDetails.comments.map((comment) => (
+                                        <li key={comment.id} className="p-3 rounded-md hover:bg-gray-50 transition-colors">
+                                            <p className="italic text-gray-700">"{comment.text}"</p>
+                                            <p className="text-gray-500 text-xs mt-1">
+                                                {comment.createdAt ? new Date(comment.createdAt).toLocaleDateString() : ''}
+                                            </p>
+                                        </li>
+                                    ))}
+                                </ul>
+                            ) : (
+                                <p className="text-gray-500 text-center py-4">아직 작성한 댓글이 없습니다.</p>
+                            )}
                         </section>
                     </div>
                 </div>
