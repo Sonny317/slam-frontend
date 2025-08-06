@@ -15,6 +15,12 @@ export default function NewPostPage() {
   });
   const [loading, setLoading] = useState(false);
 
+  // 로그인하지 않은 사용자는 로그인 페이지로 리다이렉트
+  if (!user?.isLoggedIn) {
+    navigate('/login');
+    return null;
+  }
+
   const categories = ['Free-form', 'Taipei Tips', 'Travel Recs'];
 
   const handleSubmit = async (e) => {

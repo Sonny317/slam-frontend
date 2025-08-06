@@ -3,36 +3,52 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import PostCard from '../components/PostCard';
 import axios from '../api/axios';
+import { useUser } from '../context/UserContext';
 
 export default function CommunityPage() {
-  const [category, setCategory] = useState('Taipei Tips');
+  const { user } = useUser();
+  const [category, setCategory] = useState('Free-form');
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
   const categories = ['Free-form', 'Taipei Tips', 'Travel Recs'];
 
   // ✅ 백엔드에서 게시글 데이터를 가져옵니다
   useEffect(() => {
+    let isMounted = true;
+    
     const fetchPosts = async () => {
       try {
         setLoading(true);
         const response = await axios.get('/api/posts');
-        setPosts(response.data);
+        if (isMounted) {
+          setPosts(response.data);
+        }
       } catch (error) {
         console.error('Error fetching posts:', error);
         // 에러 발생 시 localStorage에서 가져오기 (fallback)
         try {
           const userPosts = JSON.parse(localStorage.getItem('communityPosts') || '[]');
-          setPosts(userPosts);
+          if (isMounted) {
+            setPosts(userPosts);
+          }
         } catch (localError) {
           console.error('Error loading from localStorage:', localError);
-          setPosts([]);
+          if (isMounted) {
+            setPosts([]);
+          }
         }
       } finally {
-        setLoading(false);
+        if (isMounted) {
+          setLoading(false);
+        }
       }
     };
 
     fetchPosts();
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   const filteredPosts = posts.filter(post => post.category === category);
@@ -51,9 +67,18 @@ export default function CommunityPage() {
       <div className="max-w-7xl mx-auto px-4 py-12">
         <div className="flex justify-between items-center mb-8">
           <h1 className="text-4xl font-bold">Community</h1>
-          <Link to="/community/new" className="bg-blue-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-blue-700 transition-colors">
-            Write a Post
-          </Link>
+          {user?.isLoggedIn ? (
+            <Link to="/community/new" className="bg-blue-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-blue-700 transition-colors">
+              Write a Post
+            </Link>
+          ) : (
+            <div className="flex items-center space-x-4">
+              <span className="text-gray-500 text-sm">게시글을 작성하려면 로그인이 필요합니다</span>
+              <Link to="/login" className="bg-gray-500 text-white font-bold py-2 px-6 rounded-lg hover:bg-gray-600 transition-colors">
+                로그인
+              </Link>
+            </div>
+          )}
         </div>
 
         <div className="border-b border-gray-200 mb-8">
@@ -75,12 +100,18 @@ export default function CommunityPage() {
         </div>
         
         {/* ✅ 카드 레이아웃으로 변경 */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {/* 고정 게시물을 먼저 보여줍니다. */}
-          {pinned.map(post => <PostCard key={post.id} post={post} onDelete={handleDeletePost} />)}
-          {/* 일반 게시물을 이어서 보여줍니다. */}
-          {regular.map(post => <PostCard key={post.id} post={post} onDelete={handleDeletePost} />)}
-        </div>
+        {loading ? (
+          <div className="flex justify-center items-center py-12">
+            <div className="text-gray-500">Loading posts...</div>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {/* 고정 게시물을 먼저 보여줍니다. */}
+            {pinned.map(post => <PostCard key={post.id} post={post} onDelete={handleDeletePost} />)}
+            {/* 일반 게시물을 이어서 보여줍니다. */}
+            {regular.map(post => <PostCard key={post.id} post={post} onDelete={handleDeletePost} />)}
+          </div>
+        )}
       </div>
     </div>
   );

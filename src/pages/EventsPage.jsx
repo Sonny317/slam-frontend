@@ -88,7 +88,7 @@ export default function EventsPage() {
                   <p className="text-gray-600 text-sm mb-4">{event.location}</p>
                   
                   <div className="mt-auto pt-4 border-t border-gray-100">
-                    {user.isLoggedIn ? (
+                    {user?.isLoggedIn ? (
                       // ✅ Context에서 가져온 실제 멤버십 목록(user.memberships)을 사용합니다.
                       (user.memberships || []).some(membership => {
                         // "ACTIVE_NCCU" 형태에서 지부 이름만 추출

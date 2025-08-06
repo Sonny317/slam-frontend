@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from '../api/axios';
-import { useNavigate } from 'react-router-dom'; // ✅ 1. useNavigate를 임포트합니다.
+import { useNavigate, Link } from 'react-router-dom'; // ✅ 1. useNavigate를 임포트합니다.
+import { useUser } from '../context/UserContext';
 
 // --- 가짜 데이터 (나중에 이 모든 데이터를 백엔드 API로부터 받아옵니다) ---
 const MOCK_API_DATA = {
@@ -95,9 +96,28 @@ const UrgencyMessage = ({ data }) => {
 
 
 export default function MembershipPage() {
-  const navigate = useNavigate(); // ✅ 2. navigate 함수를 사용할 수 있도록 설정합니다.
-  const [step, setStep] = useState(1);
-  const [selectedBranch, setSelectedBranch] = useState('');
+  const navigate = useNavigate(); // ✅ 2. navigate 함수를 사용할 수 있도록 설정합니다.
+  const { user } = useUser();
+  const [step, setStep] = useState(1);
+  const [selectedBranch, setSelectedBranch] = useState('');
+
+  // 로그인하지 않은 사용자는 로그인 페이지로 리다이렉트
+  if (!user?.isLoggedIn) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-gray-800 mb-4">로그인이 필요합니다</h1>
+          <p className="text-gray-600 mb-6">멤버십 신청을 하려면 로그인해주세요.</p>
+          <Link 
+            to="/login" 
+            className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            로그인하기
+          </Link>
+        </div>
+      </div>
+    );
+  }
   const [paymentMethod, setPaymentMethod] = useState('');
   const [formData, setFormData] = useState({
     userType: '', studentId: '', major: '', otherMajor: '', phone: '', professionalStatus: '',

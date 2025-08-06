@@ -74,6 +74,11 @@ export default function PostDetailPage() {
 
   // 좋아요 처리
   const handleLike = async () => {
+    if (!user?.isLoggedIn) {
+      alert('로그인이 필요한 기능입니다.');
+      return;
+    }
+    
     try {
       await axios.post(`/api/posts/${postId}/like`);
       setPost(prev => ({ ...prev, likes: (prev.likes || 0) + 1 }));
@@ -85,6 +90,11 @@ export default function PostDetailPage() {
 
   // 댓글 추가
   const handleAddComment = async () => {
+    if (!user?.isLoggedIn) {
+      alert('로그인이 필요한 기능입니다.');
+      return;
+    }
+    
     if (!comment.trim()) return;
 
     try {
@@ -184,7 +194,13 @@ export default function PostDetailPage() {
               <div className="flex space-x-4">
                 <button 
                   onClick={handleLike}
-                  className="flex items-center space-x-2 text-gray-500 hover:text-red-500 transition-colors"
+                  disabled={!user?.isLoggedIn}
+                  className={`flex items-center space-x-2 transition-colors ${
+                    user?.isLoggedIn 
+                      ? 'text-gray-500 hover:text-red-500' 
+                      : 'text-gray-300 cursor-not-allowed'
+                  }`}
+                  title={!user?.isLoggedIn ? '로그인이 필요한 기능입니다' : ''}
                 >
                   <span>❤️</span>
                   <span>Like ({post.likes || 0})</span>
@@ -245,22 +261,36 @@ export default function PostDetailPage() {
 
               {/* 댓글 작성 폼 */}
               <div className="border-t pt-4">
-                <textarea
-                  value={comment}
-                  onChange={(e) => setComment(e.target.value)}
-                  placeholder="Write a comment..."
-                  className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  rows="3"
-                />
-                <div className="flex justify-end mt-2">
-                  <button
-                    onClick={handleAddComment}
-                    disabled={!comment.trim()}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    Add Comment
-                  </button>
-                </div>
+                {user?.isLoggedIn ? (
+                  <>
+                    <textarea
+                      value={comment}
+                      onChange={(e) => setComment(e.target.value)}
+                      placeholder="Write a comment..."
+                      className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      rows="3"
+                    />
+                    <div className="flex justify-end mt-2">
+                      <button
+                        onClick={handleAddComment}
+                        disabled={!comment.trim()}
+                        className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        Add Comment
+                      </button>
+                    </div>
+                  </>
+                ) : (
+                  <div className="text-center py-4">
+                    <p className="text-gray-500 mb-2">댓글을 작성하려면 로그인이 필요합니다.</p>
+                    <Link 
+                      to="/login" 
+                      className="text-blue-600 hover:text-blue-800 font-medium"
+                    >
+                      로그인하기
+                    </Link>
+                  </div>
+                )}
               </div>
             </div>
           )}

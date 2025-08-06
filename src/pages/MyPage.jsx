@@ -13,6 +13,24 @@ export default function MyPage() {
     const [showQrCode, setShowQrCode] = useState(false);
     const qrCodeValue = JSON.stringify({ userId: userDetails.userId, name: userDetails.name });
 
+    // 로그인하지 않은 사용자는 로그인 페이지로 리다이렉트
+    if (!user?.isLoggedIn) {
+        return (
+            <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+                <div className="text-center">
+                    <h1 className="text-2xl font-bold text-gray-800 mb-4">로그인이 필요합니다</h1>
+                    <p className="text-gray-600 mb-6">마이페이지를 이용하려면 로그인해주세요.</p>
+                    <Link 
+                        to="/login" 
+                        className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+                    >
+                        로그인하기
+                    </Link>
+                </div>
+            </div>
+        );
+    }
+
     // ✅ user 상태가 변경될 때마다 userDetails를 업데이트합니다.
     useEffect(() => {
         if (user.isLoggedIn) {

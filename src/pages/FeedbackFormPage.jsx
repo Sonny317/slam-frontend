@@ -1,6 +1,7 @@
 // src/pages/FeedbackFormPage.jsx
 import React, { useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, Link } from 'react-router-dom';
+import { useUser } from '../context/UserContext';
 
 // --- 별점 컴포넌트 ---
 const StarRating = ({ rating, setRating }) => {
@@ -24,6 +25,7 @@ const StarRating = ({ rating, setRating }) => {
 
 export default function FeedbackFormPage() {
   const { eventId } = useParams(); // URL에서 이벤트 ID를 가져옵니다. (예: /feedback/event/1)
+  const { user } = useUser();
   
   // 가짜 이벤트 제목 (나중에 API로 실제 이벤트 제목을 받아옵니다)
   const eventTitle = "NCCU Welcome Party"; 
@@ -32,6 +34,24 @@ export default function FeedbackFormPage() {
   const [goodPoints, setGoodPoints] = useState('');
   const [improvements, setImprovements] = useState('');
   const [isSubmitted, setIsSubmitted] = useState(false);
+
+  // 로그인하지 않은 사용자는 로그인 페이지로 리다이렉트
+  if (!user?.isLoggedIn) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-gray-800 mb-4">로그인이 필요합니다</h1>
+          <p className="text-gray-600 mb-6">피드백을 작성하려면 로그인해주세요.</p>
+          <Link 
+            to="/login" 
+            className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            로그인하기
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   const handleSubmit = (e) => {
     e.preventDefault();

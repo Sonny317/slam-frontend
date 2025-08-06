@@ -66,10 +66,25 @@ export default function PostCard({ post, onDelete }) {
           by {post.author}
         </div>
         <div className="flex gap-4 text-gray-500">
-          <div className="flex items-center gap-1">
+          <button 
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              if (!user?.isLoggedIn) {
+                alert('로그인이 필요한 기능입니다.');
+                return;
+              }
+              // 좋아요 기능 구현
+            }}
+            disabled={!user?.isLoggedIn}
+            className={`flex items-center gap-1 transition-colors ${
+              user?.isLoggedIn ? 'hover:text-red-500' : 'cursor-not-allowed opacity-50'
+            }`}
+            title={!user?.isLoggedIn ? '로그인이 필요한 기능입니다' : ''}
+          >
             <HeartIcon />
             <span>{post.likes || 0}</span>
-          </div>
+          </button>
           <div className="flex items-center gap-1">
             <CommentIcon />
             <span>{post.comments?.length || 0}</span>
