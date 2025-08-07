@@ -45,14 +45,22 @@ export default function EventDetailPage() {
   }, [eventId, user.isLoggedIn]);
 
   const handleRsvpSubmit = async (attendingStatus) => {
+    console.log("=== handleRsvpSubmit Debug ===");
+    console.log("User logged in:", user.isLoggedIn);
+    console.log("Event ID:", eventId);
+    console.log("Attending status:", attendingStatus);
+    console.log("After party:", attendingStatus ? wantsAfterParty : false);
+    
     if (!user.isLoggedIn) {
       return alert("로그인이 필요한 기능입니다.");
     }
     try {
+      console.log("Making API call to /api/events/rsvp");
       const response = await axios.post(`/api/events/rsvp?eventId=${eventId}`, {
         isAttending: attendingStatus,
         afterParty: attendingStatus ? wantsAfterParty : false,
       });
+      console.log("API response:", response.data);
       alert(response.data.message);
       setIsAttending(attendingStatus);
 
@@ -60,6 +68,7 @@ export default function EventDetailPage() {
       navigate('/events'); 
 
     } catch (error) {
+      console.error("RSVP API error:", error);
       alert("RSVP 처리 중 오류가 발생했습니다: " + (error.response?.data?.message || "다시 시도해주세요."));
     }
   };
