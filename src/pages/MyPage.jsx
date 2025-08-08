@@ -146,6 +146,9 @@ export default function MyPage() {
                             <button onClick={handleBioSave} className="mt-2 w-full py-2 text-xs bg-gray-200 text-gray-700 rounded hover:bg-gray-300 transition">
                                 Save Bio
                             </button>
+                            <Link to="/change-password" className="mt-2 w-full inline-block text-center py-2 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 transition">
+                                Change Password
+                            </Link>
                             <div className="mt-4 pt-4 border-t">
                                 <Link to="/admin/scanner" className="text-xs text-gray-400 hover:text-blue-500 hover:underline">
                                     (Admin: Go to Check-in Scanner)

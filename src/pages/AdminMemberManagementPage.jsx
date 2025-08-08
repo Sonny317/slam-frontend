@@ -66,7 +66,7 @@ export default function AdminMemberManagementPage() {
           setApplications(response.data);
         } else if (activeTab === 'all_members') {
           console.log('Fetching members for branch:', branchFilter);
-          const response = await axios.get(`/api/admin/users/branch?branchName=${branchFilter}`);
+          const response = await axios.get(`/api/admin/users/branch?branchName=${branchFilter}&sort=name`);
           console.log('Members API response:', response.data);
           setMembers(response.data);
         }
@@ -223,13 +223,22 @@ export default function AdminMemberManagementPage() {
               <p className="text-center text-gray-500">Loading members...</p>
             ) : (
               <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50"><tr><th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Name</th><th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Email</th><th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Membership</th><th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Action</th></tr></thead>
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Name</th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Email</th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Membership</th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Joined</th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Action</th>
+                    </tr>
+                  </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
                       {filteredMembers.map(member => (
                           <tr key={member.id} onClick={() => setSelectedUser(member)} className="cursor-pointer hover:bg-gray-50">
                               <td className="px-4 py-2">{member.name}</td>
                               <td className="px-4 py-2">{member.email}</td>
                               <td className="px-4 py-2">{member.membership || 'No membership'}</td>
+                              <td className="px-4 py-2 text-xs text-gray-500">{member.id}</td>
                               <td className="px-4 py-2">
                                 <button onClick={(e) => { e.stopPropagation(); handleDeleteMembership(member.id, branchFilter); }} className="bg-red-500 text-white text-xs font-bold py-1 px-3 rounded-full hover:bg-red-600">Delete Membership</button>
                               </td>

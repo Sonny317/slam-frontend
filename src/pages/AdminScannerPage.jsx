@@ -1,5 +1,6 @@
 // src/pages/AdminScannerPage.jsx
 import React, { useState } from 'react';
+import axios from '../api/axios';
 // ✅ The component name has been corrected from QrScanner to Scanner
 import { Scanner } from '@yudiel/react-qr-scanner';
 
@@ -14,7 +15,7 @@ export default function AdminScannerPage() {
   const [checkedInUsers, setCheckedInUsers] = useState(new Set());
   const [scanResult, setScanResult] = useState({ type: '', message: '' });
 
-  const handleScan = (result) => {
+  const handleScan = async (result) => {
     // To prevent multiple scans of the same code
     if (lastScan && lastScan.text === result) {
       return;
@@ -27,12 +28,22 @@ export default function AdminScannerPage() {
         if (checkedInUsers.has(data.userId)) {
           setScanResult({ type: 'error', message: `Already Checked In: ${data.name}` });
         } else {
-          // TODO: Send check-in request to the backend API
-          // const response = await axios.post('/api/admin/check-in', { userId: data.userId });
-          
-          // Assuming success for now
-          setScanResult({ type: 'success', message: `✅ Welcome, ${data.name}!` });
-          setCheckedInUsers(prev => new Set(prev.add(data.userId)));
+          try {
+            // eventId는 스캐너 UI에서 선택하거나 별도 입력으로 받을 수 있음. 여기서는 QR에 포함되었다고 가정.
+            if (!data.eventId) {
+              setScanResult({ type: 'error', message: 'Invalid QR: missing eventId' });
+              return;
+            }
+            const res = await axios.post(`/api/admin/check-in?eventId=${data.eventId}&userId=${data.userId}`);
+            if (res.data?.success) {
+              setScanResult({ type: 'success', message: `✅ Welcome, ${data.name}!` });
+              setCheckedInUsers(prev => new Set(prev.add(data.userId)));
+            } else {
+              setScanResult({ type: 'error', message: res.data?.error || 'Check-in failed' });
+            }
+          } catch (err) {
+            setScanResult({ type: 'error', message: err?.response?.data?.error || err.message || 'Check-in failed' });
+          }
         }
         setLastScan({ text: result, ...data });
       }

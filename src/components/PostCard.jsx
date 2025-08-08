@@ -3,6 +3,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { useUser } from '../context/UserContext';
 import axios from '../api/axios';
+import { resolveAuthorsBatch } from '../api/auth';
 
 // --- Placeholder Icons ---
 const HeartIcon = () => (
@@ -25,6 +26,19 @@ export default function PostCard({ post, onDelete }) {
   const { user } = useUser();
   // 고정 게시물은 특별한 스타일을 적용합니다.
   const isPinned = post.isPinned;
+  const [likeCount, setLikeCount] = React.useState(post.likes || 0);
+  const [liked, setLiked] = React.useState(false);
+  const [avatars, setAvatars] = React.useState({});
+
+  React.useEffect(() => {
+    (async () => {
+      try {
+        const authors = [post.author];
+        const data = await resolveAuthorsBatch(authors);
+        setAvatars(data || {});
+      } catch (_) {}
+    })();
+  }, [post.author]);
   
   const handleDelete = async (e) => {
     e.preventDefault();
@@ -62,8 +76,11 @@ export default function PostCard({ post, onDelete }) {
 
       {/* 작성자 정보 및 인터랙션 버튼 */}
       <div className="px-6 py-4 bg-gray-50 border-t border-gray-100 flex justify-between items-center">
-        <div className="text-xs text-gray-500">
-          by {post.author}
+        <div className="text-xs text-gray-500 flex items-center gap-2">
+          <Link to={`/users/profile?author=${encodeURIComponent(post.author)}`} className="flex items-center gap-2 hover:opacity-80">
+            <img src={(avatars?.[post.author]?.profileImage) || '/default_profile.jpg'} alt="avatar" className="w-6 h-6 rounded-full object-cover" />
+            <span>by {post.author}</span>
+          </Link>
         </div>
         <div className="flex gap-4 text-gray-500">
           <button 
@@ -74,7 +91,18 @@ export default function PostCard({ post, onDelete }) {
                 alert('로그인이 필요한 기능입니다.');
                 return;
               }
-              // 좋아요 기능 구현
+              // 좋아요 토글 호출
+              (async () => {
+                try {
+                  const res = await axios.post(`/api/posts/${post.id}/like`);
+                  const nowLiked = !!res.data?.liked;
+                  setLiked(nowLiked);
+                  setLikeCount((prev) => prev + (nowLiked ? 1 : -1));
+                } catch (err) {
+                  const msg = err?.response?.data || err.message || 'Failed to toggle like';
+                  alert(msg);
+                }
+              })();
             }}
             disabled={!user?.isLoggedIn}
             className={`flex items-center gap-1 transition-colors ${
@@ -83,7 +111,7 @@ export default function PostCard({ post, onDelete }) {
             title={!user?.isLoggedIn ? '로그인이 필요한 기능입니다' : ''}
           >
             <HeartIcon />
-            <span>{post.likes || 0}</span>
+            <span>{likeCount}</span>
           </button>
           <div className="flex items-center gap-1">
             <CommentIcon />

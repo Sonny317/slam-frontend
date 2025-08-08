@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import axios from '../api/axios';
+import { resolveAuthorsBatch } from '../api/auth';
 import { useUser } from '../context/UserContext';
 
 export default function PostDetailPage() {
@@ -44,7 +45,19 @@ export default function PostDetailPage() {
       try {
         setLoading(true);
         const response = await axios.get(`/api/posts/${postId}`);
-        setPost(response.data);
+        const data = response.data;
+        // 작성자/댓글 작성자 아바타 매핑
+        const authors = new Set();
+        if (data?.author) authors.add(data.author);
+        (data?.comments || []).forEach(c => c?.author && authors.add(c.author));
+        let avatars = {};
+        if (authors.size > 0) {
+          try {
+            const resolved = await resolveAuthorsBatch(Array.from(authors));
+            avatars = resolved;
+          } catch (_) {}
+        }
+        setPost({ ...data, _avatars: avatars });
       } catch (error) {
         console.error('Error loading post:', error);
         alert('게시글을 불러오는 중 오류가 발생했습니다.');
@@ -72,7 +85,7 @@ export default function PostDetailPage() {
     return null;
   }
 
-  // 좋아요 처리
+  // 좋아요 토글
   const handleLike = async () => {
     if (!user?.isLoggedIn) {
       alert('로그인이 필요한 기능입니다.');
@@ -80,8 +93,12 @@ export default function PostDetailPage() {
     }
     
     try {
-      await axios.post(`/api/posts/${postId}/like`);
-      setPost(prev => ({ ...prev, likes: (prev.likes || 0) + 1 }));
+      const res = await axios.post(`/api/posts/${postId}/like`);
+      const liked = !!res.data?.liked;
+      setPost(prev => ({
+        ...prev,
+        likes: Math.max(0, (prev.likes || 0) + (liked ? 1 : -1)),
+      }));
     } catch (error) {
       console.error('Failed to like post:', error);
       alert('좋아요 처리 중 오류가 발생했습니다.');
@@ -169,7 +186,10 @@ export default function PostDetailPage() {
 
                          <div className="flex items-center justify-between text-sm text-gray-500">
                <div className="flex items-center space-x-4">
-                 <span>by {post.author}</span>
+                  <Link to={`/users/profile?author=${encodeURIComponent(post.author)}`} className="flex items-center gap-2 hover:opacity-80">
+                    <img src={(post._avatars?.[post.author]?.profileImage) || '/default_profile.jpg'} alt="avatar" className="w-6 h-6 rounded-full object-cover" />
+                    <span>by {post.author}</span>
+                  </Link>
                  <span>{post.createdAt ? new Date(post.createdAt).toLocaleDateString() : ''}</span>
                </div>
               <div className="flex items-center space-x-4">
@@ -247,10 +267,13 @@ export default function PostDetailPage() {
                 {(post.comments || []).length > 0 ? (
                   (post.comments || []).map(comment => (
                     <div key={comment.id} className="bg-gray-50 p-4 rounded-lg">
-                                             <div className="flex items-center justify-between mb-2">
-                         <span className="font-medium text-gray-800">{comment.author}</span>
-                         <span className="text-sm text-gray-500">{comment.createdAt ? new Date(comment.createdAt).toLocaleDateString() : ''}</span>
-                       </div>
+                      <div className="flex items-center justify-between mb-2">
+                        <Link to={`/users/profile?author=${encodeURIComponent(comment.author)}`} className="flex items-center gap-2 hover:opacity-80">
+                          <img src={(post._avatars?.[comment.author]?.profileImage) || '/default_profile.jpg'} alt="avatar" className="w-6 h-6 rounded-full object-cover" />
+                          <span className="font-medium text-gray-800">{comment.author}</span>
+                        </Link>
+                        <span className="text-sm text-gray-500">{comment.createdAt ? new Date(comment.createdAt).toLocaleDateString() : ''}</span>
+                      </div>
                       <p className="text-gray-700">{comment.text}</p>
                     </div>
                   ))

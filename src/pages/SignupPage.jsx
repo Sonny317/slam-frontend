@@ -1,10 +1,12 @@
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { register, sendVerificationCode } from "../api/auth"; 
+import { register, sendVerificationCode, checkEmail } from "../api/auth"; 
 
 export default function SignupPage() {
   const navigate = useNavigate();
-  const [isSendingCode, setIsSendingCode] = useState(false);
+  const [isSendingCode, setIsSendingCode] = useState(false);
+  const [isCheckingEmail, setIsCheckingEmail] = useState(false);
+  const [emailAvailable, setEmailAvailable] = useState(null); // null | true | false
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -26,6 +28,10 @@ export default function SignupPage() {
       alert("Please enter your email to receive a verification code.");
       return;
     }
+    if (emailAvailable === false) {
+      alert("This email is already registered. Please use a different email.");
+      return;
+    }
     setIsSendingCode(true);
     try {
       await sendVerificationCode(formData.email);
@@ -36,6 +42,27 @@ export default function SignupPage() {
       setIsSendingCode(false);
     }
   };
+
+  const handleCheckEmail = async () => {
+    if (!formData.email) {
+      alert("Please enter your email first.");
+      return;
+    }
+    setIsCheckingEmail(true);
+    try {
+      const { available } = await checkEmail(formData.email);
+      setEmailAvailable(available);
+      if (available) {
+        alert("This email is available.");
+      } else {
+        alert("This email is already registered.");
+      }
+    } catch (error) {
+      alert("Failed to check email: " + (error.error || error.message || error));
+    } finally {
+      setIsCheckingEmail(false);
+    }
+  };
 
   const handleSignup = async (e) => {
     e.preventDefault();
@@ -90,12 +117,43 @@ export default function SignupPage() {
             <div>
               <input type="text" name="name" placeholder="Name" value={formData.name} onChange={handleChange} className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm" required />
             </div>
-            <div className="flex">
-              <input type="email" name="email" placeholder="Email" value={formData.email} onChange={handleChange} className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm" required />
-              <button type="button" onClick={handleSendCode} disabled={isSendingCode} className="relative inline-flex items-center px-4 py-2 border border-l-0 border-gray-300 bg-gray-50 text-sm font-medium text-gray-700 hover:bg-gray-100 disabled:bg-gray-200 disabled:cursor-not-allowed whitespace-nowrap">
+            <div className="flex gap-2">
+              <input
+                type="email"
+                name="email"
+                placeholder="Email"
+                value={formData.email}
+                onChange={(e) => {
+                  handleChange(e);
+                  setEmailAvailable(null);
+                }}
+                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                required
+              />
+              <button
+                type="button"
+                onClick={handleCheckEmail}
+                disabled={isCheckingEmail}
+                className={`relative inline-flex items-center px-3 py-2 border border-gray-300 text-sm font-medium whitespace-nowrap ${
+                  isCheckingEmail ? "bg-gray-200 text-gray-500" : "bg-white text-gray-700 hover:bg-gray-50"
+                }`}
+              >
+                {isCheckingEmail ? "Checking..." : "Check Email"}
+              </button>
+              <button
+                type="button"
+                onClick={handleSendCode}
+                disabled={isSendingCode}
+                className="relative inline-flex items-center px-3 py-2 border border-gray-300 bg-gray-50 text-sm font-medium text-gray-700 hover:bg-gray-100 disabled:bg-gray-200 disabled:cursor-not-allowed whitespace-nowrap"
+              >
                 {isSendingCode ? "Sending..." : "Send Code"}
               </button>
             </div>
+            {emailAvailable !== null && (
+              <p className={`mt-1 text-xs ${emailAvailable ? "text-green-600" : "text-red-600"}`}>
+                {emailAvailable ? "This email is available." : "This email is already registered."}
+              </p>
+            )}
             <div>
               <input type="text" name="code" placeholder="Verification Code" value={formData.code} onChange={handleChange} className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm" required />
             </div>

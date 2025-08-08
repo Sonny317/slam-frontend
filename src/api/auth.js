@@ -44,3 +44,21 @@ export const sendVerificationCode = async (email) => {
     throw error.response?.data || error;
   }
 };
+
+export const checkEmail = async (email) => {
+  try {
+    const response = await axios.get('/api/auth/check-email', { params: { email } });
+    return response.data; // { available: boolean }
+  } catch (error) {
+    throw error.response?.data || error;
+  }
+};
+
+export const resolveAuthorsBatch = async (authors) => {
+  try {
+    const response = await axios.post('/api/users/resolve-batch', { authors });
+    return response.data; // { [author]: { found, userId, name, email, profileImage } }
+  } catch (error) {
+    throw error.response?.data || error;
+  }
+};

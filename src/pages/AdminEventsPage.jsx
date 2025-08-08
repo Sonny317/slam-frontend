@@ -4,6 +4,7 @@ import axios from '../api/axios';
 // --- 이벤트 생성/수정 폼 컴포넌트 ---
 const EventForm = ({ event, onSave, onCancel }) => {
   const [formData, setFormData] = useState(event);
+  const [imageFile, setImageFile] = useState(null);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -16,7 +17,17 @@ const EventForm = ({ event, onSave, onCancel }) => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    onSave(formData);
+    const data = new FormData();
+    data.append('branch', formData.branch);
+    data.append('title', formData.title);
+    if (formData.theme) data.append('theme', formData.theme);
+    data.append('eventDateTime', formData.eventDateTime);
+    data.append('location', formData.location);
+    if (formData.description) data.append('description', formData.description);
+    data.append('capacity', String(formData.capacity ?? 0));
+    data.append('price', String(formData.price ?? 0));
+    if (imageFile) data.append('image', imageFile);
+    onSave({ id: formData.id, formData: data, isMultipart: true });
   };
 
   return (
@@ -52,8 +63,11 @@ const EventForm = ({ event, onSave, onCancel }) => {
             </div>
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700">Image URL</label>
-          <input type="text" name="imageUrl" value={formData.imageUrl || ''} onChange={handleChange} className="mt-1 block w-full p-2 border rounded-md" placeholder="e.g., /images/event_image.jpg" />
+          <label className="block text-sm font-medium text-gray-700">Event Image</label>
+          <input type="file" accept="image/*" onChange={(e) => setImageFile(e.target.files?.[0] || null)} className="mt-1 block w-full p-2 border rounded-md bg-white" />
+          {formData.imageUrl && (
+            <p className="text-xs text-gray-500 mt-1">Current: {formData.imageUrl}</p>
+          )}
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-700">Description</label>
@@ -122,18 +136,25 @@ export default function AdminEventsPage() {
     setIsEditing(true);
   };
   
-    const handleSave = async (eventData) => {
-    const isNew = !eventData.id;
-    const url = isNew ? '/api/admin/events' : `/api/admin/events?eventId=${eventData.id}`;
+  const handleSave = async (payload) => {
+    const isNew = !payload.id;
+    const url = isNew ? '/api/admin/events' : `/api/admin/events?eventId=${payload.id}`;
     const method = isNew ? 'post' : 'put';
 
     try {
-      const response = await axios[method](url, eventData);
+      let response;
+      if (payload.isMultipart) {
+        response = await axios[method](url, payload.formData, {
+          headers: { 'Content-Type': 'multipart/form-data' },
+        });
+      } else {
+        response = await axios[method](url, payload);
+      }
       alert(`Event ${isNew ? 'created' : 'updated'} successfully!`);
       if (isNew) {
         setEvents(prev => [...prev, response.data]);
       } else {
-        setEvents(prev => prev.map(e => e.id === eventData.id ? response.data : e));
+        setEvents(prev => prev.map(e => e.id === payload.id ? response.data : e));
       }
       setIsEditing(false);
       setCurrentEvent(null);
