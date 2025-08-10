@@ -20,9 +20,17 @@ const membershipDetails = {
 const nccuMajors = ["Liberal Arts", "Social Sciences", "Commerce", "Communication", "Foreign Languages", "Law", "Science", "International Affairs", "Education", "ICI", "Informatics", "X-College"];
 const taipeiStatuses = ["Student", "Professional", "Business Owner", "Freelancer", "Intern"];
 
+// ISO-like country list (subset for brevity, can be expanded)
+const countryOptions = [
+  // Americas (Latin America & South America emphasized)
+  "Argentina", "Belize", "Bolivia", "Brazil", "Chile", "Colombia", "Costa Rica", "Cuba", "Dominican Republic", "Ecuador", "El Salvador", "Guatemala", "Guyana", "Haiti", "Honduras", "Jamaica", "Mexico", "Nicaragua", "Panama", "Paraguay", "Peru", "Puerto Rico", "Suriname", "Trinidad and Tobago", "Uruguay", "Venezuela",
+  // Others (existing)
+  "Australia", "Austria", "Belgium", "Canada", "China", "Denmark", "Finland", "France", "Germany", "Hong Kong", "India", "Indonesia", "Ireland", "Italy", "Japan", "Malaysia", "Netherlands", "New Zealand", "Norway", "Philippines", "Poland", "Portugal", "Russia", "Singapore", "South Africa", "South Korea", "Spain", "Sweden", "Switzerland", "Taiwan", "Thailand", "Turkey", "United Arab Emirates", "United Kingdom", "United States", "Vietnam"
+].sort();
+
 // --- 마케팅 메시지를 관리하는 컴포넌트 ---
 const UrgencyMessage = ({ data }) => {
-  const { totalCapacity, earlyBirdCap, currentMembers, registrationCloseDate, selectedBranch } = data;
+  const { totalCapacity, earlyBirdCap, currentMembers, registrationCloseDate, selectedBranch } = data;
   const price = currentMembers < earlyBirdCap ? 800 : 900;
   const spotsLeft = totalCapacity - currentMembers;
 
@@ -37,9 +45,11 @@ const UrgencyMessage = ({ data }) => {
         setTimeLeft("Registration Closed!");
         return;
       }
-      const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-      const hours = Math.floor((diff / (1000 * 60 * 60)) % 24);
-      setTimeLeft(`${days} days ${hours} hours left`);
+      const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+      const hours = Math.floor((diff / (1000 * 60 * 60)) % 24);
+      const minutes = Math.floor((diff / (1000 * 60)) % 60);
+      const seconds = Math.floor((diff / 1000) % 60);
+      setTimeLeft(`${days}d ${hours}h ${minutes}m ${seconds}s left`);
     }, 1000);
     return () => clearInterval(interval);
   }, [registrationCloseDate]);
@@ -79,19 +89,24 @@ const UrgencyMessage = ({ data }) => {
     );
   }
 
-  return (
-    <div className="mb-8 p-6 bg-blue-50 rounded-lg border border-blue-200">
-      <h2 className="text-2xl font-bold mb-3 text-blue-800">{membershipDetails[selectedBranch].title}</h2>
-      <div className="my-4 text-center">
-        <span className="text-gray-500 line-through">Total Value: 1500 NTD</span>
-        <p className="text-4xl font-black text-red-500">Your Price: ONLY {price} NTD</p>
-      </div>
-      <ul className="list-disc list-inside space-y-1 text-gray-700 mb-6">
-        {membershipDetails[selectedBranch].benefits.map((benefit, i) => <li key={i}>{benefit}</li>)}
-      </ul>
-      {message}
-    </div>
-  );
+  return (
+    <div className="mb-8 p-6 bg-white rounded-2xl border border-gray-200 shadow-sm">
+      <h2 className="text-2xl font-bold mb-3 text-gray-900">{membershipDetails[selectedBranch].title}</h2>
+      <div className="my-4">
+        <div className="rounded-xl bg-gradient-to-r from-blue-600 to-blue-800 text-white p-6 text-center shadow">
+          <div className="text-sm opacity-80 line-through">Total Value: 1500 NTD</div>
+          <div className="mt-1 text-3xl md:text-4xl font-extrabold">Your Price: ONLY {price} NTD</div>
+        </div>
+        <div className="mt-3 text-center">
+          <span className="inline-block text-xs font-semibold bg-blue-100 text-blue-700 px-3 py-1 rounded-full">All Included</span>
+        </div>
+      </div>
+      <ul className="list-disc list-inside space-y-1 text-gray-700 mb-6">
+        {membershipDetails[selectedBranch].benefits.map((benefit, i) => <li key={i}>{benefit}</li>)}
+      </ul>
+      {message}
+    </div>
+  );
 };
 
 
@@ -100,6 +115,26 @@ export default function MembershipPage() {
   const { user } = useUser();
   const [step, setStep] = useState(1);
   const [selectedBranch, setSelectedBranch] = useState('');
+  const [branchCloseDate, setBranchCloseDate] = useState(null);
+  useEffect(() => {
+    const fetchCloseDate = async () => {
+      if (!selectedBranch) return;
+      try {
+        const res = await axios.get(`/api/events?branch=${selectedBranch}`);
+        const now = new Date();
+        const future = (res.data || []).filter(e => new Date(e.eventDateTime) > now);
+        if (future.length > 0) {
+          const earliest = future.reduce((min, e) => new Date(e.eventDateTime) < new Date(min.eventDateTime) ? e : min, future[0]);
+          setBranchCloseDate(new Date(earliest.eventDateTime).toISOString());
+        } else {
+          setBranchCloseDate(null);
+        }
+      } catch (e) {
+        setBranchCloseDate(null);
+      }
+    };
+    fetchCloseDate();
+  }, [selectedBranch]);
 
   // 로그인하지 않은 사용자는 로그인 페이지로 리다이렉트
   if (!user?.isLoggedIn) {
@@ -168,7 +203,7 @@ export default function MembershipPage() {
     }
   };
 
-  const renderInfoForm = () => (
+  const renderInfoForm = () => (
     <form onSubmit={handleInfoSubmit} className="space-y-4">
       <h3 className="text-xl font-bold mb-4">Tell us about yourself</h3>
       {selectedBranch === 'TAIPEI' ? (
@@ -182,9 +217,14 @@ export default function MembershipPage() {
               <option value="local">Local</option>
               <option value="foreigner">Foreigner</option>
           </select>
-          {formData.userType === 'foreigner' && (
-              <input type="text" name="country" placeholder="Which country are you from?" value={formData.country} onChange={handleChange} className="w-full p-2 border rounded" required />
-          )}
+          {formData.userType === 'foreigner' && (
+            <select name="country" value={formData.country} onChange={handleChange} className="w-full p-2 border rounded" required>
+              <option value="">Select your country</option>
+              {countryOptions.map(c => (
+                <option key={c} value={c}>{c}</option>
+              ))}
+            </select>
+          )}
           <input type="text" name="phone" placeholder="Phone Number" value={formData.phone} onChange={handleChange} className="w-full p-2 border rounded" required />
         </>
       ) : (
@@ -195,6 +235,14 @@ export default function MembershipPage() {
             <option value="international">International Student</option>
             <option value="exchange">Exchange Student</option>
           </select>
+          {(formData.userType === 'international' || formData.userType === 'exchange') && (
+            <select name="country" value={formData.country} onChange={handleChange} className="w-full p-2 border rounded" required>
+              <option value="">Select your country</option>
+              {countryOptions.map(c => (
+                <option key={c} value={c}>{c}</option>
+              ))}
+            </select>
+          )}
           <input type="text" name="studentId" placeholder="Student ID" value={formData.studentId} onChange={handleChange} className="w-full p-2 border rounded" required />
           <select name="major" value={formData.major} onChange={handleChange} className="w-full p-2 border rounded" required>
             <option value="">Major</option>
@@ -213,7 +261,7 @@ export default function MembershipPage() {
   );
 
   const renderPaymentForm = () => {
-    const price = MOCK_API_DATA.currentMembers < MOCK_API_DATA.earlyBirdCap ? 800 : 900;
+    const price = MOCK_API_DATA.currentMembers < MOCK_API_DATA.earlyBirdCap ? 800 : 900;
     return (
         <div>
             <h3 className="text-xl font-bold mt-8 mb-4">Choose your payment method</h3>
@@ -233,7 +281,21 @@ export default function MembershipPage() {
                 <p><strong>Please transfer {price} NTD to:</strong></p>
                 <p><strong>Bank:</strong> (822) Cathay United Bank</p>
                 <p><strong>Account:</strong> 123-456-7890</p>
-                <input type="text" name="bankLast5" placeholder="Last 5 digits of your account" value={formData.bankLast5} onChange={handleChange} className="w-full p-2 border rounded mt-4" required />
+                <input
+                  type="text"
+                  name="bankLast5"
+                  placeholder="Last 5 digits of your account"
+                  value={formData.bankLast5}
+                  onChange={(e) => {
+                    const onlyDigits = e.target.value.replace(/\D/g, '').slice(0, 5);
+                    setFormData(prev => ({ ...prev, bankLast5: onlyDigits }));
+                  }}
+                  className="w-full p-2 border rounded mt-4"
+                  inputMode="numeric"
+                  pattern="\\d{5}"
+                  maxLength={5}
+                  required
+                />
                 </div>
             )}
             {paymentMethod === 'cash' && (
@@ -251,28 +313,31 @@ export default function MembershipPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center py-12 px-4">
-      <div className="bg-white p-8 rounded-lg shadow-xl w-full max-w-lg">
+    <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center py-12 px-4">
+      <div className="bg-white p-8 rounded-2xl shadow-xl w-full max-w-2xl">
         {step === 1 && (
           <div>
-            <h2 className="text-3xl font-bold text-center mb-2">Join the SLAM Family!</h2>
-            <p className="text-center text-gray-600 mb-8">First, which community are you joining?</p>
+            <h2 className="text-3xl font-bold text-center mb-2">Join the SLAM Family!</h2>
+            <p className="text-center text-gray-600 mb-8">First, which community are you joining?</p>
             <div className="flex flex-col md:flex-row gap-4">
               {Object.keys(membershipDetails).map(branch => (
                 <button 
                   key={branch} 
-                  onClick={() => { setSelectedBranch(branch); setStep(2); }} 
-                  className="p-6 border rounded-lg text-center hover:shadow-lg hover:border-blue-500 transition w-full whitespace-nowrap"
+                  onClick={() => { setSelectedBranch(branch); setStep(2); }} 
+                  className="p-6 border rounded-lg text-left hover:shadow-lg hover:border-blue-500 transition w-full whitespace-nowrap"
                 >
-                  <h3 className="text-xl font-bold">{branch}</h3>
+                  <h3 className="text-xl font-bold">{branch}</h3>
+                  {branchCloseDate && selectedBranch === branch && (
+                    <p className="mt-2 text-sm text-gray-500">Registration closes by next event: syncing to branch schedule.</p>
+                  )}
                 </button>
               ))}
             </div>
           </div>
         )}
         {step === 2 && (
-          <div>
-            <UrgencyMessage data={{...MOCK_API_DATA, selectedBranch}} />
+            <div>
+              <UrgencyMessage data={{...MOCK_API_DATA, selectedBranch, registrationCloseDate: branchCloseDate || MOCK_API_DATA.registrationCloseDate}} />
             {renderInfoForm()}
             <button onClick={() => setStep(1)} className="mt-2 w-full py-1 text-sm text-gray-600 hover:underline">Back to branch selection</button>
           </div>

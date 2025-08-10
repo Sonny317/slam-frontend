@@ -8,7 +8,7 @@ export default function MainHeader() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const { user, logout } = useUser();
-  const defaultProfileImage = "/default_profile.jpg";
+  const defaultProfileImage = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='64' height='64' viewBox='0 0 24 24'><circle cx='12' cy='12' r='12' fill='%23e5e7eb'/><circle cx='12' cy='9' r='4' fill='%239ca3af'/><path d='M4 20c0-4 4-6 8-6s8 2 8 6' fill='%239ca3af'/></svg>";
 
   // 화면 크기 변경 감지하여 모바일 메뉴 상태 초기화
   useEffect(() => {
@@ -88,7 +88,7 @@ export default function MainHeader() {
                 onMouseLeave={() => setShowProfileMenu(false)}
               >
                 <button onClick={handleMyPage} className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
-                  마이페이지
+                  My Page
                 </button>
                 
                 {user.role === 'ADMIN' && (
@@ -98,7 +98,7 @@ export default function MainHeader() {
                 )}
 
                 <button onClick={handleLogout} className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
-                  로그아웃
+                  Logout
                 </button>
               </div>
             )}
@@ -142,7 +142,7 @@ export default function MainHeader() {
               </>
             ) : (
               <>
-                <button onClick={handleMyPage} className="w-full text-center py-2">마이페이지</button>
+                 <button onClick={handleMyPage} className="w-full text-center py-2">My Page</button>
                 {user.role === 'ADMIN' && (
                   <button onClick={handleAdminPage} className="w-full text-center py-2">Admin Page</button>
                 )}

@@ -1,6 +1,7 @@
 // src/pages/BrandStoryPage.jsx
 import React from 'react';
 import { Link } from 'react-router-dom';
+import { useUser } from '../context/UserContext';
 
 // 각 섹션을 위한 재사용 가능한 제목 컴포넌트
 const SectionHeader = ({ title, subtitle }) => (
@@ -11,6 +12,7 @@ const SectionHeader = ({ title, subtitle }) => (
 );
 
 export default function BrandStoryPage() {
+  const { user } = useUser();
   return (
     <div className="bg-white font-sans">
       <main className="mx-auto">
@@ -85,7 +87,7 @@ export default function BrandStoryPage() {
 
             {/* Our Core Philosophy */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-16 items-center">
-              <img src="/about_us6.jpg" alt="A large group photo of SLAM members" className="w-full h-full object-cover rounded-2xl shadow-lg md:order-2" />
+              <img src="/SLAMMEET10.jpg" alt="A large group photo of SLAM members" className="w-full h-full object-cover rounded-2xl shadow-lg md:order-2" />
               <div className="md:pl-8">
                 <h2 className="text-4xl font-bold text-gray-900 mb-6">Our Core Philosophy</h2>
                 <p className="text-3xl font-bold text-gray-800 mb-6 leading-snug">
@@ -123,14 +125,17 @@ export default function BrandStoryPage() {
         <section className="relative text-center py-24 sm:py-28 px-4 flex items-center justify-center min-h-screen text-white">
           <div className="max-w-5xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-8 text-center">
               <div>
+                  <img src="/nccu.png" alt="SLAM NCCU Logo" className="w-16 h-16 mx-auto mb-3 object-contain" />
                   <h4 className="text-2xl font-semibold mb-2 text-blue-600">SLAM NCCU</h4>
                   <p className="text-gray-600 leading-relaxed">The vibrant <span className="text-blue-600 font-semibold">starting point</span> of our community, uniting students at National Chengchi University.</p>
               </div>
               <div>
+                  <img src="/ntu.png" alt="SLAM NTU Logo" className="w-16 h-16 mx-auto mb-3 object-contain" />
                   <h4 className="text-2xl font-semibold mb-2 text-blue-600">SLAM NTU</h4>
                   <p className="text-gray-600 leading-relaxed">Expanding our reach to <span className="text-blue-600 font-semibold">Taiwan's top university</span>, creating even more dynamic opportunities.</p>
               </div>
               <div>
+                  <img src="/taipei.png" alt="SLAM TAIPEI Logo" className="w-16 h-16 mx-auto mb-3 object-contain" />
                   <h4 className="text-2xl font-semibold mb-2 text-blue-600">SLAM TAIPEI</h4>
                   <p className="text-gray-600 leading-relaxed">Our <span className="text-blue-600 font-semibold">newest branch</span> for students and young professionals across the city to connect.</p>
               </div>
@@ -144,7 +149,7 @@ export default function BrandStoryPage() {
             <p className="text-xl text-gray-300 mb-10 max-w-3xl mx-auto leading-relaxed">
               We invite you to a party where you'll find lifelong friends, not just study a language. Experience the special connection you only felt while traveling, now regularly in Taipei.
             </p>
-            <Link to="/signup" className="bg-blue-600 text-white font-bold py-4 px-12 rounded-full text-2xl hover:bg-blue-700 transition-transform transform hover:scale-105 inline-block">
+            <Link to={user?.isLoggedIn ? "/events" : "/signup"} className="bg-blue-600 text-white font-bold py-4 px-12 rounded-full text-2xl hover:bg-blue-700 transition-transform transform hover:scale-105 inline-block">
               Become Part of Our Story
             </Link>
           </div>

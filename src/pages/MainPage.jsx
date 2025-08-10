@@ -2,6 +2,7 @@
 
 import React from 'react';
 import ImageSlider from '../components/ImageSlider';
+import { useUser } from '../context/UserContext';
 import { Link } from 'react-router-dom';
 
 // --- Placeholder Icons ---
@@ -26,6 +27,7 @@ const testimonials = [
 
 // --- Main Page Component ---
 export default function MainPage() {
+  const { user } = useUser();
   return (
     <div className="font-sans text-gray-800 bg-white">
      
@@ -275,14 +277,35 @@ export default function MainPage() {
 
       {/* SECTION 5: Pricing Anchor */}
       <section className="py-20 sm:py-24 px-4 sm:px-6 bg-gray-50">
-        <div className="max-w-4xl mx-auto text-center">
-            <h2 className="text-3xl md:text-4xl font-bold mb-12">The Other Ways to Make "Friends" in Taipei... And What They <span className="text-blue-600">Really Cost</span>.</h2>
+        <div className="max-w-5xl mx-auto">
+            <h2 className="text-3xl md:text-4xl font-bold mb-12 text-center">
+              The Other Ways to Make "Friends" in Taipei...
+              <span className="md:block">And What They <span className="text-blue-600">Really Cost</span>.</span>
+            </h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                <div><h3 className="font-bold text-xl">General Language Meetups</h3><p className="text-gray-600 mt-2">Cost: <span className="text-blue-600 font-bold">300+ NTD.</span> Result: Awkward silences and Limited conversation opportunities.</p></div>
-                <div><h3 className="font-bold text-xl">A Single Night Out</h3><p className="text-gray-600 mt-2">Cost: <span className="text-blue-600 font-bold">1000+ NTD.</span> Result: Enjoyable moments with fleeting connections.</p></div>
-                <div><h3 className="font-bold text-xl">Premium Dating Apps</h3><p className="text-gray-600 mt-2">Cost: <span className="text-blue-600 font-bold">600+ NTD.</span> Result: Time spent browsing rather than connecting. </p></div>
+                <div className="text-left bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+                  <h3 className="font-bold text-xl">General Language Meetups</h3>
+                  <p className="text-gray-600 mt-2 leading-relaxed">
+                    Cost: <span className="text-blue-600 font-bold">300+ NTD</span><br />
+                    Result: Awkward silences and limited conversation opportunities.
+                  </p>
+                </div>
+                <div className="text-left bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+                  <h3 className="font-bold text-xl">A Single Night Out</h3>
+                  <p className="text-gray-600 mt-2 leading-relaxed">
+                    Cost: <span className="text-blue-600 font-bold">1000+ NTD</span><br />
+                    Result: Enjoyable moments with fleeting connections.
+                  </p>
+                </div>
+                <div className="text-left bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+                  <h3 className="font-bold text-xl">Premium Dating Apps</h3>
+                  <p className="text-gray-600 mt-2 leading-relaxed">
+                    Cost: <span className="text-blue-600 font-bold">600+ NTD</span><br />
+                    Result: Time spent browsing rather than connecting.
+                  </p>
+                </div>
             </div>
-            <p className="mt-12 text-lg text-gray-800 font-semibold">The SLAM Way: We promise a time of <span className="text-blue-600">genuine friendships and priceless experiences,</span> for less than the cost of one night out.</p>
+            <p className="mt-12 text-lg text-gray-800 font-semibold text-left">The SLAM Way: We promise a time of <span className="text-blue-600">genuine friendships and priceless experiences,</span> for less than the cost of one night out.</p>
         </div>
       </section>
 
@@ -324,7 +347,7 @@ export default function MainPage() {
             <p className="text-lg md:text-xl text-gray-300 mb-10 leading-relaxed">
                 Sign up to get involved in the <span className="text-blue-400 font-bold">unique community</span> in Taipei.
             </p>
-            <Link to="/signup" className="bg-blue-500 text-white font-bold py-4 px-12 rounded-full text-xl hover:bg-blue-600 transition-all duration-300 transform hover:scale-105 shadow-lg">
+            <Link to={user?.isLoggedIn ? "/events" : "/signup"} className="bg-blue-500 text-white font-bold py-4 px-12 rounded-full text-xl hover:bg-blue-600 transition-all duration-300 transform hover:scale-105 shadow-lg">
                 Become Part of Our Story
             </Link>
         </div>

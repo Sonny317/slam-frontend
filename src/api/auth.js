@@ -62,3 +62,13 @@ export const resolveAuthorsBatch = async (authors) => {
     throw error.response?.data || error;
   }
 };
+
+// ✅ 인증코드 검증 API (Verify 버튼에서 사용)
+export const verifyCode = async (email, code) => {
+  try {
+    const response = await axios.post('/auth/verify-code', { email, code });
+    return response.data; // { valid: boolean }
+  } catch (error) {
+    throw error.response?.data || error;
+  }
+};
