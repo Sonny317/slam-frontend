@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import axios from '../api/axios';
 import { resolveAuthorsBatch } from '../api/auth';
+import ShareMenu from '../components/ShareMenu';
 import { useUser } from '../context/UserContext';
 
 export default function PostDetailPage() {
@@ -60,7 +61,7 @@ export default function PostDetailPage() {
         setPost({ ...data, _avatars: avatars });
       } catch (error) {
         console.error('Error loading post:', error);
-        alert('게시글을 불러오는 중 오류가 발생했습니다.');
+        alert('Failed to load the post.');
         navigate('/community');
       } finally {
         setLoading(false);
@@ -75,7 +76,7 @@ export default function PostDetailPage() {
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">게시글을 불러오는 중...</p>
+          <p className="mt-4 text-gray-600">Loading post...</p>
         </div>
       </div>
     );
@@ -88,7 +89,7 @@ export default function PostDetailPage() {
   // 좋아요 토글
   const handleLike = async () => {
     if (!user?.isLoggedIn) {
-      alert('로그인이 필요한 기능입니다.');
+      alert('Login is required.');
       return;
     }
     
@@ -101,14 +102,14 @@ export default function PostDetailPage() {
       }));
     } catch (error) {
       console.error('Failed to like post:', error);
-      alert('좋아요 처리 중 오류가 발생했습니다.');
+      alert('Failed to process like.');
     }
   };
 
   // 댓글 추가
   const handleAddComment = async () => {
     if (!user?.isLoggedIn) {
-      alert('로그인이 필요한 기능입니다.');
+      alert('Login is required.');
       return;
     }
     
@@ -128,20 +129,20 @@ export default function PostDetailPage() {
       setComment('');
     } catch (error) {
       console.error('Failed to add comment:', error);
-      alert('댓글 작성 중 오류가 발생했습니다.');
+      alert('Failed to add comment.');
     }
   };
 
   // 게시글 삭제
   const handleDeletePost = async () => {
-    if (window.confirm('정말로 이 게시글을 삭제하시겠습니까?')) {
+    if (window.confirm('Are you sure you want to delete this post?')) {
       try {
         await axios.delete(`/api/posts/${postId}`);
-        alert('게시글이 삭제되었습니다.');
+        alert('Post deleted.');
         navigate('/community');
       } catch (error) {
         console.error('Failed to delete post:', error);
-        alert('게시글 삭제 중 오류가 발생했습니다.');
+        alert('Failed to delete post.');
       }
     }
   };
@@ -220,7 +221,7 @@ export default function PostDetailPage() {
                       ? 'text-gray-500 hover:text-red-500' 
                       : 'text-gray-300 cursor-not-allowed'
                   }`}
-                  title={!user?.isLoggedIn ? '로그인이 필요한 기능입니다' : ''}
+                  title={!user?.isLoggedIn ? 'Login is required' : ''}
                 >
                   <span>❤️</span>
                   <span>Like ({post.likes || 0})</span>
@@ -232,10 +233,12 @@ export default function PostDetailPage() {
                   <span>💬</span>
                   <span>Comment ({(post.comments || []).length})</span>
                 </button>
-                <button className="flex items-center space-x-2 text-gray-500 hover:text-green-500 transition-colors">
-                  <span>📤</span>
-                  <span>Share</span>
-                </button>
+                <ShareMenu
+                  title={post.title}
+                  text={post.summary || post.content}
+                  url={(typeof window !== 'undefined') ? window.location.href : ''}
+                  variant="text"
+                />
                 {/* 관리자용 삭제 버튼 */}
                 {user && user.role === 'ADMIN' && (
                   <button 
@@ -305,12 +308,12 @@ export default function PostDetailPage() {
                   </>
                 ) : (
                   <div className="text-center py-4">
-                    <p className="text-gray-500 mb-2">댓글을 작성하려면 로그인이 필요합니다.</p>
+                    <p className="text-gray-500 mb-2">Please log in to write a comment.</p>
                     <Link 
                       to="/login" 
                       className="text-blue-600 hover:text-blue-800 font-medium"
                     >
-                      로그인하기
+                      Log in
                     </Link>
                   </div>
                 )}

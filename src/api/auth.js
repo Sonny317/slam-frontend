@@ -9,7 +9,7 @@ export const login = async (email, password) => {
 
     const { token, profileImage, name, role } = response.data;
 
-    // ✅ sessionStorage -> localStorage 로 변경
+    // Use localStorage to persist auth info
     localStorage.setItem("userEmail", email);
     localStorage.setItem("jwtToken", token);
     localStorage.setItem("userName", name);
@@ -21,7 +21,7 @@ export const login = async (email, password) => {
     
     return response.data;
   } catch (error) {
-    // 에러 발생 시 모든 정보 삭제
+    // Clear all auth info if login fails
     localStorage.clear();
     throw error.response?.data || error;
   }
@@ -32,7 +32,7 @@ export const register = async (userData) => {
     const response = await axios.post("/auth/register", userData);
     return response.data;
   } catch (error) {
-    throw error.response?.data || error.message || "회원가입 실패";
+    throw error.response?.data || error.message || "Registration failed";
   }
 };
 
@@ -63,7 +63,7 @@ export const resolveAuthorsBatch = async (authors) => {
   }
 };
 
-// ✅ 인증코드 검증 API (Verify 버튼에서 사용)
+// Verify code API (used by Verify button)
 export const verifyCode = async (email, code) => {
   try {
     const response = await axios.post('/auth/verify-code', { email, code });

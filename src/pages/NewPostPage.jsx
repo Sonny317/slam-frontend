@@ -34,7 +34,7 @@ export default function NewPostPage() {
         author: user?.name || user?.email || 'Anonymous' // 사용자 이름을 우선으로, 없으면 이메일 사용
       });
 
-      alert('게시글이 성공적으로 작성되었습니다!');
+      alert('Post published successfully!');
       navigate('/community', { replace: true });
       window.location.reload(); // 페이지 새로고침으로 게시글 목록 업데이트
     } catch (error) {

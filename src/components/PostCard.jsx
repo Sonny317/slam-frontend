@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 import { useUser } from '../context/UserContext';
 import axios from '../api/axios';
 import { resolveAuthorsBatch } from '../api/auth';
+import ShareMenu from './ShareMenu';
 
 // --- Placeholder Icons ---
 const HeartIcon = () => (
@@ -44,16 +45,16 @@ export default function PostCard({ post, onDelete }) {
     e.preventDefault();
     e.stopPropagation();
     
-    if (window.confirm('정말로 이 게시글을 삭제하시겠습니까?')) {
+    if (window.confirm('Are you sure you want to delete this post?')) {
       try {
         await axios.delete(`/api/posts/${post.id}`);
         if (onDelete) {
           onDelete(post.id);
         }
-        alert('게시글이 삭제되었습니다.');
+        alert('Post deleted.');
       } catch (error) {
         console.error('Failed to delete post:', error);
-        alert('게시글 삭제 중 오류가 발생했습니다.');
+        alert('Failed to delete post.');
       }
     }
   };
@@ -88,7 +89,7 @@ export default function PostCard({ post, onDelete }) {
               e.preventDefault();
               e.stopPropagation();
               if (!user?.isLoggedIn) {
-                alert('로그인이 필요한 기능입니다.');
+                alert('Login is required.');
                 return;
               }
               // 좋아요 토글 호출
@@ -108,7 +109,7 @@ export default function PostCard({ post, onDelete }) {
             className={`flex items-center gap-1 transition-colors ${
               user?.isLoggedIn ? 'hover:text-red-500' : 'cursor-not-allowed opacity-50'
             }`}
-            title={!user?.isLoggedIn ? '로그인이 필요한 기능입니다' : ''}
+            title={!user?.isLoggedIn ? 'Login is required' : ''}
           >
             <HeartIcon />
             <span>{likeCount}</span>
@@ -117,9 +118,12 @@ export default function PostCard({ post, onDelete }) {
             <CommentIcon />
             <span>{post.comments?.length || 0}</span>
           </div>
-          <button className="hover:text-green-500">
-            <ShareIcon />
-          </button>
+          <ShareMenu
+            title={post.title}
+            text={post.summary || post.content}
+            url={(typeof window !== 'undefined') ? `${window.location.origin}/community/${post.id}` : ''}
+            variant="icon"
+          />
           {/* 관리자용 삭제 버튼 */}
           {user && user.role === 'ADMIN' && (
             <button 

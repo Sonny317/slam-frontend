@@ -116,6 +116,13 @@ export default function MembershipPage() {
   const [step, setStep] = useState(1);
   const [selectedBranch, setSelectedBranch] = useState('');
   const [branchCloseDate, setBranchCloseDate] = useState(null);
+
+  // Staff/admin users should go directly to RSVP (events) instead of membership flow
+  useEffect(() => {
+    if (user?.isLoggedIn && user.role === 'ADMIN') {
+      navigate('/events', { replace: true });
+    }
+  }, [user, navigate]);
   useEffect(() => {
     const fetchCloseDate = async () => {
       if (!selectedBranch) return;
@@ -136,18 +143,18 @@ export default function MembershipPage() {
     fetchCloseDate();
   }, [selectedBranch]);
 
-  // 로그인하지 않은 사용자는 로그인 페이지로 리다이렉트
+  // Redirect unauthenticated users to login page
   if (!user?.isLoggedIn) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <h1 className="text-2xl font-bold text-gray-800 mb-4">로그인이 필요합니다</h1>
-          <p className="text-gray-600 mb-6">멤버십 신청을 하려면 로그인해주세요.</p>
+          <h1 className="text-2xl font-bold text-gray-800 mb-4">Login required</h1>
+          <p className="text-gray-600 mb-6">Please log in to apply for membership.</p>
           <Link 
             to="/login" 
             className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors"
           >
-            로그인하기
+            Log in
           </Link>
         </div>
       </div>

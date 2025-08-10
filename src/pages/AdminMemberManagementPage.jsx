@@ -125,7 +125,7 @@ export default function AdminMemberManagementPage() {
 
 
 
-  // ✅ 신청서 승인/거부 함수
+  // ✅ 신청서 승인 함수 (Reject 제거)
   const handleApproveApplication = async (applicationId) => {
     try {
       await axios.post(`/api/admin/applications/approve?applicationId=${applicationId}`);
@@ -135,20 +135,7 @@ export default function AdminMemberManagementPage() {
       setApplications(response.data);
     } catch (error) {
       console.error('Failed to approve application:', error);
-      alert('Failed to approve application: ' + error.response?.data || error.message);
-    }
-  };
-
-  const handleRejectApplication = async (applicationId) => {
-    try {
-      await axios.post(`/api/admin/applications/reject?applicationId=${applicationId}`);
-      alert('Application rejected successfully');
-      // 목록 새로고침
-      const response = await axios.get('/api/admin/membership-applications');
-      setApplications(response.data);
-    } catch (error) {
-      console.error('Failed to reject application:', error);
-      alert('Failed to reject application: ' + error.response?.data || error.message);
+      alert('Failed to approve application: ' + (error.response?.data || error.message));
     }
   };
 
@@ -204,8 +191,7 @@ export default function AdminMemberManagementPage() {
                               <td className="px-4 py-2"><span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-800">{app.status}</span></td>
                               <td className="px-4 py-2">{app.paymentMethod === 'transfer' ? `Transfer (${app.bankLast5})` : 'Cash'}</td>
                               <td className="px-4 py-2">
-                                <button onClick={(e) => { e.stopPropagation(); handleApproveApplication(app.id); }} className="bg-green-500 text-white text-xs font-bold py-1 px-3 rounded-full hover:bg-green-600 mr-2">Approve</button>
-                                <button onClick={(e) => { e.stopPropagation(); handleRejectApplication(app.id); }} className="bg-red-500 text-white text-xs font-bold py-1 px-3 rounded-full hover:bg-red-600">Reject</button>
+                                <button onClick={(e) => { e.stopPropagation(); handleApproveApplication(app.id); }} className="bg-green-500 text-white text-xs font-bold py-1 px-3 rounded-full hover:bg-green-600">Approve</button>
                               </td>
                           </tr>
                       ))}

@@ -47,6 +47,8 @@ export default function EventsPage() {
     });
   };
 
+  const isStaff = user?.isLoggedIn && ['ADMIN', 'STAFF', 'PRESIDENT'].includes(user.role);
+
   return (
     <div className="bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 py-16 sm:py-24">
@@ -89,12 +91,12 @@ export default function EventsPage() {
                   
                   <div className="mt-auto pt-4 border-t border-gray-100">
                     {user?.isLoggedIn ? (
-                      // ✅ Context에서 가져온 실제 멤버십 목록(user.memberships)을 사용합니다.
-                      (user.memberships || []).some(membership => {
+                      // Staff (ADMIN/STAFF/PRESIDENT) can RSVP for all branches without membership
+                      (isStaff || (user.memberships || []).some(membership => {
                         // "ACTIVE_NCCU" 형태에서 지부 이름만 추출
                         const branchName = membership.includes('_') ? membership.split('_')[1] : membership;
                         return branchName === event.branch;
-                      }) ? (
+                      })) ? (
                         <Link to={`/events/${event.id}`} className="block w-full text-center bg-green-500 text-white font-bold py-2 rounded-lg hover:bg-green-600 transition-colors">
                           I'm Going! (RSVP)
                         </Link>

@@ -13,6 +13,7 @@ export default function EventDetailPage() {
   const [isAttending, setIsAttending] = useState(false);
   const [wantsAfterParty, setWantsAfterParty] = useState(false);
   const [isRsvpLoaded, setIsRsvpLoaded] = useState(false);
+  const [timeLeft, setTimeLeft] = useState("");
 
   useEffect(() => {
     const fetchEventAndRsvp = async () => {
@@ -35,7 +36,7 @@ export default function EventDetailPage() {
         }
       } catch (error) {
         console.error("Failed to fetch event data:", error);
-        alert("이벤트 정보를 불러오는 데 실패했습니다.");
+        alert("Failed to load event information.");
       } finally {
         setLoading(false);
       }
@@ -43,6 +44,33 @@ export default function EventDetailPage() {
 
     fetchEventAndRsvp();
   }, [eventId, user.isLoggedIn]);
+
+  // Live countdown to the event date/time (registration closes when event starts)
+  useEffect(() => {
+    if (!eventData?.eventDateTime) return;
+    const targetMs = new Date(eventData.eventDateTime).getTime();
+
+    const tick = () => {
+      const now = Date.now();
+      const diff = targetMs - now;
+      if (diff <= 0) {
+        setTimeLeft("Closed");
+        return;
+      }
+      const secondsTotal = Math.floor(diff / 1000);
+      const days = Math.floor(secondsTotal / (24 * 3600));
+      const hours = Math.floor((secondsTotal % (24 * 3600)) / 3600);
+      const minutes = Math.floor((secondsTotal % 3600) / 60);
+      const seconds = secondsTotal % 60;
+      const fmt = `${days}d ${hours}h ${minutes}m ${String(seconds).padStart(2, '0')}s`;
+      setTimeLeft(fmt);
+    };
+
+    // Initial tick and interval
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, [eventData?.eventDateTime]);
 
   const handleRsvpSubmit = async (attendingStatus) => {
     console.log("=== handleRsvpSubmit Debug ===");
@@ -52,7 +80,7 @@ export default function EventDetailPage() {
     console.log("After party:", attendingStatus ? wantsAfterParty : false);
     
     if (!user.isLoggedIn) {
-      return alert("로그인이 필요한 기능입니다.");
+      return alert("Login is required.");
     }
     try {
       console.log("Making API call to /api/events/rsvp");
@@ -107,6 +135,13 @@ export default function EventDetailPage() {
             <p><strong>Location:</strong> {eventData.location}</p>
           </div>
 
+          {/* Countdown banner (linked to event date/time) */}
+          <div className="mb-8">
+            <div className={`inline-block rounded-full px-4 py-2 text-sm font-semibold ${timeLeft === 'Closed' ? 'bg-gray-200 text-gray-700' : 'bg-red-100 text-red-700'}`}>
+              {timeLeft === 'Closed' ? 'Registration closed' : `Closes in ${timeLeft}`}
+            </div>
+          </div>
+
           {user.isLoggedIn && isRsvpLoaded && (
             <div className="bg-blue-50 p-6 rounded-lg mb-8">
               <h2 className="text-xl font-semibold mb-4 text-center">Are you going?</h2>
@@ -114,12 +149,12 @@ export default function EventDetailPage() {
                 <button 
                   onClick={() => handleRsvpSubmit(true)}
                   className={`font-bold py-2 px-8 rounded-full transition-colors ${isAttending ? 'bg-blue-600 text-white' : 'bg-white text-blue-600 border border-blue-600 hover:bg-blue-100'}`}>
-                  참석 (Join)
+                   Join
                 </button>
                 <button 
                   onClick={() => handleRsvpSubmit(false)}
                   className={`font-bold py-2 px-8 rounded-full transition-colors ${!isAttending ? 'bg-gray-400 text-white' : 'bg-gray-200 text-gray-800 hover:bg-gray-300'}`}>
-                  불참 (Decline)
+                   Decline
                 </button>
               </div>
               {isAttending && (
@@ -132,7 +167,7 @@ export default function EventDetailPage() {
                     onChange={(e) => setWantsAfterParty(e.target.checked)}
                   />
                   <label htmlFor="after-party" className="ml-2 block text-sm text-gray-900">
-                    애프터파티에도 참여합니다!
+                    I will also join the after-party!
                   </label>
                 </div>
               )}

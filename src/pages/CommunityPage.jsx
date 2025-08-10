@@ -73,9 +73,9 @@ export default function CommunityPage() {
             </Link>
           ) : (
             <div className="flex items-center space-x-4">
-              <span className="text-gray-500 text-sm">게시글을 작성하려면 로그인이 필요합니다</span>
+              <span className="text-gray-500 text-sm">Login is required to write a post</span>
               <Link to="/login" className="bg-gray-500 text-white font-bold py-2 px-6 rounded-lg hover:bg-gray-600 transition-colors">
-                로그인
+                Log in
               </Link>
             </div>
           )}

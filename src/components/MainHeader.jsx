@@ -77,7 +77,7 @@ export default function MainHeader() {
           <div className="relative">
             <img
               src={user.profileImage || defaultProfileImage}
-              alt="프로필"
+              alt="Profile"
               className="w-8 h-8 rounded-full cursor-pointer object-cover"
               onClick={() => setShowProfileMenu(!showProfileMenu)}
               onError={(e) => { e.target.onerror = null; e.target.src = defaultProfileImage; }}
@@ -146,7 +146,7 @@ export default function MainHeader() {
                 {user.role === 'ADMIN' && (
                   <button onClick={handleAdminPage} className="w-full text-center py-2">Admin Page</button>
                 )}
-                <button onClick={handleLogout} className="w-full text-center py-2 text-red-500">로그아웃</button>
+                <button onClick={handleLogout} className="w-full text-center py-2 text-red-500">Log out</button>
               </>
             )}
           </nav>

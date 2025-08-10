@@ -13,18 +13,18 @@ export default function MyPage() {
     const [showQrCode, setShowQrCode] = useState(false);
     const qrCodeValue = JSON.stringify({ userId: userDetails.userId, name: userDetails.name });
 
-    // 로그인하지 않은 사용자는 로그인 페이지로 리다이렉트
+    // Redirect unauthenticated users to login page
     if (!user?.isLoggedIn) {
         return (
             <div className="min-h-screen bg-gray-50 flex items-center justify-center">
                 <div className="text-center">
-                    <h1 className="text-2xl font-bold text-gray-800 mb-4">로그인이 필요합니다</h1>
-                    <p className="text-gray-600 mb-6">마이페이지를 이용하려면 로그인해주세요.</p>
+                    <h1 className="text-2xl font-bold text-gray-800 mb-4">Login required</h1>
+                    <p className="text-gray-600 mb-6">Please log in to use My Page.</p>
                     <Link 
                         to="/login" 
                         className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors"
                     >
-                        로그인하기
+                        Log in
                     </Link>
                 </div>
             </div>
@@ -37,7 +37,7 @@ export default function MyPage() {
             setUserDetails(prev => ({
                 ...prev,
                 name: user.name || 'Your Name',
-                bio: user.bio || '자기소개를 작성해주세요.',
+                bio: user.bio || 'Please write a short bio.',
                 membership: user.memberships && user.memberships.length > 0 
                     ? { 
                         branch: user.memberships.map(membership => {
@@ -210,7 +210,7 @@ export default function MyPage() {
                                     ))}
                                 </ul>
                             ) : (
-                                <p className="text-gray-500 text-center py-4">아직 작성한 게시글이 없습니다.</p>
+                                <p className="text-gray-500 text-center py-4">You have not written any posts yet.</p>
                             )}
                         </section>
                         <section className="bg-white p-6 rounded-lg shadow-md">
@@ -227,7 +227,7 @@ export default function MyPage() {
                                     ))}
                                 </ul>
                             ) : (
-                                <p className="text-gray-500 text-center py-4">아직 작성한 댓글이 없습니다.</p>
+                                <p className="text-gray-500 text-center py-4">You have not written any comments yet.</p>
                             )}
                         </section>
                     </div>
