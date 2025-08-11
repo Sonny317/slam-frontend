@@ -24,9 +24,9 @@ export default function EventsPage() {
         console.log('EventsPage - API Response:', response.data);
         console.log('EventsPage - Total events:', response.data.length);
         
-        // ✅ 미래의 이벤트만 필터링
+        // ✅ 미래의 이벤트만 필터링 + 보관(archived) 제외
         const now = new Date();
-        const futureEvents = response.data.filter(event => new Date(event.eventDateTime) > now);
+        const futureEvents = response.data.filter(event => !event.archived && new Date(event.eventDateTime) > now);
         console.log('EventsPage - Future events:', futureEvents.length);
         setEvents(futureEvents);
       } catch (error) {

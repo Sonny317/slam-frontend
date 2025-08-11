@@ -5,10 +5,19 @@ import axios from '../api/axios';
 // --- 가짜 데이터 (나중에 이 모든 데이터를 백엔드 API로부터 받아옵니다) ---
 const loggedInStaff = { name: 'Alice', role: 'PRESIDENT', branch: 'NCCU' }; // 'PRESIDENT', 'All'로 바꿔서 테스트해보세요.
 
-const mockExpenses = {
-    NCCU: [ { id: 1, date: '2025-07-25', item: 'BBQ Party Supplies', amount: 3500, submittedBy: 'Alice', status: 'Pending' } ],
-    TAIPEI: [ { id: 2, date: '2025-07-26', item: 'Venue Rental Deposit', amount: 2000, submittedBy: 'Peter', status: 'Reimbursed' } ],
-    NTU: [ { id: 3, date: '2025-07-27', item: 'Scavenger Hunt Prizes', amount: 1500, submittedBy: 'Diana', status: 'Pending' } ],
+// 초기 트랜잭션(수입/지출 통합)
+const initialTransactionsByBranch = {
+  NCCU: [
+    { id: 1, type: 'expense', date: '2025-07-25', item: 'BBQ Party Supplies', amount: 3500, submittedBy: 'Alice', status: 'Pending' },
+    { id: 4, type: 'revenue', date: '2025-07-20', item: 'Membership Fee', amount: 12000, submittedBy: 'System' },
+  ],
+  TAIPEI: [
+    { id: 2, type: 'expense', date: '2025-07-26', item: 'Venue Rental Deposit', amount: 2000, submittedBy: 'Peter', status: 'Reimbursed' },
+    { id: 5, type: 'revenue', date: '2025-07-22', item: 'Event Ticket', amount: 4500, submittedBy: 'System' },
+  ],
+  NTU: [
+    { id: 3, type: 'expense', date: '2025-07-27', item: 'Scavenger Hunt Prizes', amount: 1500, submittedBy: 'Diana', status: 'Pending' },
+  ],
 };
 // --------------------------------------------------------------------
 
@@ -53,6 +62,10 @@ export default function AdminMemberManagementPage() {
   const [applications, setApplications] = useState([]);
   const [members, setMembers] = useState([]);
   const [loading, setLoading] = useState(true);
+  // 회계 트랜잭션 상태 (지부별)
+  const [transactionsByBranch, setTransactionsByBranch] = useState(initialTransactionsByBranch);
+  // 신규 트랜잭션 입력값 상태
+  const [newTx, setNewTx] = useState({ type: 'expense', date: '', item: '', amount: '' });
 
   const availableBranches = loggedInStaff.role === 'PRESIDENT' ? ['NCCU', 'NTU', 'TAIPEI'] : [loggedInStaff.branch];
 
@@ -82,10 +95,14 @@ export default function AdminMemberManagementPage() {
 
   const filteredApplications = applications.filter(app => app.selectedBranch === branchFilter);
   const filteredMembers = Array.isArray(members) ? members : [];
-  const filteredExpenses = mockExpenses[branchFilter] || [];
-  
-  const totalRevenue = 95000; // 예시 총 수입 (나중에 지부별로 필터링 필요)
-  const totalExpenses = filteredExpenses.reduce((sum, exp) => sum + exp.amount, 0);
+  const filteredTransactions = transactionsByBranch[branchFilter] || [];
+
+  const totalRevenue = filteredTransactions
+    .filter(tx => tx.type === 'revenue')
+    .reduce((sum, tx) => sum + Number(tx.amount || 0), 0);
+  const totalExpenses = filteredTransactions
+    .filter(tx => tx.type === 'expense')
+    .reduce((sum, tx) => sum + Number(tx.amount || 0), 0);
   const netProfit = totalRevenue - totalExpenses;
 
   // ✅ 멤버십 삭제 함수
@@ -123,16 +140,74 @@ export default function AdminMemberManagementPage() {
     }
   };
 
+  // 회계: 지출 상태 업데이트 (지급 완료 처리 등)
+  const handleMarkExpensePaid = (expenseId) => {
+    setTransactionsByBranch(prev => {
+      const updated = { ...prev };
+      const list = [...(updated[branchFilter] || [])];
+      const idx = list.findIndex(t => t.id === expenseId && t.type === 'expense');
+      if (idx !== -1) {
+        list[idx] = { ...list[idx], status: 'Reimbursed' };
+      }
+      updated[branchFilter] = list;
+      return updated;
+    });
+  };
 
+  // 회계: 새 트랜잭션 추가 (수입/지출 선택)
+  const handleAddTransaction = (e) => {
+    e.preventDefault();
+    const { type, date, item, amount } = newTx;
+    if (!date || !item || !amount) return;
 
-  // ✅ 신청서 승인 함수 (Reject 제거)
-  const handleApproveApplication = async (applicationId) => {
+    const tx = {
+      id: Date.now(),
+      type,
+      date,
+      item,
+      amount: Number(amount),
+      submittedBy: loggedInStaff.name,
+      status: type === 'expense' ? 'Pending' : undefined,
+    };
+
+    setTransactionsByBranch(prev => {
+      const updated = { ...prev };
+      const list = [...(updated[branchFilter] || [])];
+      list.push(tx);
+      updated[branchFilter] = list;
+      return updated;
+    });
+
+    setNewTx({ type: 'expense', date: '', item: '', amount: '' });
+  };
+
+  const membershipFeeNTD = 900; // 멤버십 회비 기준 금액
+
+  // ✅ 신청서 승인 함수 (Reject 제거) + 회계 수입 반영
+  const handleApproveApplication = async (application) => {
     try {
-      await axios.post(`/api/admin/applications/approve?applicationId=${applicationId}`);
+      await axios.post(`/api/admin/applications/approve?applicationId=${application.id}`);
       alert('Application approved successfully');
       // 목록 새로고침
       const response = await axios.get('/api/admin/membership-applications');
       setApplications(response.data);
+
+      // 승인 시 해당 지부에 Revenue 자동 반영
+      const branch = application.selectedBranch || branchFilter;
+      setTransactionsByBranch(prev => {
+        const updated = { ...prev };
+        const list = [...(updated[branch] || [])];
+        list.push({
+          id: Date.now(),
+          type: 'revenue',
+          date: new Date().toISOString().slice(0,10),
+          item: 'Membership Fee',
+          amount: membershipFeeNTD,
+          submittedBy: application.userName || 'System',
+        });
+        updated[branch] = list;
+        return updated;
+      });
     } catch (error) {
       console.error('Failed to approve application:', error);
       alert('Failed to approve application: ' + (error.response?.data || error.message));
@@ -191,7 +266,7 @@ export default function AdminMemberManagementPage() {
                               <td className="px-4 py-2"><span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-800">{app.status}</span></td>
                               <td className="px-4 py-2">{app.paymentMethod === 'transfer' ? `Transfer (${app.bankLast5})` : 'Cash'}</td>
                               <td className="px-4 py-2">
-                                <button onClick={(e) => { e.stopPropagation(); handleApproveApplication(app.id); }} className="bg-green-500 text-white text-xs font-bold py-1 px-3 rounded-full hover:bg-green-600">Approve</button>
+                                <button onClick={(e) => { e.stopPropagation(); handleApproveApplication(app); }} className="bg-green-500 text-white text-xs font-bold py-1 px-3 rounded-full hover:bg-green-600">Approve</button>
                               </td>
                           </tr>
                       ))}
@@ -238,35 +313,68 @@ export default function AdminMemberManagementPage() {
         {activeTab === 'accounting' && (
           <div className="space-y-8">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="bg-green-100 p-6 rounded-lg"><h3 className="text-lg font-semibold text-green-800">Total Revenue</h3><p className="text-3xl font-bold">{totalRevenue.toLocaleString()} NTD</p></div>
-                <div className="bg-red-100 p-6 rounded-lg"><h3 className="text-lg font-semibold text-red-800">Total Expenses</h3><p className="text-3xl font-bold">{totalExpenses.toLocaleString()} NTD</p></div>
-                <div className="bg-blue-100 p-6 rounded-lg"><h3 className="text-lg font-semibold text-blue-800">Net Profit</h3><p className="text-3xl font-bold">{netProfit.toLocaleString()} NTD</p></div>
+              <div className="bg-green-100 p-6 rounded-lg"><h3 className="text-lg font-semibold text-green-800">Total Revenue</h3><p className="text-3xl font-bold">{totalRevenue.toLocaleString()} NTD</p></div>
+              <div className="bg-red-100 p-6 rounded-lg"><h3 className="text-lg font-semibold text-red-800">Total Expenses</h3><p className="text-3xl font-bold">{totalExpenses.toLocaleString()} NTD</p></div>
+              <div className="bg-blue-100 p-6 rounded-lg"><h3 className="text-lg font-semibold text-blue-800">Net Profit</h3><p className="text-3xl font-bold">{netProfit.toLocaleString()} NTD</p></div>
             </div>
+
+            {/* 지출 목록 */}
             <div className="bg-white p-6 rounded-lg shadow-md">
-                <h2 className="text-xl font-semibold mb-4">Reimbursement Requests for {branchFilter}</h2>
-                <table className="min-w-full">
-                    <thead><tr><th className="text-left">Date</th><th className="text-left">Item</th><th className="text-left">Amount</th><th className="text-left">Submitted By</th><th className="text-left">Receipt</th><th className="text-left">Status</th><th className="text-left">Action</th></tr></thead>
-                    <tbody>
-                        {filteredExpenses.map(exp => (
-                            <tr key={exp.id}>
-                                <td>{exp.date}</td><td>{exp.item}</td><td>{exp.amount.toLocaleString()} NTD</td><td>{exp.submittedBy}</td>
-                                <td><a href={exp.receiptUrl} target="_blank" rel="noopener noreferrer" className="text-blue-500 underline">View</a></td>
-                                <td><span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${exp.status === 'Pending' ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800'}`}>{exp.status}</span></td>
-                                <td>{exp.status === 'Pending' && <button onClick={() => alert(`Marking expense ID ${exp.id} as paid.`)} className="text-xs bg-gray-200 px-2 py-1 rounded hover:bg-gray-300">Mark as Paid</button>}</td>
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
-                <div className="mt-6 border-t pt-6">
-                    <h3 className="font-semibold">Add New Expense</h3>
-                    <form className="flex flex-wrap gap-4 mt-2 items-end">
-                        <input type="date" className="p-2 border rounded"/>
-                        <input type="text" placeholder="Item" className="p-2 border rounded flex-grow"/>
-                        <input type="number" placeholder="Amount" className="p-2 border rounded"/>
-                        <div><label className="block text-xs">Receipt (max 2MB):</label><input type="file" className="text-sm"/></div>
-                        <button type="submit" className="bg-blue-600 text-white px-4 py-2 rounded">Add</button>
-                    </form>
-                </div>
+              <h2 className="text-xl font-semibold mb-4">Expenses for {branchFilter}</h2>
+              <table className="min-w-full">
+                <thead><tr><th className="text-left">Date</th><th className="text-left">Item</th><th className="text-left">Amount</th><th className="text-left">Submitted By</th><th className="text-left">Status</th><th className="text-left">Action</th></tr></thead>
+                <tbody>
+                  {filteredTransactions.filter(t => t.type === 'expense').map(exp => (
+                    <tr key={exp.id}>
+                      <td>{exp.date}</td>
+                      <td>{exp.item}</td>
+                      <td>{Number(exp.amount).toLocaleString()} NTD</td>
+                      <td>{exp.submittedBy}</td>
+                      <td>
+                        <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${exp.status === 'Pending' ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800'}`}>{exp.status}</span>
+                      </td>
+                      <td>
+                        {exp.status === 'Pending' && (
+                          <button onClick={() => handleMarkExpensePaid(exp.id)} className="text-xs bg-gray-200 px-2 py-1 rounded hover:bg-gray-300">Mark as Paid</button>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+
+              {/* 트랜잭션 추가 */}
+              <div className="mt-6 border-t pt-6">
+                <h3 className="font-semibold">Add New Transaction</h3>
+                <form onSubmit={handleAddTransaction} className="flex flex-wrap gap-4 mt-2 items-end">
+                  <select value={newTx.type} onChange={e => setNewTx(v => ({ ...v, type: e.target.value }))} className="p-2 border rounded">
+                    <option value="revenue">Revenue</option>
+                    <option value="expense">Expense</option>
+                  </select>
+                  <input type="date" value={newTx.date} onChange={e => setNewTx(v => ({ ...v, date: e.target.value }))} className="p-2 border rounded"/>
+                  <input type="text" placeholder="Item" value={newTx.item} onChange={e => setNewTx(v => ({ ...v, item: e.target.value }))} className="p-2 border rounded flex-grow"/>
+                  <input type="number" min="0" placeholder="Amount" value={newTx.amount} onChange={e => setNewTx(v => ({ ...v, amount: e.target.value }))} className="p-2 border rounded w-32"/>
+                  <button type="submit" className="bg-blue-600 text-white px-4 py-2 rounded">Add</button>
+                </form>
+              </div>
+            </div>
+
+            {/* 수입 목록 */}
+            <div className="bg-white p-6 rounded-lg shadow-md">
+              <h2 className="text-xl font-semibold mb-4">Revenue for {branchFilter}</h2>
+              <table className="min-w-full">
+                <thead><tr><th className="text-left">Date</th><th className="text-left">Item</th><th className="text-left">Amount</th><th className="text-left">Source</th></tr></thead>
+                <tbody>
+                  {filteredTransactions.filter(t => t.type === 'revenue').map(rv => (
+                    <tr key={rv.id}>
+                      <td>{rv.date}</td>
+                      <td>{rv.item}</td>
+                      <td>{Number(rv.amount).toLocaleString()} NTD</td>
+                      <td>{rv.submittedBy || 'System'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           </div>
         )}

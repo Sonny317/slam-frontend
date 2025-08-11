@@ -174,6 +174,17 @@ export default function AdminEventsPage() {
       }
     }
   };
+
+  const handleArchive = async (eventId) => {
+    if (!window.confirm("Mark this event as Past (archive)?")) return;
+    try {
+      await axios.post(`/api/admin/events/archive?eventId=${eventId}`);
+      alert('Event archived successfully.');
+      setEvents(prev => prev.map(e => e.id === eventId ? { ...e, archived: true } : e));
+    } catch (error) {
+      alert(`Failed to archive event: ${error.response?.data?.message || error.message}`);
+    }
+  };
   
   if (isEditing) {
     return <EventForm event={currentEvent} onSave={handleSave} onCancel={() => setIsEditing(false)} />;
@@ -217,6 +228,7 @@ export default function AdminEventsPage() {
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                         <button onClick={() => handleEdit(event)} className="text-blue-600 hover:text-blue-900">Edit</button>
                         <button onClick={() => handleDelete(event.id)} className="text-red-600 hover:text-red-900 ml-4">Delete</button>
+                        <button onClick={() => handleArchive(event.id)} className="text-gray-700 hover:text-black ml-4">Move to Past</button>
                       </td>
                     </tr>
                   ))}
