@@ -45,3 +45,30 @@
   /* (너비 625px * 이미지 5장) 만큼 이동 */
   100% { transform: translateX(calc(-625px * 5)); }
 }
+
+/* ⭐ Floating stars animation */
+.stars-container {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.star {
+  position: absolute;
+  color: #facc15; /* yellow-400 */
+  font-size: 20px;
+  opacity: 0;
+  transform: translateY(20px) scale(0.8) rotate(0deg);
+  /* 반복 애니메이션 (개별 duration은 --star-dur 커스텀 속성으로 제어) */
+  animation: floatStar var(--star-dur, 2s) ease-out infinite;
+}
+
+@keyframes floatStar {
+  /* Visible float phase */
+  0% { opacity: 0; transform: translateY(20px) scale(0.8) rotate(0deg); }
+  10% { opacity: 1; }
+  30% { opacity: 0; transform: translateY(-120px) scale(1.2) rotate(25deg); }
+  /* Idle hidden phase to create a pause between repeats */
+  100% { opacity: 0; transform: translateY(-120px) scale(1.2) rotate(25deg); }
+}

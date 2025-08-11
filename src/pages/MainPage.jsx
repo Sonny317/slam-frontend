@@ -91,7 +91,7 @@ export default function MainPage() {
         {/* Content - Left aligned for better readability */}
         <div className="space-y-6 text-lg sm:text-xl md:text-2xl text-gray-700 leading-relaxed">
         <p className="text-left">
-            "<span className="text-blue-600 font-bold">90% of exchange students</span> only make friends with other exchange students before returning home..."
+            "90% of exchange students <span className="text-blue-600 font-bold">only make friends with other exchange students</span> before returning home..."
         </p>
         
         <p className="text-left">
@@ -141,15 +141,15 @@ export default function MainPage() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-10 text-center">
                 <div>
                     <h3 className="font-bold text-2xl mb-2 text-blue-600">Step 1: Get Connected</h3>
-                    <p className="text-gray-600 leading-relaxed">Sign up and instantly access our <span className="text-blue-600 font-semibold">curated community</span>. No more awkward first encounters, just a network of friendly faces ready to meet you.</p>
+                    <p className="text-gray-600 leading-relaxed"> Join our <span className="text-blue-600 font-semibold">curated community</span> instantly. <br></br>No awkward encounters—just <br></br>friendly faces ready to meet you.</p>
                 </div>
                 <div>
                     <h3 className="font-bold text-2xl mb-2 text-blue-600">Step 2: Experience the Party</h3>
-                    <p className="text-gray-600 leading-relaxed">Forget boring study groups. Our events are <span className="text-blue-600 font-semibold">high-energy parties</span> built around language games. This is where the walls come down and real connections begin.</p>
+                    <p className="text-gray-600 leading-relaxed">Forget boring study groups.<br></br> Our <span className="text-blue-600 font-semibold">high-energy language parties</span> <br></br>break down walls and spark real connections.</p>
                 </div>
                 <div>
                     <h3 className="font-bold text-2xl mb-2 text-blue-600">Step 3: Build Your Story</h3>
-                    <p className="text-gray-600 leading-relaxed">The party is just the start. Take the friendships you make and build <span className="text-blue-600 font-semibold">unforgettable memories</span>—exploring Taipei, joining sports activities, and creating your own adventures together.</p>
+                    <p className="text-gray-600 leading-relaxed">Turn new friendships into <br></br><span className="text-blue-600 font-semibold">unforgettable memories</span>—explore Taipei,<br></br> join activities, create adventures together.</p>
                 </div>
             </div>
         </div>
@@ -169,19 +169,19 @@ export default function MainPage() {
               <GlobeIcon className="w-16 h-16 text-blue-600 mb-4" />
               <p className="text-5xl md:text-6xl font-extrabold text-blue-600">500+</p>
               <h3 className="font-bold text-xl mt-2 mb-2">Total Members</h3>
-              <p className="text-gray-600">From <span className="text-blue-600 font-semibold">6 to 500+</span> members in 3 years. We're not just growing, we're <span className="text-blue-600 font-bold">exploding</span>.</p>
+              <p className="text-gray-600">From <span className="text-blue-600 font-semibold">6 to 500+</span> members in 3 years. <br></br> We're not just growing, we're <span className="text-blue-600 font-bold">exploding</span>.</p>
             </div>             
             <div className="flex flex-col items-center">
               <UsersIcon className="w-16 h-16 text-blue-600 mb-4" />
               <p className="text-5xl md:text-6xl font-extrabold text-blue-600">6:4</p>
               <h3 className="font-bold text-xl mt-2 mb-2">Perfect Balance</h3>
-              <p className="text-gray-600">The <span className="text-blue-600 font-bold">scientifically perfect</span> local-to-international ratio for ideal language exchange.</p>
+              <p className="text-gray-600">The <span className="text-blue-600 font-bold"> perfect local-to-international ratio</span>  <br></br>for ideal language based party.</p>
             </div>             
             <div className="flex flex-col items-center">
               <TrendingUpIcon className="w-16 h-16 text-blue-600 mb-4" />
               <p className="text-5xl md:text-6xl font-extrabold text-blue-600">3</p>
               <h3 className="font-bold text-xl mt-2 mb-2">Fast Growing </h3>
-              <p className="text-gray-600"><span className="text-blue-600 font-semibold">NCCU → NTU → Taipei</span> in just 3 years. Our proven model is <span className="text-blue-600 font-bold">unstoppable</span>.</p>
+              <p className="text-gray-600"><span className="text-blue-600 font-semibold">NCCU → NTU → Taipei</span> in just 3 years.  <br></br> Our proven model is <span className="text-blue-600 font-bold">unstoppable</span>.</p>
             </div>
           </div>
 
@@ -218,8 +218,8 @@ export default function MainPage() {
                             <p className="mt-1 pl-6">Use languages naturally through genuine friendships, not awkward study sessions - laugh, debate, and bond in real conversations.</p>
                         </li>
                         <li>
-                            <h4 className="font-bold">✓ Story Worth Telling</h4>
-                            <p className="mt-1 pl-6">Create legendary memories with real locals and internationals you'll share for decades - not just tourist snapshots with strangers.</p>
+                            <h4 className="font-bold">✓ Create Unforgettable Memories</h4>
+                            <p className="mt-1 pl-6">Forming deeper bonds with locals and internationals you'll share for decades - not just photos for social media.</p>
                         </li>
                     </ul>
                 </div>
@@ -235,8 +235,8 @@ export default function MainPage() {
                             <p className="mt-1 pl-6">Your language skills slowly rust away from lack of real conversation while fluent opportunities walk past you daily.</p>
                         </li>
                         <li>
-                            <h4 className="font-bold">✗ What-If Syndrome</h4>
-                            <p className="mt-1 pl-6">Fly home with that haunting regret: "What if I had connected with those amazing people I saw but never met?"</p>
+                            <h4 className="font-bold">✗ Leaving With Regrets</h4>
+                            <p className="mt-1 pl-6">Flying home, wishing I’d made deeper connections with amazing people in Taiwan</p>
                         </li>
                     </ul>
                 </div>
@@ -279,40 +279,62 @@ export default function MainPage() {
       <section className="py-20 sm:py-24 px-4 sm:px-6 bg-gray-50">
         <div className="max-w-5xl mx-auto">
             <h2 className="text-3xl md:text-4xl font-bold mb-12 text-center">
-              The Other Ways to Make "Friends" in Taipei...
-              <span className="md:block">And What They <span className="text-blue-600">Really Cost</span>.</span>
+            The Cost of Making <span className="text-blue-600">"Friends Without SLAM"</span>
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                 <div className="text-left bg-white rounded-xl p-6 shadow-sm border border-gray-100">
                   <h3 className="font-bold text-xl">General Language Meetups</h3>
                   <p className="text-gray-600 mt-2 leading-relaxed">
                     Cost: <span className="text-blue-600 font-bold">300+ NTD</span><br />
-                    Result: Awkward silences and limited conversation opportunities.
+                    Result: Awkward silences and walls to deeper connection.
                   </p>
                 </div>
                 <div className="text-left bg-white rounded-xl p-6 shadow-sm border border-gray-100">
                   <h3 className="font-bold text-xl">A Single Night Out</h3>
                   <p className="text-gray-600 mt-2 leading-relaxed">
                     Cost: <span className="text-blue-600 font-bold">1000+ NTD</span><br />
-                    Result: Enjoyable moments with fleeting connections.
+                    Result: Enjoyable moments with superficial friendships.
                   </p>
                 </div>
                 <div className="text-left bg-white rounded-xl p-6 shadow-sm border border-gray-100">
                   <h3 className="font-bold text-xl">Premium Dating Apps</h3>
                   <p className="text-gray-600 mt-2 leading-relaxed">
                     Cost: <span className="text-blue-600 font-bold">600+ NTD</span><br />
-                    Result: Time spent browsing rather than connecting.
+                    Result: Wasting time forming short relationships.
                   </p>
                 </div>
             </div>
-            <p className="mt-12 text-lg text-gray-800 font-semibold text-left">The SLAM Way: We promise a time of <span className="text-blue-600">genuine friendships and priceless experiences,</span> for less than the cost of one night out.</p>
+            <div className="mt-12 mx-auto max-w-3xl px-4 relative">
+              {/* Background gradient */}
+              <div className="absolute inset-0 -z-10 rounded-3xl bg-gradient-to-r from-blue-50 via-white to-blue-50" />
+              <div className="text-center bg-white/90 backdrop-blur rounded-2xl border border-blue-100 shadow-md hover:shadow-xl transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.99] px-6 py-8 relative overflow-hidden">
+                {/* Floating stars */}
+                <div className="stars-container">
+                  <span className="star" style={{ left: '15%', bottom: '10%', animationDelay: '0s',   ['--star-dur']: '2.0s' }}>⭐</span>
+                  <span className="star" style={{ left: '35%', bottom: '12%', animationDelay: '0.3s', ['--star-dur']: '2.2s' }}>⭐</span>
+                  <span className="star" style={{ left: '55%', bottom: '8%',  animationDelay: '0.6s', ['--star-dur']: '1.9s' }}>⭐</span>
+                  <span className="star" style={{ left: '75%', bottom: '14%', animationDelay: '0.9s', ['--star-dur']: '2.1s' }}>⭐</span>
+                  <span className="star" style={{ left: '25%', bottom: '6%',  animationDelay: '1.2s', ['--star-dur']: '2.3s' }}>⭐</span>
+                </div>
+                <div className="leading-snug text-gray-900">
+                  <span className="block text-2xl sm:text-3xl md:text-4xl font-extrabold">The SLAM Way</span>
+                  <span className="block mt-2 text-base sm:text-lg md:text-xl font-medium">
+                    <span className="md:hidden">We promise <span className="text-blue-600 font-extrabold">genuine friendships and priceless experiences</span>, for less than the cost of one night out.</span>
+                    <span className="hidden md:inline">We promise <span className="text-blue-600 font-extrabold">genuine friendships and priceless experiences</span>,<br />for less than the cost of one night out.</span>
+                  </span>
+                </div>
+              </div>
+            </div>
         </div>
       </section>
 
       {/* SECTION 6: FAQ */}
       <section className="py-20 sm:py-24 bg-white px-4 sm:px-6">
         <div className="max-w-3xl mx-auto">
-            <h2 className="text-3xl md:text-4xl font-bold text-center mb-12">Still Hesitating? It's Okay. Everyone Asks These <span className="text-blue-600">Questions</span>.</h2>
+            <h2 className="font-bold text-center mb-12 leading-tight">
+              <span className="block text-3xl sm:text-4xl md:text-5xl text-blue-600">Still Hesitating?</span> <br></br>
+              <span className="block text-2xl sm:text-3xl md:text-4xl">Here's What Everyone Asks.</span>
+            </h2>
             <div className="space-y-8">
                 <div className="border-b pb-6">
                     <h3 className="font-bold text-lg sm:text-xl text-blue-600">Q. My English/Chinese isn't fluent. Is that okay?</h3>
@@ -329,7 +351,7 @@ export default function MainPage() {
                  <div>
                     <h3 className="font-bold text-lg sm:text-xl text-blue-600">Q. How to Join SLAM?</h3>
                     <div className="mt-2 text-base sm:text-lg text-gray-700 leading-relaxed space-y-2">
-                      <p><strong>Step 1: Sign Up (30 seconds) →</strong> Create your free account.</p>
+                      <p><strong>Step 1: Sign Up (30 seconds) →</strong> Create an account.</p>
                       <p><strong>Step 2: Book Your Spot (2 minutes) →</strong> Browse events, choose your branch, and complete the membership payment to secure your spot.</p>
                       <p><strong>Step 3: Show Up & Connect (2 hours) →</strong> Walk in nervous, walk out with new best friends.</p>
                     </div>
@@ -341,8 +363,8 @@ export default function MainPage() {
       {/* Final CTA Section */}
       <section className="py-24 px-6 text-center bg-gray-800 text-white">
         <div className="max-w-4xl mx-auto">
-            <h2 className="text-3xl md:text-4xl font-bold mb-6 text-white">
-                Your social life deserves better.
+            <h2 className="font-bold mb-6 text-white text-2xl sm:text-3xl md:text-4xl leading-snug">
+              Your social life deserves better.
             </h2>
             <p className="text-lg md:text-xl text-gray-300 mb-10 leading-relaxed">
                 Sign up to get involved in the <span className="text-blue-400 font-bold">unique community</span> in Taipei.
