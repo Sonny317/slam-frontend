@@ -28,7 +28,7 @@ const DetailModal = ({ user, onClose, onDeleteMembership }) => (
             <h2 className="text-2xl font-bold mb-4">{user?.name || user?.userName || 'Unknown User'}</h2>
             <div className="space-y-2 text-sm">
                 <p><strong>Email:</strong> {user?.email || user?.userEmail || 'N/A'}</p>
-                <p><strong>Branch:</strong> {user?.branch || user?.selectedBranch || 'N/A'}</p>
+                <p><strong>Branch:</strong> {user?.branch || user?.membership || user?.selectedBranch || 'N/A'}</p>
                 {user?.studentId && <p><strong>Student ID:</strong> {user.studentId}</p>}
                 {user?.phone && <p><strong>Phone:</strong> {user.phone}</p>}
                 {user?.major && <p><strong>Major:</strong> {user.major}</p>}
@@ -105,6 +105,15 @@ export default function AdminMemberManagementPage() {
     .reduce((sum, tx) => sum + Number(tx.amount || 0), 0);
   const netProfit = totalRevenue - totalExpenses;
 
+  // 통합 트랜잭션: 최신 날짜순 정렬
+  const combinedTransactions = [...filteredTransactions].sort((a, b) => {
+    const toTime = (d) => {
+      const t = new Date(d).getTime();
+      return Number.isNaN(t) ? 0 : t;
+    };
+    return toTime(b.date) - toTime(a.date);
+  });
+
   // ✅ 멤버십 삭제 함수
   const handleDeleteMembership = async (userId, branchName) => {
     try {
@@ -158,24 +167,30 @@ export default function AdminMemberManagementPage() {
   const handleAddTransaction = (e) => {
     e.preventDefault();
     const { type, date, item, amount } = newTx;
-    if (!date || !item || !amount) return;
+    const trimmedItem = String(item || '').trim();
+    const parsedAmount = Number(amount);
+    if (!date || !trimmedItem || Number.isNaN(parsedAmount)) {
+      console.warn('Add transaction blocked: invalid input', { date, item, amount });
+      alert('날짜/항목/금액을 모두 입력하세요. 금액은 숫자여야 합니다.');
+      return;
+    }
 
     const tx = {
       id: Date.now(),
       type,
       date,
-      item,
-      amount: Number(amount),
+      item: trimmedItem,
+      amount: parsedAmount,
       submittedBy: loggedInStaff.name,
       status: type === 'expense' ? 'Pending' : undefined,
     };
 
     setTransactionsByBranch(prev => {
-      const updated = { ...prev };
-      const list = [...(updated[branchFilter] || [])];
-      list.push(tx);
-      updated[branchFilter] = list;
-      return updated;
+      const next = { ...prev };
+      const currentList = Array.isArray(next[branchFilter]) ? [...next[branchFilter]] : [];
+      currentList.push(tx);
+      next[branchFilter] = currentList;
+      return next;
     });
 
     setNewTx({ type: 'expense', date: '', item: '', amount: '' });
@@ -298,8 +313,8 @@ export default function AdminMemberManagementPage() {
                           <tr key={member.id} onClick={() => setSelectedUser(member)} className="cursor-pointer hover:bg-gray-50">
                               <td className="px-4 py-2">{member.name}</td>
                               <td className="px-4 py-2">{member.email}</td>
-                              <td className="px-4 py-2">{member.membership || 'No membership'}</td>
-                              <td className="px-4 py-2 text-xs text-gray-500">{member.id}</td>
+                              <td className="px-4 py-2">{member.membership || member.branch || 'No membership'}</td>
+                              <td className="px-4 py-2 text-xs text-gray-500">{member.joinedCount ?? 0}</td>
                               <td className="px-4 py-2">
                                 <button onClick={(e) => { e.stopPropagation(); handleDeleteMembership(member.id, branchFilter); }} className="bg-red-500 text-white text-xs font-bold py-1 px-3 rounded-full hover:bg-red-600">Delete Membership</button>
                               </td>
@@ -316,6 +331,53 @@ export default function AdminMemberManagementPage() {
               <div className="bg-green-100 p-6 rounded-lg"><h3 className="text-lg font-semibold text-green-800">Total Revenue</h3><p className="text-3xl font-bold">{totalRevenue.toLocaleString()} NTD</p></div>
               <div className="bg-red-100 p-6 rounded-lg"><h3 className="text-lg font-semibold text-red-800">Total Expenses</h3><p className="text-3xl font-bold">{totalExpenses.toLocaleString()} NTD</p></div>
               <div className="bg-blue-100 p-6 rounded-lg"><h3 className="text-lg font-semibold text-blue-800">Net Profit</h3><p className="text-3xl font-bold">{netProfit.toLocaleString()} NTD</p></div>
+            </div>
+
+            {/* 통합 트랜잭션 목록 */}
+            <div className="bg-white p-6 rounded-lg shadow-md">
+              <h2 className="text-xl font-semibold mb-4">All Transactions for {branchFilter}</h2>
+              <table className="min-w-full">
+                <thead>
+                  <tr>
+                    <th className="text-left">Type</th>
+                    <th className="text-left">Date</th>
+                    <th className="text-left">Item</th>
+                    <th className="text-left">Amount</th>
+                    <th className="text-left">Submitted By</th>
+                    <th className="text-left">Status</th>
+                    <th className="text-left">Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {combinedTransactions.map(tx => (
+                    <tr key={tx.id}>
+                      <td>
+                        <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${tx.type === 'expense' ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'}`}>
+                          {tx.type === 'expense' ? 'Expense' : 'Revenue'}
+                        </span>
+                      </td>
+                      <td>{tx.date}</td>
+                      <td>{tx.item}</td>
+                      <td>{Number(tx.amount).toLocaleString()} NTD</td>
+                      <td>{tx.submittedBy || 'System'}</td>
+                      <td>
+                        {tx.type === 'expense' ? (
+                          <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${tx.status === 'Pending' ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800'}`}>
+                            {tx.status}
+                          </span>
+                        ) : (
+                          <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-50 text-green-700">Confirmed</span>
+                        )}
+                      </td>
+                      <td>
+                        {tx.type === 'expense' && tx.status === 'Pending' && (
+                          <button onClick={() => handleMarkExpensePaid(tx.id)} className="text-xs bg-gray-200 px-2 py-1 rounded hover:bg-gray-300">Mark as Paid</button>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
 
             {/* 지출 목록 */}
