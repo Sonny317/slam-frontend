@@ -69,6 +69,7 @@ export default function App() {
         <Route path="/forgot-password" element={<PublicLayout><ForgotPasswordPage /></PublicLayout>} />
 
         {/* Standalone Feedback Form Page */}
+        <Route path="/feedback" element={<FeedbackFormPage />} />
         <Route path="/feedback/event/:eventId" element={<FeedbackFormPage />} />
         
         {/* Admin Routes (Nested inside AdminLayout) */}

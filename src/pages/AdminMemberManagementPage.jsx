@@ -65,7 +65,9 @@ export default function AdminMemberManagementPage() {
   // 회계 트랜잭션 상태 (지부별)
   const [transactionsByBranch, setTransactionsByBranch] = useState(initialTransactionsByBranch);
   // 신규 트랜잭션 입력값 상태
-  const [newTx, setNewTx] = useState({ type: 'expense', date: '', item: '', amount: '' });
+  const [newTx, setNewTx] = useState({ type: 'expense', date: '', item: '', amount: '', eventTitle: '', receiptDataUrl: '', receiptUrl: '' });
+  const [receiptPreviewUrl, setReceiptPreviewUrl] = useState('');
+  const [viewReceiptUrl, setViewReceiptUrl] = useState('');
 
   const availableBranches = loggedInStaff.role === 'PRESIDENT' ? ['NCCU', 'NTU', 'TAIPEI'] : [loggedInStaff.branch];
 
@@ -183,6 +185,9 @@ export default function AdminMemberManagementPage() {
       amount: parsedAmount,
       submittedBy: loggedInStaff.name,
       status: type === 'expense' ? 'Pending' : undefined,
+      eventTitle: newTx.eventTitle || '',
+      receiptDataUrl: newTx.receiptDataUrl || '',
+      receiptUrl: newTx.receiptUrl || '',
     };
 
     setTransactionsByBranch(prev => {
@@ -193,7 +198,8 @@ export default function AdminMemberManagementPage() {
       return next;
     });
 
-    setNewTx({ type: 'expense', date: '', item: '', amount: '' });
+    setNewTx({ type: 'expense', date: '', item: '', amount: '', eventTitle: '', receiptDataUrl: '', receiptUrl: '' });
+    setReceiptPreviewUrl('');
   };
 
   const membershipFeeNTD = 900; // 멤버십 회비 기준 금액
@@ -232,6 +238,19 @@ export default function AdminMemberManagementPage() {
   return (
     <div>
       {selectedUser && <DetailModal user={selectedUser} onClose={() => setSelectedUser(null)} onDeleteMembership={handleDeleteMembership} />}
+      {viewReceiptUrl && (
+        <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50" onClick={() => setViewReceiptUrl('')}>
+          <div className="bg-white p-4 rounded-lg shadow-2xl max-w-3xl w-full" onClick={(e) => e.stopPropagation()}>
+            <div className="flex justify-between items-center mb-2">
+              <h3 className="text-lg font-semibold">Receipt</h3>
+              <button onClick={() => setViewReceiptUrl('')} className="text-gray-600 hover:text-gray-900">✕</button>
+            </div>
+            <div className="max-h-[75vh] overflow-auto">
+              <img src={viewReceiptUrl} alt="Receipt" className="w-full h-auto object-contain" />
+            </div>
+          </div>
+        </div>
+      )}
       <h1 className="text-4xl font-bold text-gray-800 mb-2">Member Management</h1>
       <p className="text-gray-500 mb-8">Manage applications, view member lists, and track finances for each branch.</p>
 
@@ -333,7 +352,7 @@ export default function AdminMemberManagementPage() {
               <div className="bg-blue-100 p-6 rounded-lg"><h3 className="text-lg font-semibold text-blue-800">Net Profit</h3><p className="text-3xl font-bold">{netProfit.toLocaleString()} NTD</p></div>
             </div>
 
-            {/* 통합 트랜잭션 목록 */}
+            {/* 통합 트랜잭션 목록 + Add New Transaction + Net Total */}
             <div className="bg-white p-6 rounded-lg shadow-md">
               <h2 className="text-xl font-semibold mb-4">All Transactions for {branchFilter}</h2>
               <table className="min-w-full">
@@ -342,7 +361,9 @@ export default function AdminMemberManagementPage() {
                     <th className="text-left">Type</th>
                     <th className="text-left">Date</th>
                     <th className="text-left">Item</th>
+                    <th className="text-left">Event</th>
                     <th className="text-left">Amount</th>
+                    <th className="text-left">Receipt</th>
                     <th className="text-left">Submitted By</th>
                     <th className="text-left">Status</th>
                     <th className="text-left">Action</th>
@@ -358,7 +379,17 @@ export default function AdminMemberManagementPage() {
                       </td>
                       <td>{tx.date}</td>
                       <td>{tx.item}</td>
+                      <td>{tx.eventTitle || '—'}</td>
                       <td>{Number(tx.amount).toLocaleString()} NTD</td>
+                      <td>
+                        {tx.receiptUrl ? (
+                          <a href={tx.receiptUrl} target="_blank" rel="noreferrer" className="text-xs text-blue-600 hover:underline">Open</a>
+                        ) : tx.receiptDataUrl ? (
+                          <button onClick={() => setViewReceiptUrl(tx.receiptDataUrl)} className="text-xs text-blue-600 hover:underline">Preview</button>
+                        ) : (
+                          <span className="text-xs text-gray-400">—</span>
+                        )}
+                      </td>
                       <td>{tx.submittedBy || 'System'}</td>
                       <td>
                         {tx.type === 'expense' ? (
@@ -378,34 +409,12 @@ export default function AdminMemberManagementPage() {
                   ))}
                 </tbody>
               </table>
-            </div>
-
-            {/* 지출 목록 */}
-            <div className="bg-white p-6 rounded-lg shadow-md">
-              <h2 className="text-xl font-semibold mb-4">Expenses for {branchFilter}</h2>
-              <table className="min-w-full">
-                <thead><tr><th className="text-left">Date</th><th className="text-left">Item</th><th className="text-left">Amount</th><th className="text-left">Submitted By</th><th className="text-left">Status</th><th className="text-left">Action</th></tr></thead>
-                <tbody>
-                  {filteredTransactions.filter(t => t.type === 'expense').map(exp => (
-                    <tr key={exp.id}>
-                      <td>{exp.date}</td>
-                      <td>{exp.item}</td>
-                      <td>{Number(exp.amount).toLocaleString()} NTD</td>
-                      <td>{exp.submittedBy}</td>
-                      <td>
-                        <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${exp.status === 'Pending' ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800'}`}>{exp.status}</span>
-                      </td>
-                      <td>
-                        {exp.status === 'Pending' && (
-                          <button onClick={() => handleMarkExpensePaid(exp.id)} className="text-xs bg-gray-200 px-2 py-1 rounded hover:bg-gray-300">Mark as Paid</button>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-
-              {/* 트랜잭션 추가 */}
+              <div className="mt-4 text-right">
+                <span className="text-sm text-gray-600 mr-2">Net Total:</span>
+                <span className={`text-lg font-bold ${combinedTransactions.reduce((sum, t) => sum + (t.type === 'expense' ? -Number(t.amount || 0) : Number(t.amount || 0)), 0) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                  {combinedTransactions.reduce((sum, t) => sum + (t.type === 'expense' ? -Number(t.amount || 0) : Number(t.amount || 0)), 0).toLocaleString()} NTD
+                </span>
+              </div>
               <div className="mt-6 border-t pt-6">
                 <h3 className="font-semibold">Add New Transaction</h3>
                 <form onSubmit={handleAddTransaction} className="flex flex-wrap gap-4 mt-2 items-end">
@@ -414,30 +423,54 @@ export default function AdminMemberManagementPage() {
                     <option value="expense">Expense</option>
                   </select>
                   <input type="date" value={newTx.date} onChange={e => setNewTx(v => ({ ...v, date: e.target.value }))} className="p-2 border rounded"/>
+                  <input type="text" placeholder="Event Name" value={newTx.eventTitle} onChange={e => setNewTx(v => ({ ...v, eventTitle: e.target.value }))} className="p-2 border rounded w-64"/>
                   <input type="text" placeholder="Item" value={newTx.item} onChange={e => setNewTx(v => ({ ...v, item: e.target.value }))} className="p-2 border rounded flex-grow"/>
                   <input type="number" min="0" placeholder="Amount" value={newTx.amount} onChange={e => setNewTx(v => ({ ...v, amount: e.target.value }))} className="p-2 border rounded w-32"/>
+                  <div className="flex items-center gap-2">
+                    <label className="text-sm text-gray-600">Receipt (≤1MB):</label>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (!file) return;
+                        if (file.size > 1024 * 1024) {
+                          alert('Receipt size must be 1MB or less.');
+                          e.target.value = '';
+                          return;
+                        }
+                        const form = new FormData();
+                        form.append('file', file);
+                        axios.post('/api/admin/receipts/upload', form, { headers: { 'Content-Type': 'multipart/form-data' } })
+                          .then(res => {
+                            const url = res?.data?.url;
+                            if (url) {
+                              setNewTx(prev => ({ ...prev, receiptUrl: url, receiptDataUrl: '' }));
+                              setReceiptPreviewUrl('');
+                              alert('Receipt uploaded.');
+                            } else {
+                              alert('Upload response invalid.');
+                            }
+                          })
+                          .catch(err => {
+                            console.error(err);
+                            alert('Failed to upload receipt.');
+                          });
+                      }}
+                      className="text-sm"
+                    />
+                  </div>
+                  {receiptPreviewUrl && (
+                    <button type="button" onClick={() => setViewReceiptUrl(receiptPreviewUrl)} className="text-xs text-blue-600 underline">
+                      Preview
+                    </button>
+                  )}
                   <button type="submit" className="bg-blue-600 text-white px-4 py-2 rounded">Add</button>
                 </form>
               </div>
             </div>
 
-            {/* 수입 목록 */}
-            <div className="bg-white p-6 rounded-lg shadow-md">
-              <h2 className="text-xl font-semibold mb-4">Revenue for {branchFilter}</h2>
-              <table className="min-w-full">
-                <thead><tr><th className="text-left">Date</th><th className="text-left">Item</th><th className="text-left">Amount</th><th className="text-left">Source</th></tr></thead>
-                <tbody>
-                  {filteredTransactions.filter(t => t.type === 'revenue').map(rv => (
-                    <tr key={rv.id}>
-                      <td>{rv.date}</td>
-                      <td>{rv.item}</td>
-                      <td>{Number(rv.amount).toLocaleString()} NTD</td>
-                      <td>{rv.submittedBy || 'System'}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            {/* Expenses/Revenue sections removed to avoid duplication */}
           </div>
         )}
       </div>
