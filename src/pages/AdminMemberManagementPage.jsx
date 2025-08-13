@@ -84,6 +84,11 @@ export default function AdminMemberManagementPage() {
           const response = await axios.get(`/api/admin/users/branch?branchName=${branchFilter}&sort=name`);
           console.log('Members API response:', response.data);
           setMembers(response.data);
+        } else if (activeTab === 'accounting') {
+          // Load persisted finance transactions
+          const res = await axios.get(`/api/admin/finance?branch=${branchFilter}`);
+          const list = Array.isArray(res.data) ? res.data : [];
+          setTransactionsByBranch(prev => ({ ...prev, [branchFilter]: list }));
         }
       } catch (error) {
         console.error('Failed to fetch data:', error);
@@ -152,21 +157,23 @@ export default function AdminMemberManagementPage() {
   };
 
   // 회계: 지출 상태 업데이트 (지급 완료 처리 등)
-  const handleMarkExpensePaid = (expenseId) => {
-    setTransactionsByBranch(prev => {
-      const updated = { ...prev };
-      const list = [...(updated[branchFilter] || [])];
-      const idx = list.findIndex(t => t.id === expenseId && t.type === 'expense');
-      if (idx !== -1) {
-        list[idx] = { ...list[idx], status: 'Reimbursed' };
-      }
-      updated[branchFilter] = list;
-      return updated;
-    });
+  const handleMarkExpensePaid = async (expenseId) => {
+    try {
+      const list = transactionsByBranch[branchFilter] || [];
+      const tx = list.find(t => t.id === expenseId && t.type === 'expense');
+      if (!tx) return;
+      await axios.put(`/api/admin/finance/${expenseId}`, { status: 'Reimbursed' });
+      // refresh
+      const res = await axios.get(`/api/admin/finance?branch=${branchFilter}`);
+      setTransactionsByBranch(prev => ({ ...prev, [branchFilter]: Array.isArray(res.data) ? res.data : [] }));
+    } catch (e) {
+      console.error(e);
+      alert('Failed to update status');
+    }
   };
 
   // 회계: 새 트랜잭션 추가 (수입/지출 선택)
-  const handleAddTransaction = (e) => {
+  const handleAddTransaction = async (e) => {
     e.preventDefault();
     const { type, date, item, amount } = newTx;
     const trimmedItem = String(item || '').trim();
@@ -177,29 +184,26 @@ export default function AdminMemberManagementPage() {
       return;
     }
 
-    const tx = {
-      id: Date.now(),
-      type,
-      date,
-      item: trimmedItem,
-      amount: parsedAmount,
-      submittedBy: loggedInStaff.name,
-      status: type === 'expense' ? 'Pending' : undefined,
-      eventTitle: newTx.eventTitle || '',
-      receiptDataUrl: newTx.receiptDataUrl || '',
-      receiptUrl: newTx.receiptUrl || '',
-    };
-
-    setTransactionsByBranch(prev => {
-      const next = { ...prev };
-      const currentList = Array.isArray(next[branchFilter]) ? [...next[branchFilter]] : [];
-      currentList.push(tx);
-      next[branchFilter] = currentList;
-      return next;
-    });
-
-    setNewTx({ type: 'expense', date: '', item: '', amount: '', eventTitle: '', receiptDataUrl: '', receiptUrl: '' });
-    setReceiptPreviewUrl('');
+    try {
+      await axios.post('/api/admin/finance', {
+        branchName: branchFilter,
+        type,
+        date,
+        item: trimmedItem,
+        amount: parsedAmount,
+        eventTitle: newTx.eventTitle || '',
+        receiptUrl: newTx.receiptUrl || '',
+        submittedBy: loggedInStaff.name,
+      });
+      // refresh
+      const res = await axios.get(`/api/admin/finance?branch=${branchFilter}`);
+      setTransactionsByBranch(prev => ({ ...prev, [branchFilter]: Array.isArray(res.data) ? res.data : [] }));
+      setNewTx({ type: 'expense', date: '', item: '', amount: '', eventTitle: '', receiptDataUrl: '', receiptUrl: '' });
+      setReceiptPreviewUrl('');
+    } catch (err) {
+      console.error(err);
+      alert('Failed to add transaction');
+    }
   };
 
   const membershipFeeNTD = 900; // 멤버십 회비 기준 금액
