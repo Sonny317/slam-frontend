@@ -14,6 +14,8 @@ export default function PostDetailPage() {
   const [loading, setLoading] = useState(true);
   const [comment, setComment] = useState('');
   const [showComments, setShowComments] = useState(false);
+  const [replyTo, setReplyTo] = useState(null);
+  const [sortBy, setSortBy] = useState('popular'); // 'popular', 'newest', 'oldest'
 
   // ✅ 고정 게시물 데이터
   const pinnedPosts = [
@@ -106,6 +108,30 @@ export default function PostDetailPage() {
     }
   };
 
+  // 댓글 좋아요 토글
+  const handleCommentLike = async (commentId) => {
+    if (!user?.isLoggedIn) {
+      alert('Login is required.');
+      return;
+    }
+    
+    try {
+      const res = await axios.post(`/api/posts/${postId}/comments/${commentId}/like`);
+      const liked = !!res.data?.liked;
+      
+      setPost(prev => ({
+        ...prev,
+        comments: prev.comments?.map(comment => 
+          comment.id === commentId 
+            ? { ...comment, likes: Math.max(0, (comment.likes || 0) + (liked ? 1 : -1)) }
+            : comment
+        ) || []
+      }));
+    } catch (error) {
+      console.error('Failed to like comment:', error);
+    }
+  };
+
   // 댓글 추가
   const handleAddComment = async () => {
     if (!user?.isLoggedIn) {
@@ -118,7 +144,8 @@ export default function PostDetailPage() {
     try {
       const response = await axios.post(`/api/posts/${postId}/comments`, {
         text: comment,
-        author: user?.name || user?.email || 'Anonymous' // 사용자 이름을 우선으로, 없으면 이메일 사용
+        author: user?.name || user?.email || 'Anonymous',
+        replyTo: replyTo?.id || null
       });
 
       setPost(prev => ({
@@ -127,10 +154,42 @@ export default function PostDetailPage() {
       }));
 
       setComment('');
+      setReplyTo(null);
     } catch (error) {
       console.error('Failed to add comment:', error);
       alert('Failed to add comment.');
     }
+  };
+
+  // 댓글 정렬
+  const getSortedComments = (comments) => {
+    if (!comments) return [];
+    
+    const sorted = [...comments].sort((a, b) => {
+      switch (sortBy) {
+        case 'popular':
+          return (b.likes || 0) - (a.likes || 0);
+        case 'newest':
+          return new Date(b.createdAt) - new Date(a.createdAt);
+        case 'oldest':
+          return new Date(a.createdAt) - new Date(b.createdAt);
+        default:
+          return 0;
+      }
+    });
+    
+    return sorted;
+  };
+
+  const formatTimeAgo = (dateString) => {
+    const now = new Date();
+    const past = new Date(dateString);
+    const diffInMinutes = Math.floor((now - past) / (1000 * 60));
+    
+    if (diffInMinutes < 1) return 'just now';
+    if (diffInMinutes < 60) return `${diffInMinutes}m ago`;
+    if (diffInMinutes < 1440) return `${Math.floor(diffInMinutes / 60)}h ago`;
+    return `${Math.floor(diffInMinutes / 1440)}d ago`;
   };
 
   // 게시글 삭제
@@ -263,51 +322,68 @@ export default function PostDetailPage() {
           {/* 댓글 섹션 */}
           {showComments && (
             <div className="px-8 py-6 border-t border-gray-100">
-              <h3 className="text-lg font-semibold mb-4">Comments ({(post.comments || []).length})</h3>
-              
-              {/* 댓글 목록 */}
-              <div className="space-y-4 mb-6">
-                {(post.comments || []).length > 0 ? (
-                  (post.comments || []).map(comment => (
-                    <div key={comment.id} className="bg-gray-50 p-4 rounded-lg">
-                      <div className="flex items-center justify-between mb-2">
-                        <Link to={`/users/profile?author=${encodeURIComponent(comment.author)}`} className="flex items-center gap-2 hover:opacity-80">
-                          <img src={(post._avatars?.[comment.author]?.profileImage) || '/default_profile.jpg'} alt="avatar" className="w-6 h-6 rounded-full object-cover" />
-                          <span className="font-medium text-gray-800">{comment.author}</span>
-                        </Link>
-                        <span className="text-sm text-gray-500">{comment.createdAt ? new Date(comment.createdAt).toLocaleDateString() : ''}</span>
-                      </div>
-                      <p className="text-gray-700">{comment.text}</p>
-                    </div>
-                  ))
-                ) : (
-                  <p className="text-gray-500 text-center py-4">No comments yet. Be the first to comment!</p>
+              {/* 댓글 헤더 */}
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-lg font-semibold">Comments ({(post.comments || []).length})</h3>
+                {(post.comments || []).length > 0 && (
+                  <div className="flex items-center space-x-2">
+                    <span className="text-sm text-gray-500">Sort by:</span>
+                    <select
+                      value={sortBy}
+                      onChange={(e) => setSortBy(e.target.value)}
+                      className="text-sm border border-gray-300 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    >
+                      <option value="popular">Most Liked</option>
+                      <option value="newest">Newest</option>
+                      <option value="oldest">Oldest</option>
+                    </select>
+                  </div>
                 )}
               </div>
 
               {/* 댓글 작성 폼 */}
-              <div className="border-t pt-4">
+              <div className="mb-6">
                 {user?.isLoggedIn ? (
-                  <>
-                    <textarea
-                      value={comment}
-                      onChange={(e) => setComment(e.target.value)}
-                      placeholder="Write a comment..."
-                      className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      rows="3"
-                    />
-                    <div className="flex justify-end mt-2">
-                      <button
-                        onClick={handleAddComment}
-                        disabled={!comment.trim()}
-                        className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        Add Comment
-                      </button>
+                  <div className="bg-gray-50 p-4 rounded-lg">
+                    {replyTo && (
+                      <div className="mb-3 p-2 bg-blue-50 rounded text-sm">
+                        <div className="flex justify-between items-center">
+                          <span className="text-blue-700">Replying to @{replyTo.author}</span>
+                          <button 
+                            onClick={() => setReplyTo(null)}
+                            className="text-blue-500 hover:text-blue-700"
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                    <div className="flex space-x-3">
+                      <div className="w-8 h-8 bg-gradient-to-br from-blue-400 to-purple-500 rounded-full flex items-center justify-center text-white text-sm font-semibold flex-shrink-0">
+                        {user.name?.charAt(0)?.toUpperCase() || 'U'}
+                      </div>
+                      <div className="flex-1">
+                        <textarea
+                          value={comment}
+                          onChange={(e) => setComment(e.target.value)}
+                          placeholder={replyTo ? `Reply to ${replyTo.author}...` : "Write a comment..."}
+                          className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                          rows="3"
+                        />
+                        <div className="flex justify-end mt-2">
+                          <button
+                            onClick={handleAddComment}
+                            disabled={!comment.trim()}
+                            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                          >
+                            {replyTo ? 'Reply' : 'Comment'}
+                          </button>
+                        </div>
+                      </div>
                     </div>
-                  </>
+                  </div>
                 ) : (
-                  <div className="text-center py-4">
+                  <div className="text-center py-6 bg-gray-50 rounded-lg">
                     <p className="text-gray-500 mb-2">Please log in to write a comment.</p>
                     <Link 
                       to="/login" 
@@ -315,6 +391,67 @@ export default function PostDetailPage() {
                     >
                       Log in
                     </Link>
+                  </div>
+                )}
+              </div>
+              
+              {/* 댓글 목록 */}
+              <div className="space-y-4">
+                {(post.comments || []).length > 0 ? (
+                  getSortedComments(post.comments).map(comment => (
+                    <div key={comment.id} className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-sm transition-shadow">
+                      <div className="flex space-x-3">
+                        <div className="w-10 h-10 bg-gradient-to-br from-blue-400 to-purple-500 rounded-full flex items-center justify-center text-white font-semibold flex-shrink-0">
+                          {comment.author?.charAt(0)?.toUpperCase() || 'A'}
+                        </div>
+                        <div className="flex-1">
+                          <div className="flex items-center space-x-2 mb-1">
+                            <span className="font-medium text-gray-900">{comment.author}</span>
+                            <span className="text-sm text-gray-500">•</span>
+                            <span className="text-sm text-gray-500">{formatTimeAgo(comment.createdAt)}</span>
+                            {(comment.likes || 0) > 0 && (
+                              <>
+                                <span className="text-sm text-gray-500">•</span>
+                                <span className="text-sm font-medium text-blue-600">Popular</span>
+                              </>
+                            )}
+                          </div>
+                          <p className="text-gray-700 mb-3">{comment.text}</p>
+                          <div className="flex items-center space-x-4">
+                            <button
+                              onClick={() => handleCommentLike(comment.id)}
+                              disabled={!user?.isLoggedIn}
+                              className={`flex items-center space-x-1 text-sm transition-colors ${
+                                user?.isLoggedIn 
+                                  ? 'text-gray-500 hover:text-red-500' 
+                                  : 'text-gray-300 cursor-not-allowed'
+                              }`}
+                            >
+                              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+                              </svg>
+                              <span>{comment.likes || 0}</span>
+                            </button>
+                            <button
+                              onClick={() => setReplyTo(comment)}
+                              disabled={!user?.isLoggedIn}
+                              className={`text-sm transition-colors ${
+                                user?.isLoggedIn 
+                                  ? 'text-gray-500 hover:text-blue-500' 
+                                  : 'text-gray-300 cursor-not-allowed'
+                              }`}
+                            >
+                              Reply
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-center py-8">
+                    <div className="text-4xl mb-2">💬</div>
+                    <p className="text-gray-500">No comments yet. Be the first to comment!</p>
                   </div>
                 )}
               </div>
