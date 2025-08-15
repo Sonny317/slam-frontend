@@ -31,7 +31,13 @@ export default function AdminDashboardPage() {
         }
       } catch (error) {
         console.error("Failed to fetch data:", error);
-        alert("데이터를 불러오는 데 실패했습니다.");
+        console.error("Error details:", {
+          message: error.message,
+          response: error.response?.data,
+          status: error.response?.status,
+          config: error.config
+        });
+        alert(`데이터를 불러오는 데 실패했습니다.\n상태코드: ${error.response?.status}\n메시지: ${error.response?.data?.message || error.message}`);
       } finally {
         setLoading(false);
       }

@@ -298,8 +298,8 @@ export default function PostDetailPage() {
                   url={(typeof window !== 'undefined') ? window.location.href : ''}
                   variant="text"
                 />
-                {/* 관리자용 삭제 버튼 */}
-                {user && user.role === 'ADMIN' && (
+                {/* 삭제 버튼 (관리자 또는 작성자) */}
+                {user && (user.role === 'ADMIN' || user.email === post.author || user.name === post.author) && (
                   <button 
                     onClick={handleDeletePost}
                     className="flex items-center space-x-2 text-gray-500 hover:text-red-600 transition-colors"

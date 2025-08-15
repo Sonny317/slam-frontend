@@ -142,8 +142,9 @@ export default function AdminFeedbackPage() {
             <div className="bg-white p-6 rounded-lg shadow-md">
               <h2 className="text-2xl font-semibold mb-4">Event Feedback List</h2>
               <ul className="space-y-4">
-                {filteredEvents.map(event => (
-                  <li key={event.eventId} className="p-4 border rounded-lg sm:flex justify-between items-center space-y-4 sm:space-y-0">
+                {console.log('Rendering filteredEvents:', filteredEvents)}
+                {filteredEvents.map((event, index) => (
+                  <li key={`filtered-event-${event.eventId || event.id || index}-${event.eventTitle || 'untitled'}`} className="p-4 border rounded-lg sm:flex justify-between items-center space-y-4 sm:space-y-0">
                     <div className="flex-grow">
                       <p className="font-bold text-lg text-gray-900">{event.eventTitle}</p>
                       <p className="text-sm text-gray-600"><span className="font-semibold text-indigo-700 bg-indigo-100 px-2 py-1 rounded-full">{event.branch}</span> | {new Date(event.eventDateTime || event.date).toLocaleString()}</p>
@@ -183,7 +184,7 @@ export default function AdminFeedbackPage() {
                         </thead>
                         <tbody className="bg-white divide-y divide-gray-100">
                           {gameRows.map((g,i)=>(
-                            <tr key={i}>
+                            <tr key={`game-${g.gameId}-${i}`}>
                               <td className="px-3 py-2">{g.gameId}</td>
                               <td className="px-3 py-2">{g.rating}</td>
                             </tr>

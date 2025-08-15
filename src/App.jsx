@@ -58,7 +58,7 @@ export default function App() {
         <Route path="/partnership" element={<PublicLayout><PartnershipPage /></PublicLayout>} />
         <Route path="/community" element={<PublicLayout><CommunityPage /></PublicLayout>} />
         <Route path="/community/new" element={<PublicLayout><NewPostPage /></PublicLayout>} />
-        <Route path="/community/:postId" element={<PublicLayout><PostDetailPage /></PublicLayout>} />
+        <Route path="/community/post/:postId" element={<PublicLayout><PostDetailPage /></PublicLayout>} />
         <Route path="/login" element={<PublicLayout><LoginPage /></PublicLayout>} />
         <Route path="/signup" element={<PublicLayout><SignupPage /></PublicLayout>} />
         <Route path="/mypage" element={<PublicLayout><MyPage /></PublicLayout>} />
