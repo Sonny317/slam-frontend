@@ -3,7 +3,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import axios from '../api/axios';
 import { QRCodeSVG } from 'qrcode.react';
 
-// --- 가짜 데이터 (API 연동 후 대체될 데이터베이스 모델) ---
+// --- 가�??�이??(API ?�동 ???�체될 ?�이?�베?�스 모델) ---
 
 // Game Master List
 const mockGames = [
@@ -19,7 +19,7 @@ const mockEvents = [
   { eventId: 3, eventTitle: "NCCU Mid-term Party", branch: "NCCU", date: "2024-09-10", games: [mockGames[0], mockGames[2]] },
 ];
 
-// Game Analytics Data (누적 데이터)
+// Game Analytics Data (?�적 ?�이??
 const mockGameStats = [
     { gameId: 'game-01', name: 'Human Bingo', avgRating: 4.8, feedbackCount: 120 },
     { gameId: 'game-02', name: 'Two Truths, One Lie', avgRating: 4.2, feedbackCount: 250 },
@@ -27,26 +27,26 @@ const mockGameStats = [
 ];
 // ------------------------------------
 
-// --- QR 코드 팝업(Modal) 컴포넌트 ---
+// --- QR 코드 ?�업(Modal) 컴포?�트 ---
 const QrModal = ({ url, title, onClose }) => (
   <div className="fixed inset-0 bg-black bg-opacity-60 flex justify-center items-center z-50" onClick={onClose}>
     <div className="bg-white p-8 rounded-lg text-center shadow-2xl max-w-md w-full mx-4" onClick={e => e.stopPropagation()}>
       <h2 className="text-2xl font-bold mb-6">{title}</h2>
       
-      {/* QR Code - 가운데 정렬 */}
+      {/* QR Code - 가?�데 ?�렬 */}
       <div className="flex justify-center mb-6">
       <QRCodeSVG value={url} size={256} />
       </div>
       
       <p className="text-gray-600 mb-4">Scan this code or click the button below to open the feedback form.</p>
       
-      {/* 버튼으로 링크 이동 */}
+      {/* 버튼?�로 링크 ?�동 */}
       <div className="space-y-3">
         <button 
           onClick={() => window.open(url, '_blank')}
           className="w-full py-3 bg-indigo-600 text-white font-bold rounded-lg hover:bg-indigo-700 transition-colors"
         >
-          🔗 Open Feedback Form
+          ?�� Open Feedback Form
         </button>
         <button 
           onClick={onClose} 
@@ -79,15 +79,15 @@ export default function AdminFeedbackPage() {
   const [staffFeedback, setStaffFeedback] = useState([]);
   const [userRole, setUserRole] = useState('member'); // 'member', 'staff', 'leader', 'admin'
 
-  // 사용자 역할 확인 (useEffect에 추가)
+  // ?�용????�� ?�인 (useEffect??추�?)
   useEffect(() => {
-    // 사용자 역할 가져오기 (UserContext 또는 API에서)
+    // ?�용????�� 가?�오�?(UserContext ?�는 API?�서)
     axios.get('/api/user/role').then(res => {
       setUserRole(res.data.role);
     }).catch(() => setUserRole('member'));
   }, []);
 
-  // 지부 필터링 로직
+  // 지부 ?�터�?로직
   const filteredEvents = useMemo(() => {
     const eventsToFilter = activeTab === 'past' ? pastEvents : events;
     if (selectedBranch === 'all') return eventsToFilter;
@@ -100,7 +100,7 @@ export default function AdminFeedbackPage() {
       const allEvents = res.data || [];
       const now = new Date();
       
-      // 현재/미래 이벤트와 과거 이벤트 분리
+      // ?�재/미래 ?�벤?��? 과거 ?�벤??분리
       const upcoming = allEvents.filter(e => new Date(e.eventDateTime) >= now);
       const past = allEvents.filter(e => new Date(e.eventDateTime) < now);
       
@@ -121,9 +121,9 @@ export default function AdminFeedbackPage() {
     axios.get(`/api/feedback/event/${selectedEventId}/games`).then(res => setGameRows(res.data || [])).catch(()=> setGameRows([]));
   }, [selectedEventId]);
 
-  // QR 코드 URL 생성 로직
+  // QR 코드 URL ?�성 로직
   const generateQrUrl = (event, role) => {
-    // Staff 폼의 경우 새로운 Staff Feedback Form으로 연결
+    // Staff ?�의 경우 ?�로??Staff Feedback Form?�로 ?�결
     if (role === 'staff') {
       const url = `${window.location.origin}/feedback/staff/${event.id || event.eventId}?branch=${event.branch}`;
       setShowQrModal({ url, title: `${event.title || event.eventTitle} (Staff Evaluation)` });
@@ -140,7 +140,7 @@ export default function AdminFeedbackPage() {
       return;
     }
     
-    // 선택된 이벤트에 게임 할당
+    // ?�택???�벤?�에 게임 ?�당
     axios.post(`/api/admin/events/${newFeedbackForm.eventId}/games`, newFeedbackForm.games)
       .then(() => {
         alert('Feedback form created successfully!');
@@ -150,7 +150,7 @@ export default function AdminFeedbackPage() {
       .catch(err => alert('Failed to create feedback: ' + (err?.response?.data || err?.message || 'Unknown error')));
   };
 
-  // 피드백 삭제 처리
+  // ?�드�???�� 처리
   const handleDeleteFeedback = async (eventId) => {
     if (!window.confirm('Are you sure you want to delete all feedback for this event? This action cannot be undone.')) {
       return;
@@ -160,7 +160,7 @@ export default function AdminFeedbackPage() {
       await axios.delete(`/api/feedback/event/${eventId}`);
       alert('Feedback deleted successfully!');
       
-      // 선택된 이벤트가 삭제된 경우 선택 해제
+      // ?�택???�벤?��? ??��??경우 ?�택 ?�제
       if (selectedEventId === eventId) {
         setSelectedEventId('');
         setSummary(null);
@@ -171,7 +171,7 @@ export default function AdminFeedbackPage() {
     }
   };
 
-  // 체크박스 선택 처리
+  // 체크박스 ?�택 처리
   const handleEventSelection = (eventId, isChecked) => {
     const newSelection = new Set(selectedPastEvents);
     if (isChecked) {
@@ -182,7 +182,7 @@ export default function AdminFeedbackPage() {
     setSelectedPastEvents(newSelection);
   };
 
-  // 전체 선택/해제
+  // ?�체 ?�택/?�제
   const handleSelectAll = (isChecked) => {
     if (isChecked) {
       const allEventIds = filteredEvents.map(e => e.id || e.eventId);
@@ -192,7 +192,7 @@ export default function AdminFeedbackPage() {
     }
   };
 
-  // 선택된 이벤트들의 집계 데이터 계산
+  // ?�택???�벤?�들??집계 ?�이??계산
   const calculateAggregatedData = async () => {
     if (selectedPastEvents.size === 0) {
       setAggregatedData(null);
@@ -211,7 +211,7 @@ export default function AdminFeedbackPage() {
       const summaries = await Promise.all(summaryPromises);
       const gameData = await Promise.all(gamePromises);
 
-      // 유효한 데이터만 필터링
+      // ?�효???�이?�만 ?�터�?
       const validSummaries = summaries.filter(s => s && s.data).map(s => s.data);
       const validGameData = gameData.filter(g => g && g.data).flatMap(g => g.data);
 
@@ -225,7 +225,7 @@ export default function AdminFeedbackPage() {
       const avgOverall = validSummaries.reduce((sum, s) => sum + (s.overallAvg || 0), 0) / validSummaries.length;
       const avgNPS = validSummaries.reduce((sum, s) => sum + (s.npsAvg || 0), 0) / validSummaries.length;
       
-      // 게임별 집계
+      // 게임�?집계
       const gameAggregation = {};
       validGameData.forEach(game => {
         if (!gameAggregation[game.gameId]) {
@@ -255,14 +255,14 @@ export default function AdminFeedbackPage() {
     }
   };
 
-  // 선택된 이벤트가 변경될 때마다 집계 데이터 계산
+  // ?�택???�벤?��? 변경될 ?�마??집계 ?�이??계산
   useEffect(() => {
     if (activeTab === 'past') {
       calculateAggregatedData();
     }
   }, [selectedPastEvents, activeTab]);
 
-  // Staff 피드백 데이터 로드
+  // Staff ?�드�??�이??로드
   const loadStaffFeedback = async (eventId) => {
     try {
       const selfResponse = await axios.get(`/api/feedback/staff/self/${eventId}`);
@@ -289,20 +289,20 @@ export default function AdminFeedbackPage() {
         </button>
       </div>
 
-      {/* 탭 메뉴 */}
+      {/* ??메뉴 */}
       <div className="border-b border-gray-200">
         <nav className="-mb-px flex gap-6">
           <button onClick={() => setActiveTab('summary')} className={`py-4 px-1 border-b-2 font-medium ${activeTab === 'summary' ? 'border-indigo-500 text-indigo-600' : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'}`}>
-            📋 Current Events
+            ?�� Current Events
           </button>
           <button onClick={() => setActiveTab('past')} className={`py-4 px-1 border-b-2 font-medium ${activeTab === 'past' ? 'border-indigo-500 text-indigo-600' : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'}`}>
-            📚 Past Feedback
+            ?�� Past Feedback
           </button>
           <button onClick={() => setActiveTab('staff')} className={`py-4 px-1 border-b-2 font-medium ${activeTab === 'staff' ? 'border-indigo-500 text-indigo-600' : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'}`}>
-            👥 Staff Feedback
+            ?�� Staff Feedback
           </button>
           <button onClick={() => setActiveTab('games')} className={`py-4 px-1 border-b-2 font-medium ${activeTab === 'games' ? 'border-indigo-500 text-indigo-600' : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'}`}>
-            🎯 Game Analytics
+            ?�� Game Analytics
           </button>
         </nav>
       </div>
@@ -347,7 +347,7 @@ export default function AdminFeedbackPage() {
             {selectedEventId && (
               <div className="bg-white p-6 rounded-lg shadow-md mt-6">
                 <h3 className="text-xl font-semibold mb-4 flex items-center">
-                  <span className="mr-2">📊</span>
+                  <span className="mr-2">?��</span>
                   Event Feedback Summary (#{selectedEventId})
                 </h3>
                 {summary ? (
@@ -360,7 +360,7 @@ export default function AdminFeedbackPage() {
                       </div>
                       <div className="bg-yellow-50 p-4 rounded-lg">
                         <div className="text-sm text-gray-500">Overall Rating</div>
-                        <div className="text-2xl font-bold text-yellow-500">{Number(summary.overallAvg).toFixed(1)} ★</div>
+                        <div className="text-2xl font-bold text-yellow-500">{Number(summary.overallAvg).toFixed(1)} ??/div>
                       </div>
                       <div className="bg-green-50 p-4 rounded-lg">
                         <div className="text-sm text-gray-500">NPS Score</div>
@@ -380,19 +380,19 @@ export default function AdminFeedbackPage() {
                         {summary.participantsFitAvg && (
                           <div className="bg-gray-50 p-4 rounded-lg text-center">
                             <div className="text-sm text-gray-500">Participants Fit</div>
-                            <div className="text-xl font-bold text-gray-700">{Number(summary.participantsFitAvg).toFixed(1)} ★</div>
+                            <div className="text-xl font-bold text-gray-700">{Number(summary.participantsFitAvg).toFixed(1)} ??/div>
                           </div>
                         )}
                         {summary.interactionOpportunityAvg && (
                           <div className="bg-gray-50 p-4 rounded-lg text-center">
                             <div className="text-sm text-gray-500">Interaction Opportunity</div>
-                            <div className="text-xl font-bold text-gray-700">{Number(summary.interactionOpportunityAvg).toFixed(1)} ★</div>
+                            <div className="text-xl font-bold text-gray-700">{Number(summary.interactionOpportunityAvg).toFixed(1)} ??/div>
                           </div>
                         )}
                         {summary.languageConfidenceAvg && (
                           <div className="bg-gray-50 p-4 rounded-lg text-center">
                             <div className="text-sm text-gray-500">Language Confidence</div>
-                            <div className="text-xl font-bold text-gray-700">{Number(summary.languageConfidenceAvg).toFixed(1)} ★</div>
+                            <div className="text-xl font-bold text-gray-700">{Number(summary.languageConfidenceAvg).toFixed(1)} ??/div>
                           </div>
                         )}
                       </div>
@@ -402,7 +402,7 @@ export default function AdminFeedbackPage() {
                     {(summary.goodPoints || summary.improvements || summary.comments) && (
                       <div className="mb-6">
                         <h4 className="font-semibold mb-4 flex items-center">
-                          <span className="mr-2">💬</span>
+                          <span className="mr-2">?��</span>
                           Participant Comments
                         </h4>
                         
@@ -411,7 +411,7 @@ export default function AdminFeedbackPage() {
                           {summary.goodPoints && summary.goodPoints.length > 0 && (
                             <div>
                               <h5 className="font-medium text-green-700 mb-3 flex items-center">
-                                <span className="mr-2">👍</span>
+                                <span className="mr-2">?��</span>
                                 What they liked most ({summary.goodPoints.length})
                               </h5>
                               <div className="space-y-2 max-h-48 overflow-y-auto">
@@ -433,7 +433,7 @@ export default function AdminFeedbackPage() {
                           {summary.improvements && summary.improvements.length > 0 && (
                             <div>
                               <h5 className="font-medium text-orange-700 mb-3 flex items-center">
-                                <span className="mr-2">💡</span>
+                                <span className="mr-2">?��</span>
                                 Suggestions for improvement ({summary.improvements.length})
                               </h5>
                               <div className="space-y-2 max-h-48 overflow-y-auto">
@@ -455,7 +455,7 @@ export default function AdminFeedbackPage() {
                           {summary.comments && summary.comments.length > 0 && !summary.goodPoints && !summary.improvements && (
                             <div className="lg:col-span-2">
                               <h5 className="font-medium text-gray-700 mb-3 flex items-center">
-                                <span className="mr-2">💭</span>
+                                <span className="mr-2">?��</span>
                                 General Comments ({summary.comments.length})
                               </h5>
                               <div className="space-y-3 max-h-64 overflow-y-auto">
@@ -478,14 +478,14 @@ export default function AdminFeedbackPage() {
                   </div>
                 ) : (
                   <div className="text-center py-8">
-                    <div className="text-4xl mb-2">📋</div>
+                    <div className="text-4xl mb-2">?��</div>
                     <p className="text-gray-500">No feedback data available yet.</p>
                   </div>
                 )}
                 
                 <div className="mt-6">
                   <h4 className="font-semibold mb-3 flex items-center">
-                    <span className="mr-2">🎮</span>
+                    <span className="mr-2">?��</span>
                     Game Ratings
                   </h4>
                   {gameRows.length > 0 ? (
@@ -503,13 +503,13 @@ export default function AdminFeedbackPage() {
                           {gameRows.map((g,i)=>{
                             const gameName = allGames.find(game => game.gameId === g.gameId)?.name || g.gameId;
                             const rating = Number(g.rating);
-                            const performance = rating >= 4.5 ? '🔥 Excellent' : rating >= 4.0 ? '👍 Good' : rating >= 3.5 ? '👌 Average' : '⚠️ Needs Improvement';
+                            const performance = rating >= 4.5 ? '?�� Excellent' : rating >= 4.0 ? '?�� Good' : rating >= 3.5 ? '?�� Average' : '?�️ Needs Improvement';
                             
                             return (
                               <tr key={i} className="hover:bg-gray-50">
                                 <td className="px-4 py-3 font-medium text-gray-900">{gameName}</td>
                                 <td className="px-4 py-3">
-                                  <span className="text-yellow-500 font-bold text-lg">{rating.toFixed(1)} ★</span>
+                                  <span className="text-yellow-500 font-bold text-lg">{rating.toFixed(1)} ??/span>
                                 </td>
                                 <td className="px-4 py-3 text-gray-600">{g.responseCount || 'N/A'}</td>
                                 <td className="px-4 py-3">
@@ -523,7 +523,7 @@ export default function AdminFeedbackPage() {
                     </div>
                   ) : (
                     <div className="text-center py-8">
-                      <div className="text-4xl mb-2">🎯</div>
+                      <div className="text-4xl mb-2">?��</div>
                       <p className="text-gray-500">No game ratings available yet.</p>
                     </div>
                   )}
@@ -570,7 +570,7 @@ export default function AdminFeedbackPage() {
                 <div className="mb-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
                   <div className="flex justify-between items-center mb-3">
                     <h3 className="font-semibold text-blue-800">
-                      📊 Aggregated Data ({selectedPastEvents.size} events selected)
+                      ?�� Aggregated Data ({selectedPastEvents.size} events selected)
                     </h3>
                     <button
                       onClick={() => setSelectedPastEvents(new Set())}
@@ -588,7 +588,7 @@ export default function AdminFeedbackPage() {
                       </div>
                       <div className="bg-white p-3 rounded-lg text-center">
                         <div className="text-xs text-gray-500">Avg Overall</div>
-                        <div className="text-xl font-bold text-yellow-500">{aggregatedData.avgOverall.toFixed(1)} ★</div>
+                        <div className="text-xl font-bold text-yellow-500">{aggregatedData.avgOverall.toFixed(1)} ??/div>
                       </div>
                       <div className="bg-white p-3 rounded-lg text-center">
                         <div className="text-xs text-gray-500">Avg NPS</div>
@@ -631,7 +631,7 @@ export default function AdminFeedbackPage() {
                         onClick={() => setSelectedEventId(event.id || event.eventId)} 
                         className="text-sm bg-blue-100 text-blue-800 px-3 py-2 rounded-lg hover:bg-blue-200"
                       >
-                        📊 View Feedback
+                        ?�� View Feedback
                       </button>
                     </div>
                   </li>
@@ -651,7 +651,7 @@ export default function AdminFeedbackPage() {
                       </div>
                       <div className="bg-yellow-50 p-4 rounded-lg">
                         <div className="text-sm text-gray-500">Overall Avg</div>
-                        <div className="text-2xl font-bold text-yellow-500">{Number(summary.overallAvg).toFixed(1)} ★</div>
+                        <div className="text-2xl font-bold text-yellow-500">{Number(summary.overallAvg).toFixed(1)} ??/div>
                       </div>
                       <div className="bg-green-50 p-4 rounded-lg">
                         <div className="text-sm text-gray-500">NPS Avg</div>
@@ -669,7 +669,7 @@ export default function AdminFeedbackPage() {
                     {(summary.goodPoints || summary.improvements || summary.comments) && (
                       <div className="mb-6">
                         <h4 className="font-semibold mb-4 flex items-center">
-                          <span className="mr-2">💬</span>
+                          <span className="mr-2">?��</span>
                           Participant Comments
                         </h4>
                         
@@ -678,7 +678,7 @@ export default function AdminFeedbackPage() {
                           {summary.goodPoints && summary.goodPoints.length > 0 && (
                             <div>
                               <h5 className="font-medium text-green-700 mb-3 flex items-center">
-                                <span className="mr-2">👍</span>
+                                <span className="mr-2">?��</span>
                                 What they liked most ({summary.goodPoints.length})
                               </h5>
                               <div className="space-y-2 max-h-48 overflow-y-auto">
@@ -700,7 +700,7 @@ export default function AdminFeedbackPage() {
                           {summary.improvements && summary.improvements.length > 0 && (
                             <div>
                               <h5 className="font-medium text-orange-700 mb-3 flex items-center">
-                                <span className="mr-2">💡</span>
+                                <span className="mr-2">?��</span>
                                 Suggestions for improvement ({summary.improvements.length})
                               </h5>
                               <div className="space-y-2 max-h-48 overflow-y-auto">
@@ -722,7 +722,7 @@ export default function AdminFeedbackPage() {
                           {summary.comments && summary.comments.length > 0 && !summary.goodPoints && !summary.improvements && (
                             <div className="lg:col-span-2">
                               <h5 className="font-medium text-gray-700 mb-3 flex items-center">
-                                <span className="mr-2">💭</span>
+                                <span className="mr-2">?��</span>
                                 General Comments ({summary.comments.length})
                               </h5>
                               <div className="space-y-3 max-h-64 overflow-y-auto">
@@ -760,14 +760,20 @@ export default function AdminFeedbackPage() {
                         </thead>
                         <tbody className="bg-white divide-y divide-gray-100">
                           {gameRows.map((g,i)=>(
+<<<<<<< HEAD
                             <tr key={i}>
                               <td className="px-3 py-2 font-medium">
                                 {allGames.find(game => game.gameId === g.gameId)?.name || g.gameId}
                               </td>
                               <td className="px-3 py-2">
-                                <span className="text-yellow-500 font-bold">{Number(g.rating).toFixed(1)} ★</span>
+                                <span className="text-yellow-500 font-bold">{Number(g.rating).toFixed(1)} ??/span>
                               </td>
                               <td className="px-3 py-2">{g.responseCount || 'N/A'}</td>
+=======
+                            <tr key={`game-${g.gameId}-${i}`}>
+                              <td className="px-3 py-2">{g.gameId}</td>
+                              <td className="px-3 py-2">{g.rating}</td>
+>>>>>>> e1a1f5d98e21a84f2a2bafaa37322d548abf5436
                             </tr>
                           ))}
                         </tbody>
@@ -803,7 +809,7 @@ export default function AdminFeedbackPage() {
               <div className="flex justify-between items-center mb-4">
                 <h2 className="text-2xl font-semibold">Staff Performance Feedback</h2>
                 <span className="text-sm text-red-600 bg-red-100 px-2 py-1 rounded-full">
-                  🔒 Leader Access Only
+                  ?�� Leader Access Only
                 </span>
               </div>
               
@@ -826,7 +832,7 @@ export default function AdminFeedbackPage() {
                           }}
                           className="text-sm bg-purple-100 text-purple-800 px-3 py-2 rounded-lg hover:bg-purple-200"
                         >
-                          👥 View Staff Feedback
+                          ?�� View Staff Feedback
                         </button>
                       </div>
                     </div>
@@ -839,7 +845,7 @@ export default function AdminFeedbackPage() {
             {selectedEventId && staffFeedback && (
               <div className="bg-white p-6 rounded-lg shadow-md mt-6">
                 <h3 className="text-xl font-semibold mb-4 flex items-center">
-                  <span className="mr-2">👥</span>
+                  <span className="mr-2">?��</span>
                   Staff Feedback Summary (Event #{selectedEventId})
                 </h3>
                 
@@ -847,7 +853,7 @@ export default function AdminFeedbackPage() {
                   {/* Self Evaluations */}
                   <div className="bg-blue-50 p-4 rounded-lg">
                     <h4 className="font-semibold text-blue-800 mb-3 flex items-center">
-                      <span className="mr-2">🔍</span>
+                      <span className="mr-2">?��</span>
                       Self Evaluations ({staffFeedback.self?.length || 0})
                     </h4>
                     <div className="space-y-3 max-h-96 overflow-y-auto">
@@ -888,7 +894,7 @@ export default function AdminFeedbackPage() {
                   {/* Peer Evaluations */}
                   <div className="bg-green-50 p-4 rounded-lg">
                     <h4 className="font-semibold text-green-800 mb-3 flex items-center">
-                      <span className="mr-2">👥</span>
+                      <span className="mr-2">?��</span>
                       Peer Evaluations ({staffFeedback.peer?.length || 0})
                     </h4>
                     <div className="space-y-3 max-h-96 overflow-y-auto">
@@ -896,7 +902,7 @@ export default function AdminFeedbackPage() {
                         <div key={index} className="bg-white p-3 rounded-lg border">
                           <div className="flex justify-between items-start mb-2">
                             <span className="font-medium text-gray-900">
-                              {feedback.evaluatorName} → {feedback.evaluatedName}
+                              {feedback.evaluatorName} ??{feedback.evaluatedName}
                             </span>
                             <span className="text-xs text-gray-500">{feedback.team}</span>
                           </div>
@@ -961,7 +967,7 @@ export default function AdminFeedbackPage() {
                           onClick={() => setSelectedEventId(event.id || event.eventId)}
                           className="text-sm bg-purple-100 text-purple-800 px-3 py-2 rounded-lg hover:bg-purple-200"
                         >
-                          👥 View Staff Feedback
+                          ?�� View Staff Feedback
                         </button>
                       </div>
                     </div>
@@ -973,7 +979,7 @@ export default function AdminFeedbackPage() {
             {selectedEventId && (
               <div className="bg-white p-6 rounded-lg shadow-md mt-6">
                 <h3 className="text-xl font-semibold mb-4 flex items-center">
-                  <span className="mr-2">👥</span>
+                  <span className="mr-2">?��</span>
                   Staff Feedback Summary (Event #{selectedEventId})
                 </h3>
                 
@@ -981,7 +987,7 @@ export default function AdminFeedbackPage() {
                   {/* Self Evaluations */}
                   <div className="bg-blue-50 p-4 rounded-lg">
                     <h4 className="font-semibold text-blue-800 mb-3 flex items-center">
-                      <span className="mr-2">🔍</span>
+                      <span className="mr-2">?��</span>
                       Self Evaluations (5)
                     </h4>
                     <div className="space-y-3 max-h-96 overflow-y-auto">
@@ -1016,14 +1022,14 @@ export default function AdminFeedbackPage() {
                   {/* Peer Evaluations */}
                   <div className="bg-green-50 p-4 rounded-lg">
                     <h4 className="font-semibold text-green-800 mb-3 flex items-center">
-                      <span className="mr-2">👥</span>
+                      <span className="mr-2">?��</span>
                       Peer Evaluations (8)
                     </h4>
                     <div className="space-y-3 max-h-96 overflow-y-auto">
                       <div className="bg-white p-3 rounded-lg border">
                         <div className="flex justify-between items-start mb-2">
                           <span className="font-medium text-gray-900">
-                            Sarah → John Kim
+                            Sarah ??John Kim
                           </span>
                           <span className="text-xs text-gray-500">EP</span>
                         </div>
@@ -1068,7 +1074,7 @@ export default function AdminFeedbackPage() {
                     <tr key={stat.gameId}>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{stat.name}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        <span className="font-bold text-yellow-500 text-lg">{stat.avgRating.toFixed(1)} ★</span>
+                        <span className="font-bold text-yellow-500 text-lg">{stat.avgRating.toFixed(1)} ??/span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{stat.feedbackCount}</td>
                     </tr>
@@ -1140,3 +1146,4 @@ export default function AdminFeedbackPage() {
     </div>
   );
 }
+

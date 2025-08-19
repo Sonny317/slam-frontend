@@ -112,7 +112,9 @@ export default function AdminMemberManagementPage() {
     fetchData();
   }, [activeTab, branchFilter]);
 
-  const filteredApplications = applications.filter(app => app.selectedBranch === branchFilter);
+  const filteredApplications = applications.filter(app => 
+    app.selectedBranch === branchFilter && app.status === 'payment_pending'
+  );
   const filteredMembers = Array.isArray(members) ? members : [];
   const filteredTransactions = transactionsByBranch[branchFilter] || [];
 

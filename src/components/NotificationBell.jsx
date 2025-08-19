@@ -28,13 +28,24 @@ export default function NotificationBell() {
       setNotifications(notifs);
       setUnreadCount(notifs.filter(n => !n.read).length);
     } catch (error) {
-      // 404 에러는 조용히 처리 (백엔드 미구현 시)
+      // 404 에러나 500 에러는 조용히 처리 (백엔드 미구현 또는 DB 연결 오류 시)
       if (error.response?.status === 404) {
         console.warn('Notification API not implemented yet');
         setNotifications([]);
         setUnreadCount(0);
+      } else if (error.response?.status === 500) {
+        console.warn('Notification service temporarily unavailable');
+        setNotifications([]);
+        setUnreadCount(0);
+      } else if (error.response?.status === 401) {
+        console.warn('Authentication required for notifications');
+        setNotifications([]);
+        setUnreadCount(0);
       } else {
         console.error('Failed to fetch notifications:', error);
+        // 다른 오류의 경우에도 빈 상태로 설정
+        setNotifications([]);
+        setUnreadCount(0);
       }
     }
   };
