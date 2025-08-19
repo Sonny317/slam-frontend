@@ -206,46 +206,47 @@ export default function AdminActionPlanPage() {
   );
 
   return (
-    <div>
-      {/* load tasks */}
-      <TasksLoader branch={branch} onLoad={setTasks} />
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-3">
-          <h1 className="text-4xl font-bold text-gray-800">Action Plan</h1>
-          <select value={branch} onChange={(e) => setBranch(e.target.value)} className="p-2 border rounded">
-            <option value="NCCU">NCCU</option>
-            <option value="NTU">NTU</option>
-            <option value="TAIPEI">TAIPEI</option>
-          </select>
+    <div className="min-h-screen bg-gray-100 p-4 sm:p-8">
+      <div className="max-w-7xl mx-auto">
+        {/* load tasks */}
+        <TasksLoader branch={branch} onLoad={setTasks} />
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-8 gap-4">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+            <h1 className="text-3xl sm:text-4xl font-bold text-gray-800">Action Plan</h1>
+            <select value={branch} onChange={(e) => setBranch(e.target.value)} className="px-4 py-2 border border-gray-300 rounded-lg bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+              <option value="NCCU">NCCU</option>
+              <option value="NTU">NTU</option>
+              <option value="TAIPEI">TAIPEI</option>
+            </select>
+          </div>
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2">
+            {selectedIds.size > 0 && (
+              <button
+                onClick={() => {
+                  if (!window.confirm(`Delete ${selectedIds.size} selected tasks?`)) return;
+                  const ids = Array.from(selectedIds);
+                  Promise.all(ids.map(id => axios.delete(`/api/admin/actions/${id}`)))
+                    .then(() => {
+                      setTasks(prev => prev.filter(t => !selectedIds.has(t.id)));
+                      setSelectedIds(new Set());
+                    })
+                    .catch(() => alert('Failed to delete some tasks'));
+                }}
+                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors shadow-sm"
+              >
+                Delete Selected ({selectedIds.size})
+              </button>
+            )}
+            <button onClick={handleOpenModal} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-sm">+ New Task</button>
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          {selectedIds.size > 0 && (
-            <button
-              onClick={() => {
-                if (!window.confirm(`Delete ${selectedIds.size} selected tasks?`)) return;
-                const ids = Array.from(selectedIds);
-                Promise.all(ids.map(id => axios.delete(`/api/admin/actions/${id}`)))
-                  .then(() => {
-                    setTasks(prev => prev.filter(t => !selectedIds.has(t.id)));
-                    setSelectedIds(new Set());
-                  })
-                  .catch(() => alert('Failed to delete some tasks'));
-              }}
-              className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
-            >
-              Delete Selected ({selectedIds.size})
-            </button>
-          )}
-          <button onClick={handleOpenModal} className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">+ New Task</button>
-        </div>
-      </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        {column('To Do', 'todo', 'bg-gray-100')}
-        {column('In Progress', 'inProgress', 'bg-gray-100')}
-        {column('Done', 'done', 'bg-gray-100')}
-        {column('Archive', 'archive', 'bg-gray-100')}
-      </div>
+        <div className="grid grid-cols-1 lg:grid-cols-4 md:grid-cols-2 gap-4 sm:gap-6">
+          {column('To Do', 'todo', 'bg-gray-100')}
+          {column('In Progress', 'inProgress', 'bg-gray-100')}
+          {column('Done', 'done', 'bg-gray-100')}
+          {column('Archive', 'archive', 'bg-gray-100')}
+        </div>
 
       {isModalOpen && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
@@ -337,6 +338,7 @@ export default function AdminActionPlanPage() {
       </div>
         </div>
       )}
+      </div>
     </div>
   );
 }

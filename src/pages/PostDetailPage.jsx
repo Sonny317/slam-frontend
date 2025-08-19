@@ -247,7 +247,20 @@ export default function PostDetailPage() {
                          <div className="flex items-center justify-between text-sm text-gray-500">
                <div className="flex items-center space-x-4">
                   <Link to={`/users/profile?author=${encodeURIComponent(post.author)}`} className="flex items-center gap-2 hover:opacity-80">
-                    <img src={(post._avatars?.[post.author]?.profileImage) || '/default_profile.jpg'} alt="avatar" className="w-6 h-6 rounded-full object-cover" />
+                    {(post._avatars?.[post.author]?.profileImage) ? (
+                      <img 
+                        src={post._avatars[post.author].profileImage} 
+                        alt="avatar" 
+                        className="w-6 h-6 rounded-full object-cover"
+                        onError={(e) => {
+                          e.target.style.display = 'none';
+                          e.target.nextElementSibling.style.display = 'flex';
+                        }}
+                      />
+                    ) : null}
+                    <div className={`w-6 h-6 bg-gradient-to-br from-blue-400 to-purple-500 rounded-full flex items-center justify-center text-white text-xs font-semibold ${(post._avatars?.[post.author]?.profileImage) ? 'hidden' : ''}`}>
+                      {post.author?.charAt(0)?.toUpperCase() || 'A'}
+                    </div>
                     <span>by {post.author}</span>
                   </Link>
                  <span>{post.createdAt ? new Date(post.createdAt).toLocaleDateString() : ''}</span>
@@ -359,7 +372,18 @@ export default function PostDetailPage() {
                       </div>
                     )}
                     <div className="flex space-x-3">
-                      <div className="w-8 h-8 bg-gradient-to-br from-blue-400 to-purple-500 rounded-full flex items-center justify-center text-white text-sm font-semibold flex-shrink-0">
+                      {user.profileImage ? (
+                        <img 
+                          src={user.profileImage} 
+                          alt={`${user.name}'s profile`}
+                          className="w-8 h-8 rounded-full object-cover flex-shrink-0"
+                          onError={(e) => {
+                            e.target.style.display = 'none';
+                            e.target.nextElementSibling.style.display = 'flex';
+                          }}
+                        />
+                      ) : null}
+                      <div className={`w-8 h-8 bg-gradient-to-br from-blue-400 to-purple-500 rounded-full flex items-center justify-center text-white text-sm font-semibold flex-shrink-0 ${user.profileImage ? 'hidden' : ''}`}>
                         {user.name?.charAt(0)?.toUpperCase() || 'U'}
                       </div>
                       <div className="flex-1">
@@ -401,12 +425,25 @@ export default function PostDetailPage() {
                   getSortedComments(post.comments).map(comment => (
                     <div key={comment.id} className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-sm transition-shadow">
                       <div className="flex space-x-3">
-                        <div className="w-10 h-10 bg-gradient-to-br from-blue-400 to-purple-500 rounded-full flex items-center justify-center text-white font-semibold flex-shrink-0">
+                        {(post._avatars?.[comment.author]?.profileImage) ? (
+                          <img 
+                            src={post._avatars[comment.author].profileImage} 
+                            alt={`${comment.author}'s profile`}
+                            className="w-10 h-10 rounded-full object-cover flex-shrink-0"
+                            onError={(e) => {
+                              e.target.style.display = 'none';
+                              e.target.nextElementSibling.style.display = 'flex';
+                            }}
+                          />
+                        ) : null}
+                        <div className={`w-10 h-10 bg-gradient-to-br from-blue-400 to-purple-500 rounded-full flex items-center justify-center text-white font-semibold flex-shrink-0 ${(post._avatars?.[comment.author]?.profileImage) ? 'hidden' : ''}`}>
                           {comment.author?.charAt(0)?.toUpperCase() || 'A'}
                         </div>
                         <div className="flex-1">
                           <div className="flex items-center space-x-2 mb-1">
-                            <span className="font-medium text-gray-900">{comment.author}</span>
+                            <Link to={`/users/profile?author=${encodeURIComponent(comment.author)}`} className="font-medium text-gray-900 hover:text-blue-600 transition-colors">
+                              {comment.author}
+                            </Link>
                             <span className="text-sm text-gray-500">•</span>
                             <span className="text-sm text-gray-500">{formatTimeAgo(comment.createdAt)}</span>
                             {(comment.likes || 0) > 0 && (

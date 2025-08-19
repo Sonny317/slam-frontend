@@ -9,12 +9,24 @@ export default function AdminStaffInfoPage() {
   const [loading, setLoading] = useState(true);
   const [assignModal, setAssignModal] = useState({ open: false, userId: null, email: '' });
   const [assignRole, setAssignRole] = useState('STAFF');
+  const [isMobile, setIsMobile] = useState(false);
 
   // Filters / Search / Sort
   const [search, setSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState('ALL');
   const [branchFilter, setBranchFilter] = useState('ALL');
   const [sortKey, setSortKey] = useState('name');
+
+  // 화면 크기 감지
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 1200); // iPad Pro까지 카드 뷰 사용
+    };
+    
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   const canAssignStaff = useMemo(() => {
     // ADMIN은 모두 가능, PRESIDENT도 STAFF로 지정 가능
@@ -152,11 +164,22 @@ export default function AdminStaffInfoPage() {
     }
   };
 
+  const getRoleColor = (role) => {
+    switch (role?.toUpperCase()) {
+      case 'ADMIN': return 'bg-red-100 text-red-800';
+      case 'PRESIDENT': return 'bg-purple-100 text-purple-800';
+      case 'LEADER': return 'bg-blue-100 text-blue-800';
+      case 'STAFF': return 'bg-green-100 text-green-800';
+      case 'MEMBER': return 'bg-gray-100 text-gray-800';
+      default: return 'bg-gray-100 text-gray-800';
+    }
+  };
+
   return (
-    <div>
-      <div className="flex justify-between items-center mb-8">
-        <h1 className="text-4xl font-bold text-gray-800">Staff Info</h1>
-        <div className="flex items-center gap-3">
+    <div className="p-4 sm:p-8">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
+        <h1 className="text-3xl sm:text-4xl font-bold text-gray-800">Staff Info</h1>
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
           <div className="text-sm text-gray-600">
             전체: <span className="font-semibold">{members.length}</span>
             <span className="mx-1">/</span>
@@ -168,7 +191,7 @@ export default function AdminStaffInfoPage() {
 
       {/* Branch Tabs */}
       <div className="mb-4 overflow-x-auto">
-        <div className="flex gap-2">
+        <div className="flex gap-2 min-w-max">
           {branches.map(b => (
             <button
               key={b}
@@ -192,9 +215,9 @@ export default function AdminStaffInfoPage() {
         </div>
       </div>
 
-      <div className="bg-white shadow-md rounded-lg overflow-x-auto">
+      <div className="bg-white shadow-md rounded-lg overflow-hidden">
         {/* Controls */}
-        <div className="p-4 grid grid-cols-1 md:grid-cols-3 gap-3 border-b">
+        <div className="p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 border-b">
           <input
             value={search}
             onChange={e => setSearch(e.target.value)}
@@ -225,7 +248,36 @@ export default function AdminStaffInfoPage() {
 
         {loading ? (
           <p className="p-6 text-gray-500">Loading...</p>
+        ) : isMobile ? (
+          // Mobile Card View
+          <div className="p-4 space-y-4">
+            {filteredMembers.map(member => (
+              <div key={member.id} className="bg-gray-50 p-4 rounded-lg border">
+                <div className="flex justify-between items-start mb-3">
+                  <div className="flex-1">
+                    <h3 className="font-semibold text-gray-900">{member.name}</h3>
+                    <p className="text-sm text-gray-600">{member.email}</p>
+                  </div>
+                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${getRoleColor(member.role)}`}>
+                    {member.role}
+                  </span>
+                </div>
+                <div className="text-sm text-gray-600 mb-3">
+                  <span className="font-medium">Branch:</span> {getActiveBranches(member).join(', ') || '-'}
+                </div>
+                {canAssignStaff && (
+                  <button 
+                    onClick={() => openAssign(member)} 
+                    className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                  >
+                    Assign as Staff
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
         ) : (
+          // Desktop Table View
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
@@ -241,7 +293,11 @@ export default function AdminStaffInfoPage() {
                 <tr key={member.id}>
                   <td className="px-6 py-4 whitespace-nowrap">{member.name}</td>
                   <td className="px-6 py-4 whitespace-nowrap">{member.email}</td>
-                  <td className="px-6 py-4 whitespace-nowrap">{member.role}</td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${getRoleColor(member.role)}`}>
+                      {member.role}
+                    </span>
+                  </td>
                   <td className="px-6 py-4 whitespace-nowrap">{getActiveBranches(member).join(', ') || '-'}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm">
                     {canAssignStaff && (
@@ -256,7 +312,7 @@ export default function AdminStaffInfoPage() {
       </div>
 
       {assignModal.open && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg p-6 w-full max-w-md">
             <h2 className="text-xl font-bold mb-4">Assign Staff</h2>
             <p className="text-sm text-gray-600 mb-4">{assignModal.email}의 역할을 설정합니다.</p>

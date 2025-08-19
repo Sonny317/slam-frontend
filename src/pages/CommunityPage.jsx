@@ -78,7 +78,18 @@ const DcardPostCard = ({ post, onDelete, isPinned }) => {
         {/* Post Header */}
         <div className="flex items-start justify-between mb-3">
           <div className="flex items-center space-x-3">
-            <div className="w-8 h-8 bg-gradient-to-br from-blue-400 to-purple-500 rounded-full flex items-center justify-center text-white text-sm font-semibold">
+            {post.profileImage ? (
+              <img 
+                src={post.profileImage} 
+                alt={`${post.author}'s profile`}
+                className="w-8 h-8 rounded-full object-cover"
+                onError={(e) => {
+                  e.target.style.display = 'none';
+                  e.target.nextElementSibling.style.display = 'flex';
+                }}
+              />
+            ) : null}
+            <div className={`w-8 h-8 bg-gradient-to-br from-blue-400 to-purple-500 rounded-full flex items-center justify-center text-white text-sm font-semibold ${post.profileImage ? 'hidden' : ''}`}>
               {post.author?.charAt(0)?.toUpperCase() || 'A'}
             </div>
             <div>
@@ -354,7 +365,18 @@ export default function CommunityPage() {
               {user?.isLoggedIn && (
                 <div className="mb-8 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-100">
                   <div className="flex items-center space-x-3 mb-3">
-                    <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold text-lg">
+                    {user.profileImage ? (
+                      <img 
+                        src={user.profileImage} 
+                        alt={`${user.name}'s profile`}
+                        className="w-12 h-12 rounded-full object-cover"
+                        onError={(e) => {
+                          e.target.style.display = 'none';
+                          e.target.nextElementSibling.style.display = 'flex';
+                        }}
+                      />
+                    ) : null}
+                    <div className={`w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold text-lg ${user.profileImage ? 'hidden' : ''}`}>
                       {user.name?.charAt(0)?.toUpperCase() || 'U'}
                     </div>
                     <div>

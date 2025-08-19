@@ -85,7 +85,7 @@ export default function UserProfilePage() {
               <ul className="space-y-3">
                 {data.posts.map(p => (
                   <li key={p.id} className="p-3 rounded-md hover:bg-gray-50">
-                    <Link to={`/community/${p.id}`} className="block">
+                    <Link to={`/community/post/${p.id}`} className="block">
                       <p className="font-semibold text-blue-700 hover:text-blue-900">{p.title}</p>
                       <p className="text-xs text-gray-500">{p.createdAt ? new Date(p.createdAt).toLocaleDateString() : ''} • {p.category}</p>
                       <p className="text-sm text-gray-600 line-clamp-2">{p.summary || p.content}</p>

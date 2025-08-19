@@ -31,6 +31,7 @@ import AdminEventsPage from './pages/AdminEventsPage';
 
 //Feedbackform
 import FeedbackFormPage from './pages/FeedbackFormPage'; // ✅ 피드백 폼 페이지 import
+import StaffFeedbackFormPage from './pages/StaffFeedbackFormPage'; // ✅ 스태프 피드백 폼 페이지 import
 import CommunityPage from './pages/CommunityPage'; // ✅ 커뮤니티 페이지 import
 import NewPostPage from './pages/NewPostPage'; // ✅ 새 게시글 작성 페이지 import
 import PostDetailPage from './pages/PostDetailPage'; // ✅ 게시글 상세 페이지 import
@@ -69,8 +70,8 @@ export default function App() {
         <Route path="/forgot-password" element={<PublicLayout><ForgotPasswordPage /></PublicLayout>} />
 
         {/* Standalone Feedback Form Page */}
-        <Route path="/feedback" element={<FeedbackFormPage />} />
         <Route path="/feedback/event/:eventId" element={<FeedbackFormPage />} />
+        <Route path="/feedback/staff/:eventId" element={<StaffFeedbackFormPage />} />
         
         {/* Admin Routes (Nested inside AdminLayout) */}
         <Route path="/admin" element={<AdminLayout />}>

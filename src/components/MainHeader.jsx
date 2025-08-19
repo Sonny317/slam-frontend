@@ -6,6 +6,7 @@ import NotificationBell from './NotificationBell';
 export default function MainHeader() {
   const navigate = useNavigate();
   const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const [showNotificationDropdown, setShowNotificationDropdown] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const { user, logout } = useUser();
@@ -32,30 +33,71 @@ export default function MainHeader() {
     };
   }, []);
 
+  // 외부 클릭 시 메뉴들 닫기
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (showProfileMenu && !event.target.closest('.profile-menu-container')) {
+        setShowProfileMenu(false);
+      }
+      if (showNotificationDropdown && !event.target.closest('.notification-container')) {
+        setShowNotificationDropdown(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showProfileMenu, showNotificationDropdown]);
+
   const handleMyPage = () => {
     setShowProfileMenu(false);
+    setShowNotificationDropdown(false);
     setIsMobileMenuOpen(false);
     navigate("/mypage");
   };
 
   const handleAdminPage = () => {
     setShowProfileMenu(false);
+    setShowNotificationDropdown(false);
     setIsMobileMenuOpen(false);
     navigate("/admin/dashboard");
   };
 
   const handleLogout = () => {
     setShowProfileMenu(false);
+    setShowNotificationDropdown(false);
     setIsMobileMenuOpen(false);
     logout();
   }
 
+  const handleProfileMenuToggle = () => {
+    const newState = !showProfileMenu;
+    setShowProfileMenu(newState);
+    if (newState) {
+      setShowNotificationDropdown(false); // 프로필 메뉴 열면 알림 드롭다운 닫기
+    }
+  };
+
+  const handleNotificationToggle = (isOpen) => {
+    setShowNotificationDropdown(isOpen);
+    if (isOpen) {
+      setShowProfileMenu(false); // 알림 드롭다운 열면 프로필 메뉴 닫기
+    }
+  };
+
+  const handleNotificationClose = () => {
+    setShowNotificationDropdown(false);
+  };
+
   const closeMobileMenu = () => {
     setIsMobileMenuOpen(false);
+    setShowProfileMenu(false);
+    setShowNotificationDropdown(false);
   }
 
   return (
-    <header className="flex items-center justify-between px-6 py-4 shadow bg-white relative z-20">
+    <header className="flex items-center justify-between px-6 py-4 shadow bg-white relative z-50">
       <Link to="/" className="flex items-center gap-2">
         <img src="/slam_logo_web_rgb.jpg" alt="SLAM Logo" className="w-8 h-8 rounded-full object-cover" />
         <span className="text-lg font-semibold">SLAM</span>
@@ -76,19 +118,25 @@ export default function MainHeader() {
           </>
         ) : (
           <div className="flex items-center space-x-4">
-            <NotificationBell />
-            <div className="relative">
+            <div className="notification-container">
+              <NotificationBell 
+                isOpen={showNotificationDropdown}
+                onToggle={handleNotificationToggle}
+                onClose={handleNotificationClose}
+              />
+            </div>
+            <div className="relative z-50 profile-menu-container">
               <img
                 src={user.profileImage || defaultProfileImage}
                 alt="Profile"
                 className="w-8 h-8 rounded-full cursor-pointer object-cover"
-                onClick={() => setShowProfileMenu(!showProfileMenu)}
+                onClick={handleProfileMenuToggle}
                 onError={(e) => { e.target.onerror = null; e.target.src = defaultProfileImage; }}
               />
             {showProfileMenu && (
               <div 
-                className="absolute right-0 top-full mt-2 w-48 bg-white rounded-md shadow-lg py-1"
-                onMouseLeave={() => setShowProfileMenu(false)}
+                className="fixed right-6 top-16 w-48 bg-white rounded-md shadow-xl py-1 border border-gray-200"
+                style={{ zIndex: 99999 }}
               >
                 <button onClick={handleMyPage} className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
                   My Page
@@ -114,8 +162,20 @@ export default function MainHeader() {
       {/* --- Mobile Menu Button --- */}
       {isMobile && (
         <div className="flex items-center space-x-2">
-          {user.isLoggedIn && <NotificationBell />}
-          <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}>
+          {user.isLoggedIn && (
+            <div className="notification-container">
+              <NotificationBell 
+                isOpen={showNotificationDropdown}
+                onToggle={handleNotificationToggle}
+                onClose={handleNotificationClose}
+              />
+            </div>
+          )}
+          <button onClick={() => {
+            setIsMobileMenuOpen(!isMobileMenuOpen);
+            setShowProfileMenu(false);
+            setShowNotificationDropdown(false);
+          }}>
             {isMobileMenuOpen ? (
               <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />

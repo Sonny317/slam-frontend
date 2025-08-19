@@ -68,11 +68,14 @@ export default function FeedbackFormPage() {
   const [overallRating, setOverallRating] = useState(0);
   const [participantsFit, setParticipantsFit] = useState(0);
   const [interactionOpportunity, setInteractionOpportunity] = useState(0);
-  const [languageConfidence, setLanguageConfidence] = useState(0);
-  const [nps, setNps] = useState(0);
+  
+  // 새로운 질문들
+  const [leadershipInterest, setLeadershipInterest] = useState('');
+  const [reelsParticipation, setReelsParticipation] = useState('');
+  
   const ACTIVITIES = [
-    'Traveling','Drink at a bar','Karaoke Nights','Going to beach','EDM festival & Night club',
-    'Bouldering & Running crew','Picnic in the Park','Game Nights','Hiking'
+    '2-day Taiwan traveling', 'Drink at a bar', 'Karaoke Nights', 'Going to the beach', 'EDM festival & Night club',
+    'Bouldering & Running crew', 'Picnic in the Park', 'Board Game Nights', 'Hiking & Nature walks', 'Language Exchange meetups'
   ];
   const [selectedActivities, setSelectedActivities] = useState([]);
   // 게임별 평점 (객체 형태로 관리)
@@ -131,10 +134,11 @@ export default function FeedbackFormPage() {
       overall: overallRating,
       participantsFit,
       interactionOpportunity,
-      languageConfidence,
-      nps,
+      leadershipInterest,
+      reelsParticipation,
       top3Activities,
-      comment: [goodPoints, improvements].filter(Boolean).join('\n\n'),
+      goodPoints,
+      improvements,
       gameRatings
     };
     axios.post('/api/feedback/member/submit', payload)
@@ -192,8 +196,27 @@ export default function FeedbackFormPage() {
   if (isSubmitted) {
     return (
       <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center text-center p-4">
-        <h1 className="text-4xl font-bold text-indigo-600 mb-4">Thank You!</h1>
-        <p className="text-lg text-gray-700">Your feedback for <span className="font-semibold">{eventDetails.eventTitle}</span> has been submitted.</p>
+        <div className="bg-white p-8 rounded-lg shadow-xl w-full max-w-md">
+          <div className="text-6xl mb-4">🎉</div>
+          <h1 className="text-3xl font-bold text-indigo-600 mb-4">Thank You!</h1>
+          <p className="text-lg text-gray-700 mb-6">
+            Your feedback for <span className="font-semibold text-indigo-600">{eventDetails.eventTitle}</span> has been submitted successfully.
+          </p>
+          <div className="space-y-3">
+            <Link 
+              to="/" 
+              className="block w-full py-3 bg-indigo-600 text-white font-bold rounded-lg hover:bg-indigo-700 transition-colors"
+            >
+              🏠 Back to Home
+            </Link>
+            <Link 
+              to="/events" 
+              className="block w-full py-3 bg-gray-600 text-white font-bold rounded-lg hover:bg-gray-700 transition-colors"
+            >
+              📅 View More Events
+            </Link>
+          </div>
+        </div>
       </div>
     );
   }
@@ -223,13 +246,91 @@ export default function FeedbackFormPage() {
               <label className="block text-center text-base font-medium text-gray-700 mb-2">Interaction opportunity</label>
               <StarRating rating={interactionOpportunity} setRating={setInteractionOpportunity} />
             </div>
-            <div className="p-4 bg-gray-50 rounded-lg">
-              <label className="block text-center text-base font-medium text-gray-700 mb-2">Language confidence</label>
-              <StarRating rating={languageConfidence} setRating={setLanguageConfidence} />
+          </div>
+
+          {/* 새로운 질문들 - 영어로 변경 */}
+          <div className="space-y-6">
+            <div className="p-4 bg-blue-50 rounded-lg">
+              <label className="block text-lg font-medium text-gray-700 mb-3">
+                🌟 Are you interested in leading a SLAM sub-community?
+              </label>
+              <p className="text-sm text-gray-600 mb-4">
+                Examples: Running crew, Sports meetups, Hiking group, Cultural exchange, etc.
+              </p>
+              <div className="space-y-3">
+                <label className="flex items-start">
+                  <input
+                    type="radio"
+                    name="leadership"
+                    value="yes"
+                    checked={leadershipInterest === 'yes'}
+                    onChange={(e) => setLeadershipInterest(e.target.value)}
+                    className="mr-3 mt-1"
+                  />
+                  <div>
+                    <span className="font-medium">Yes, I'm interested!</span>
+                    {leadershipInterest === 'yes' && (
+                      <input
+                        type="text"
+                        placeholder="Your Instagram ID for contact"
+                        className="mt-2 w-full p-2 border rounded-md text-sm"
+                        onChange={(e) => setLeadershipInterest(`yes:${e.target.value}`)}
+                      />
+                    )}
+                  </div>
+                </label>
+                <label className="flex items-center">
+                  <input
+                    type="radio"
+                    name="leadership"
+                    value="no"
+                    checked={leadershipInterest === 'no'}
+                    onChange={(e) => setLeadershipInterest(e.target.value)}
+                    className="mr-3"
+                  />
+                  <span>Not right now</span>
+                </label>
+              </div>
             </div>
-            <div className="p-4 bg-gray-50 rounded-lg">
-              <label className="block text-center text-base font-medium text-gray-700 mb-2">How likely to recommend (NPS 0–10)</label>
-              <input type="number" min="0" max="10" value={nps} onChange={(e)=> setNps(Math.max(0, Math.min(10, Number(e.target.value)||0)))} className="mt-1 w-full p-2 border rounded-md text-center" />
+
+            <div className="p-4 bg-purple-50 rounded-lg">
+              <label className="block text-lg font-medium text-gray-700 mb-3">
+                📹 Would you like to participate in SLAM Reels (Instagram videos)?
+              </label>
+              <div className="space-y-3">
+                <label className="flex items-start">
+                  <input
+                    type="radio"
+                    name="reels"
+                    value="yes"
+                    checked={reelsParticipation === 'yes'}
+                    onChange={(e) => setReelsParticipation(e.target.value)}
+                    className="mr-3 mt-1"
+                  />
+                  <div>
+                    <span className="font-medium">Yes, I'd love to!</span>
+                    {reelsParticipation === 'yes' && (
+                      <input
+                        type="text"
+                        placeholder="Your Instagram ID for contact"
+                        className="mt-2 w-full p-2 border rounded-md text-sm"
+                        onChange={(e) => setReelsParticipation(`yes:${e.target.value}`)}
+                      />
+                    )}
+                  </div>
+                </label>
+                <label className="flex items-center">
+                  <input
+                    type="radio"
+                    name="reels"
+                    value="no"
+                    checked={reelsParticipation === 'no'}
+                    onChange={(e) => setReelsParticipation(e.target.value)}
+                    className="mr-3"
+                  />
+                  <span>I prefer to stay behind the camera</span>
+                </label>
+              </div>
             </div>
           </div>
 
@@ -249,14 +350,18 @@ export default function FeedbackFormPage() {
             </div>
           )}
 
-          {/* Top 3 activities */}
-          <div className="p-4 bg-gray-50 rounded-lg">
-            <label className="block text-lg font-medium text-gray-700 mb-3 text-center">Choose your top 3 ways to have fun with SLAM</label>
+          {/* Top 3 activities - 수정된 제목 */}
+          <div className="p-4 bg-gradient-to-r from-green-50 to-blue-50 rounded-lg">
+            <label className="block text-lg font-medium text-gray-700 mb-3 text-center">
+              🎯 Choose your top 3 activities you wish to do with SLAM
+            </label>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               {ACTIVITIES.map(act => {
                 const checked = selectedActivities.includes(act);
                 return (
-                  <label key={act} className="flex items-center gap-2 p-2 border rounded-md">
+                  <label key={act} className={`flex items-center gap-2 p-3 border-2 rounded-md cursor-pointer transition-colors ${
+                    checked ? 'border-green-500 bg-green-100' : 'border-gray-200 hover:border-green-300'
+                  }`}>
                     <input
                       type="checkbox"
                       checked={checked}
@@ -264,28 +369,58 @@ export default function FeedbackFormPage() {
                         setSelectedActivities(prev => {
                           const has = prev.includes(act);
                           if (has) return prev.filter(a => a !== act);
-                          if (prev.length >= 3) { alert('You can select up to 3.'); return prev; }
+                          if (prev.length >= 3) { alert('You can select up to 3 activities.'); return prev; }
                           return [...prev, act];
                         });
                       }}
+                      className="text-green-600 focus:ring-green-500"
                     />
-                    <span>{act}</span>
+                    <span className={checked ? 'font-medium text-green-800' : ''}>{act}</span>
                   </label>
                 )
               })}
+            </div>
+            <div className="mt-4 p-3 bg-white rounded-md border-l-4 border-blue-500">
+              <p className="text-sm text-blue-700">
+                💡 <strong>Good news!</strong> You can organize your own activities in the Community section. 
+                Connect with more SLAM friends and make it happen!
+              </p>
             </div>
           </div>
 
           {/* 주관식 질문 */}
           <div className="space-y-6">
-            <div>
-              <label htmlFor="good-points" className="block text-lg font-medium text-gray-700">What did you like the most?</label>
-              <textarea id="good-points" rows="4" value={goodPoints} onChange={(e) => setGoodPoints(e.target.value)} className="mt-1 w-full p-2 border rounded-md" placeholder="e.g., The games were fun, I met many new people..."/>
+            <div className="bg-green-50 p-4 rounded-lg">
+              <label htmlFor="good-points" className="block text-lg font-medium text-green-800 mb-2 flex items-center">
+                <span className="mr-2">👍</span>
+                What did you like the most?
+              </label>
+              <textarea 
+                id="good-points" 
+                rows="3" 
+                value={goodPoints} 
+                onChange={(e) => setGoodPoints(e.target.value)} 
+                className="mt-1 w-full p-3 border border-green-200 rounded-md focus:ring-green-500 focus:border-green-500" 
+                placeholder="e.g., The games were fun, I met many new people, great atmosphere..."
+              />
             </div>
-            <div>
-              <label htmlFor="improvements" className="block text-lg font-medium text-gray-700">Any suggestions for improvement?</label>
-              <textarea id="improvements" rows="4" value={improvements} onChange={(e) => setImprovements(e.target.value)} className="mt-1 w-full p-2 border rounded-md" placeholder="e.g., More time for free talk, different music..."/>
+            
+            <div className="bg-orange-50 p-4 rounded-lg">
+              <label htmlFor="improvements" className="block text-lg font-medium text-orange-800 mb-2 flex items-center">
+                <span className="mr-2">💡</span>
+                Any suggestions for improvement?
+              </label>
+              <textarea 
+                id="improvements" 
+                rows="3" 
+                value={improvements} 
+                onChange={(e) => setImprovements(e.target.value)} 
+                className="mt-1 w-full p-3 border border-orange-200 rounded-md focus:ring-orange-500 focus:border-orange-500" 
+                placeholder="e.g., More time for free talk, different music, better venue..."
+              />
             </div>
+
+
           </div>
           
           <button type="submit" className="w-full py-3 bg-indigo-600 text-white font-bold rounded-lg hover:bg-indigo-700 transition-colors text-lg">

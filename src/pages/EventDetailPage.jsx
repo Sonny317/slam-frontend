@@ -13,6 +13,7 @@ export default function EventDetailPage() {
   const [isAttending, setIsAttending] = useState(false);
   const [wantsAfterParty, setWantsAfterParty] = useState(false);
   const [isRsvpLoaded, setIsRsvpLoaded] = useState(false);
+  const [showAfterPartyOptions, setShowAfterPartyOptions] = useState(false);
   const [timeLeft, setTimeLeft] = useState("");
 
   useEffect(() => {
@@ -72,12 +73,26 @@ export default function EventDetailPage() {
     return () => clearInterval(id);
   }, [eventData?.eventDateTime]);
 
-  const handleRsvpSubmit = async (attendingStatus) => {
+  const handleRsvpClick = (attendingStatus) => {
+    if (!user.isLoggedIn) {
+      return alert("Login is required.");
+    }
+    
+    if (attendingStatus) {
+      // 참석하는 경우 After Party 옵션을 보여줌
+      setShowAfterPartyOptions(true);
+    } else {
+      // 불참하는 경우 바로 제출
+      handleRsvpSubmit(false, false);
+    }
+  };
+
+  const handleRsvpSubmit = async (attendingStatus, afterPartyStatus) => {
     console.log("=== handleRsvpSubmit Debug ===");
     console.log("User logged in:", user.isLoggedIn);
     console.log("Event ID:", eventId);
     console.log("Attending status:", attendingStatus);
-    console.log("After party:", attendingStatus ? wantsAfterParty : false);
+    console.log("After party:", afterPartyStatus);
     
     if (!user.isLoggedIn) {
       return alert("Login is required.");
@@ -86,11 +101,13 @@ export default function EventDetailPage() {
       console.log("Making API call to /api/events/rsvp");
       const response = await axios.post(`/api/events/rsvp?eventId=${eventId}`, {
         isAttending: attendingStatus,
-        afterParty: attendingStatus ? wantsAfterParty : false,
+        afterParty: afterPartyStatus,
       });
       console.log("API response:", response.data);
       alert(response.data.message);
       setIsAttending(attendingStatus);
+      setWantsAfterParty(afterPartyStatus);
+      setShowAfterPartyOptions(false);
 
       // ✅ RSVP 성공 후 이벤트 목록 페이지로 이동합니다.
       navigate('/events'); 
@@ -105,8 +122,41 @@ export default function EventDetailPage() {
     if (!isoString) return "";
     const date = new Date(isoString);
     return date.toLocaleDateString('en-US', {
-      year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit'
+      year: 'numeric', month: 'long', day: 'numeric'
     });
+  };
+
+  const formatTimeRange = (startDateTime, endTime) => {
+    if (!startDateTime) return "";
+    const startDate = new Date(startDateTime);
+    const startHour = startDate.getHours();
+    const startMin = startDate.getMinutes();
+    
+    let startTimeStr = `${startHour > 12 ? startHour - 12 : startHour === 0 ? 12 : startHour}`;
+    if (startMin > 0) startTimeStr += `:${startMin.toString().padStart(2, '0')}`;
+    startTimeStr += startHour >= 12 ? 'pm' : 'am';
+    
+    if (!endTime) return `${startTimeStr}`;
+    
+    const [endHour, endMin] = endTime.split(':').map(Number);
+    let endTimeStr = `${endHour > 12 ? endHour - 12 : endHour === 0 ? 12 : endHour}`;
+    if (endMin > 0) endTimeStr += `:${endMin.toString().padStart(2, '0')}`;
+    endTimeStr += endHour >= 12 ? 'pm' : 'am';
+    
+    return `${startTimeStr} ~ ${endTimeStr}`;
+  };
+
+  const getThemeIcon = (theme) => {
+    const themeIcons = {
+      'Regular SLAM Meet': '🤝',
+      'Outing': '🌳',
+      'Networking Party': '🎉',
+      'Cultural Exchange': '🌍',
+      'Bar Night': '🍻',
+      'Sports Activity': '⚽',
+      'Workshop': '🛠️'
+    };
+    return themeIcons[theme] || '🎯';
   };
 
   if (loading) {
@@ -116,10 +166,7 @@ export default function EventDetailPage() {
     return <div className="text-center py-20">Event not found.</div>;
   }
 
-  const reviews = [
-    { id: 1, name: "Jessica", rating: 5, comment: "정말 즐거운 시간이었어요! 다양한 나라의 친구들을 만날 수 있어서 좋았습니다." },
-    { id: 2, name: "Michael", rating: 5, comment: "운영진분들이 정말 친절하고, 분위기도 편안해서 금방 적응할 수 있었어요. 다음 이벤트도 기대됩니다." }
-  ];
+
 
   return (
     <div className="bg-gray-50 py-12">
@@ -128,48 +175,118 @@ export default function EventDetailPage() {
         <img src={eventData.imageUrl || "/default_event_image.jpg"} alt="Event" className="w-full h-64 object-cover" />
 
         <div className="p-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-4">{eventData.title}</h1>
+          <div className="flex items-start justify-between mb-4">
+            <h1 className="text-3xl font-bold text-gray-900 flex-1">{eventData.title}</h1>
+            {eventData.theme && (
+              <span className="ml-4 inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-gradient-to-r from-purple-100 to-pink-100 text-purple-800 border border-purple-200">
+                {getThemeIcon(eventData.theme)} {eventData.theme}
+              </span>
+            )}
+          </div>
           <div className="flex flex-wrap gap-x-6 gap-y-2 text-gray-600 mb-6">
-            <p><strong>Host:</strong> Sonny</p>
-            <p><strong>Date:</strong> {formatDate(eventData.eventDateTime)}</p>
-            <p><strong>Location:</strong> {eventData.location}</p>
+            <p><strong>📅 Date:</strong> {formatDate(eventData.eventDateTime)}</p>
+            <p><strong>⏰ Time:</strong> {formatTimeRange(eventData.eventDateTime, eventData.endTime)}</p>
+            <p className="flex items-center space-x-2">
+              <strong>📍 Location:</strong> 
+              <a 
+                href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(eventData.location)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-blue-600 hover:text-blue-800 underline decoration-dotted hover:decoration-solid transition-all duration-200 flex items-center space-x-1"
+              >
+                <span>{eventData.location}</span>
+                <span className="text-sm">🗺️</span>
+              </a>
+            </p>
           </div>
 
           {/* Countdown banner (linked to event date/time) */}
           <div className="mb-8">
-            <div className={`inline-block rounded-full px-4 py-2 text-sm font-semibold ${timeLeft === 'Closed' ? 'bg-gray-200 text-gray-700' : 'bg-red-100 text-red-700'}`}>
-              {timeLeft === 'Closed' ? 'Registration closed' : `Closes in ${timeLeft}`}
+            <div className={`inline-flex items-center space-x-2 rounded-full px-6 py-3 text-sm font-bold border-2 ${
+              timeLeft === 'Closed' 
+                ? 'bg-gray-200 text-gray-700 border-gray-400' 
+                : 'bg-gradient-to-r from-red-500 to-orange-500 text-white border-red-600 shadow-lg animate-pulse'
+            }`}>
+              {timeLeft === 'Closed' ? (
+                <>
+                  <span>🔒</span>
+                  <span>Registration Closed</span>
+                </>
+              ) : (
+                <>
+                  <span className="animate-bounce">⚡</span>
+                  <span>HURRY! Registration closes in {timeLeft}</span>
+                  <span className="animate-bounce">⏰</span>
+                </>
+              )}
             </div>
           </div>
 
           {user.isLoggedIn && isRsvpLoaded && (
-            <div className="bg-blue-50 p-6 rounded-lg mb-8">
-              <h2 className="text-xl font-semibold mb-4 text-center">Are you going?</h2>
-              <div className="flex justify-center gap-4 mb-4">
-                <button 
-                  onClick={() => handleRsvpSubmit(true)}
-                  className={`font-bold py-2 px-8 rounded-full transition-colors ${isAttending ? 'bg-blue-600 text-white' : 'bg-white text-blue-600 border border-blue-600 hover:bg-blue-100'}`}>
-                   Join
-                </button>
-                <button 
-                  onClick={() => handleRsvpSubmit(false)}
-                  className={`font-bold py-2 px-8 rounded-full transition-colors ${!isAttending ? 'bg-gray-400 text-white' : 'bg-gray-200 text-gray-800 hover:bg-gray-300'}`}>
-                   Decline
-                </button>
-              </div>
-              {isAttending && (
-                <div className="flex items-center justify-center">
-                  <input 
-                    type="checkbox" 
-                    id="after-party" 
-                    className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                    checked={wantsAfterParty}
-                    onChange={(e) => setWantsAfterParty(e.target.checked)}
-                  />
-                  <label htmlFor="after-party" className="ml-2 block text-sm text-gray-900">
-                    I will also join the after-party!
-                  </label>
-                </div>
+            <div className="bg-gradient-to-r from-blue-50 to-purple-50 p-6 rounded-xl mb-8 border border-blue-100">
+              {!showAfterPartyOptions ? (
+                <>
+                  <h2 className="text-xl font-semibold mb-4 text-center flex items-center justify-center space-x-2">
+                    <span>🤔</span>
+                    <span>Will you be joining us?</span>
+                    <span>✨</span>
+                  </h2>
+                  <div className="flex justify-center gap-4 mb-4">
+                    <button 
+                      onClick={() => handleRsvpClick(true)}
+                      className={`font-bold py-3 px-8 rounded-full transition-all duration-200 flex items-center space-x-2 shadow-md ${
+                        isAttending 
+                          ? 'bg-gradient-to-r from-green-500 to-blue-600 text-white scale-105 shadow-lg' 
+                          : 'bg-white text-blue-600 border-2 border-blue-600 hover:bg-blue-50 hover:scale-105'
+                      }`}>
+                      <span className="text-lg">{isAttending ? '🎉' : '👋'}</span>
+                      <span>Count me in!</span>
+                    </button>
+                    <button 
+                      onClick={() => handleRsvpClick(false)}
+                      className={`font-bold py-3 px-8 rounded-full transition-all duration-200 flex items-center space-x-2 shadow-md ${
+                        !isAttending 
+                          ? 'bg-gray-500 text-white scale-105 shadow-lg' 
+                          : 'bg-white text-gray-600 border-2 border-gray-300 hover:bg-gray-50 hover:scale-105'
+                      }`}>
+                      <span className="text-lg">{!isAttending ? '😔' : '🤷‍♂️'}</span>
+                      <span>Maybe next time</span>
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <h2 className="text-xl font-semibold mb-4 text-center flex items-center justify-center space-x-2">
+                    <span>🎉</span>
+                    <span>Awesome! How about the after-party?</span>
+                    <span>🍻</span>
+                  </h2>
+                  <div className="flex flex-col items-center space-y-4">
+                    <div className="flex justify-center gap-4">
+                      <button 
+                        onClick={() => handleRsvpSubmit(true, true)}
+                        className="font-bold py-3 px-8 rounded-full transition-all duration-200 flex items-center space-x-2 shadow-md bg-gradient-to-r from-purple-500 to-pink-600 text-white hover:scale-105"
+                      >
+                        <span className="text-lg">🎉</span>
+                        <span>Yes! After-party too!</span>
+                        <span className="text-lg">✨</span>
+                      </button>
+                      <button 
+                        onClick={() => handleRsvpSubmit(true, false)}
+                        className="font-bold py-3 px-8 rounded-full transition-all duration-200 flex items-center space-x-2 shadow-md bg-white text-blue-600 border-2 border-blue-600 hover:bg-blue-50 hover:scale-105"
+                      >
+                        <span className="text-lg">😊</span>
+                        <span>Just the main event</span>
+                      </button>
+                    </div>
+                    <button 
+                      onClick={() => setShowAfterPartyOptions(false)}
+                      className="text-sm text-gray-500 hover:text-gray-700 underline"
+                    >
+                      ← Go back
+                    </button>
+                  </div>
+                </>
               )}
             </div>
           )}
@@ -179,20 +296,7 @@ export default function EventDetailPage() {
             <p>{eventData.description}</p>
           </div>
 
-          <div className="mt-10 pt-6 border-t">
-            <h2 className="text-2xl font-semibold mb-4">Reviews (★5.0)</h2>
-            <div className="space-y-4">
-              {reviews.map(review => (
-                <div key={review.id} className="bg-gray-50 p-4 rounded-md">
-                  <div className="flex items-center mb-1">
-                    <span className="font-semibold">{review.name}</span>
-                    <span className="ml-2 text-yellow-500">{"★".repeat(review.rating)}</span>
-                  </div>
-                  <p className="text-gray-700">"{review.comment}"</p>
-                </div>
-              ))}
-            </div>
-          </div>
+
         </div>
       </div>
     </div>

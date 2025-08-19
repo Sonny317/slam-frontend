@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { NavLink, Outlet, Link, Navigate } from 'react-router-dom';
-import { useUser } from '../context/UserContext'; // ✅ 1. useUser 훅을 임포트합니다.
+import { useUser } from '../context/UserContext';
 
 const adminNavLinks = [
   { name: 'Dashboard', path: '/admin/dashboard' },
@@ -14,49 +14,139 @@ const adminNavLinks = [
 ];
 
 export default function AdminLayout() {
-  const { user, logout } = useUser(); // ✅ 2. Context에서 실제 user 정보와 logout 함수를 가져옵니다.
+  const { user, logout } = useUser();
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
 
-  // ✅ 3. 사용자가 ADMIN이 아니거나 로그아웃 상태이면 메인 페이지로 쫓아내는 보안 장치
+  // 화면 크기 변경 감지하여 모바일 메뉴 상태 초기화
+  useEffect(() => {
+    const handleResize = () => {
+      const isMobileView = window.innerWidth < 1200;
+      setIsMobile(isMobileView);
+      
+      if (!isMobileView) {
+        setIsMobileMenuOpen(false);
+      }
+    };
+
+    window.addEventListener('resize', handleResize);
+    
+    // 컴포넌트 마운트 시에도 한 번 체크
+    handleResize();
+
+    return () => {
+      window.removeEventListener('resize', handleResize);
+    };
+  }, []);
+
+  // 사용자가 ADMIN이 아니거나 로그아웃 상태이면 메인 페이지로 쫓아내는 보안 장치
   if (!user.isLoggedIn || user.role !== 'ADMIN') {
-    // alert("You do not have permission to access this page."); // 필요하다면 경고창을 띄울 수 있습니다.
     return <Navigate to="/" replace />;
   }
 
+  const closeMobileMenu = () => {
+    setIsMobileMenuOpen(false);
+  };
+
   return (
     <div className="min-h-screen flex bg-gray-100">
-      {/* Sidebar Navigation */}
-      <aside className="w-64 bg-gray-800 text-white flex flex-col flex-shrink-0">
-        <div className="p-6 text-2xl font-bold border-b border-gray-700 flex justify-between items-center">
-          <span>SLAM Staff</span>
-          {/* ✅ 'Go to Main Site' 버튼은 Link to="/"로 이미 올바르게 작동합니다. */}
-          <Link to="/" title="Go to Main Site" className="text-gray-400 hover:text-white">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
-          </Link>
-        </div>
-        <nav className="flex-grow">
-          {adminNavLinks.map(link => (
-            <NavLink key={link.path} to={link.path} className={({ isActive }) => `block px-6 py-3 transition-colors ${isActive ? 'bg-blue-600' : 'hover:bg-gray-700'}`}>
-              {link.name}
-            </NavLink>
-          ))}
-        </nav>
-      </aside>
+      {/* Desktop Sidebar Navigation */}
+      {!isMobile && (
+        <aside className="w-64 bg-gray-800 text-white flex flex-col flex-shrink-0">
+          <div className="p-6 text-2xl font-bold border-b border-gray-700 flex justify-between items-center">
+            <span>SLAM Staff</span>
+            <Link to="/" title="Go to Main Site" className="text-gray-400 hover:text-white">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+              </svg>
+            </Link>
+          </div>
+          <nav className="flex-grow">
+            {adminNavLinks.map(link => (
+              <NavLink 
+                key={link.path} 
+                to={link.path} 
+                className={({ isActive }) => `block px-6 py-3 transition-colors ${isActive ? 'bg-blue-600' : 'hover:bg-gray-700'}`}
+              >
+                {link.name}
+              </NavLink>
+            ))}
+          </nav>
+        </aside>
+      )}
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col">
-        <header className="bg-white shadow-sm p-4 flex justify-end items-center">
-          <div className="flex items-center">
-            {/* ✅ 4. 가짜 데이터 대신 Context에서 가져온 실제 사용자 이름과 역할을 표시합니다. */}
-            <span className="font-semibold">{user.email}</span> 
-            <span className="text-sm text-gray-500 ml-2">({user.role})</span>
-            {/* ✅ 5. onClick 이벤트에 Context에서 가져온 logout 함수를 연결합니다. */}
-            <button onClick={logout} className="ml-4 text-sm text-red-500 hover:underline">Log Out</button>
+        <header className="bg-white shadow-sm border-b border-gray-200 p-4">
+          <div className="flex justify-between items-center">
+            {/* Mobile Menu Button */}
+            {isMobile && (
+              <button 
+                onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                className="text-gray-600 hover:text-gray-800 transition-colors"
+              >
+                {isMobileMenuOpen ? (
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                ) : (
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" />
+                  </svg>
+                )}
+              </button>
+            )}
+
+            {/* Mobile Title */}
+            {isMobile && (
+              <div className="flex items-center gap-2">
+                <span className="text-lg font-bold text-gray-800">SLAM Staff</span>
+                <Link to="/" title="Go to Main Site" className="text-gray-400 hover:text-gray-600 transition-colors">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                  </svg>
+                </Link>
+              </div>
+            )}
+
+            {/* User Info and Logout */}
+            <div className="flex items-center gap-4">
+              <div className="flex flex-col items-end">
+                <span className="font-semibold text-sm sm:text-base text-gray-900">{user.email}</span>
+                <span className="text-xs sm:text-sm text-gray-500">({user.role})</span>
+              </div>
+              <button 
+                onClick={logout} 
+                className="text-xs sm:text-sm text-red-600 hover:text-red-800 font-medium transition-colors px-3 py-1 rounded-md hover:bg-red-50"
+              >
+                Log Out
+              </button>
+            </div>
           </div>
         </header>
+
+        {/* Mobile Menu Panel */}
+        {isMobile && isMobileMenuOpen && (
+          <div className="bg-gray-800 text-white">
+            <nav className="flex flex-col">
+              {adminNavLinks.map(link => (
+                <NavLink 
+                  key={link.path} 
+                  to={link.path} 
+                  onClick={closeMobileMenu}
+                  className={({ isActive }) => `block px-6 py-4 transition-colors ${isActive ? 'bg-blue-600' : 'hover:bg-gray-700'}`}
+                >
+                  {link.name}
+                </NavLink>
+              ))}
+            </nav>
+          </div>
+        )}
+
         <main className="flex-1 p-4 sm:p-8 overflow-y-auto">
           <Outlet />
         </main>
-      </div>//
+      </div>
     </div>
   );
 }
