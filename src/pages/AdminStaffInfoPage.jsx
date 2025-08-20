@@ -155,12 +155,25 @@ export default function AdminStaffInfoPage() {
 
   const submitAssign = async () => {
     try {
-      await axios.post(`/api/admin/users/role?userId=${assignModal.userId}&role=${assignRole}`);
-      alert('역할이 업데이트되었습니다.');
-      setMembers(prev => prev.map(m => m.id === assignModal.userId ? { ...m, role: assignRole } : m));
-      setAssignModal({ open: false, userId: null, email: '' });
+      // 새로운 스태프 온보딩 프로세스 사용
+      const response = await axios.post('/api/admin/users/assign-staff', {
+        userId: assignModal.userId,
+        targetRole: assignRole,
+        reason: `Assigned as ${assignRole} by admin`
+      });
+      
+      if (response.data.success) {
+        alert(response.data.message);
+        setAssignModal({ open: false, userId: null, email: '' });
+        // 화면을 새로고침하여 최신 상태 반영
+        const res = await axios.get('/api/admin/users');
+        setMembers(res.data);
+      } else {
+        alert(response.data.message);
+      }
     } catch (e) {
-      alert(e.response?.data || e.message);
+      const errorMessage = e.response?.data?.message || e.response?.data || e.message;
+      alert('스태프 임명에 실패했습니다: ' + errorMessage);
     }
   };
 
