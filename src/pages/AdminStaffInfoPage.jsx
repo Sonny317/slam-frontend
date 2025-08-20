@@ -51,6 +51,11 @@ export default function AdminStaffInfoPage() {
 
   // Helper: derive active branches for a member from both string field and memberships collection
   const getActiveBranches = (m) => {
+    // Admin과 President는 모든 지부에 접근 권한이 있음
+    if (m?.role === 'ADMIN' || m?.role === 'PRESIDENT') {
+      return ['NCCU', 'NTU', 'TAIPEI']; // 모든 지부 반환
+    }
+    
     const set = new Set();
     const str = (m?.membership || '').trim();
     if (str) set.add(str);
