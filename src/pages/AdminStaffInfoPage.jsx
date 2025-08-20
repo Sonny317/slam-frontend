@@ -4,6 +4,98 @@ import axios from '../api/axios';
 import { useUser } from '../context/UserContext';
 import { canAssignStaff, getRoleColorClass } from '../utils/permissions';
 
+// --- 사용자 상세 정보 모달 컴포넌트 ---
+const UserDetailModal = ({ user, onClose }) => (
+  <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50 p-4">
+    <div className="bg-white p-6 sm:p-8 rounded-lg shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+      <div className="flex justify-between items-center mb-4">
+        <h2 className="text-xl sm:text-2xl font-bold">{user?.name || 'Unknown User'}</h2>
+        <button 
+          onClick={onClose}
+          className="text-gray-400 hover:text-gray-600 text-2xl font-bold"
+        >
+          ×
+        </button>
+      </div>
+      
+      <div className="space-y-3 text-sm">
+        <div className="grid grid-cols-1 gap-3">
+          <div className="p-3 bg-gray-50 rounded">
+            <p><strong>이메일:</strong> {user?.email || 'N/A'}</p>
+          </div>
+          
+          <div className="p-3 bg-gray-50 rounded">
+            <p><strong>역할:</strong> 
+              <span className={`ml-2 px-2 py-1 rounded-full text-xs font-medium ${getRoleColorClass(user?.role)}`}>
+                {user?.role || 'N/A'}
+              </span>
+            </p>
+          </div>
+          
+          {user?.affiliation && (
+            <div className="p-3 bg-gray-50 rounded">
+              <p><strong>소속:</strong> {user.affiliation}</p>
+            </div>
+          )}
+          
+          {user?.bio && (
+            <div className="p-3 bg-gray-50 rounded">
+              <p><strong>자기소개:</strong></p>
+              <p className="mt-1 text-gray-700">{user.bio}</p>
+            </div>
+          )}
+          
+          {user?.interests && (
+            <div className="p-3 bg-gray-50 rounded">
+              <p><strong>관심사:</strong> {user.interests}</p>
+            </div>
+          )}
+          
+          {user?.spokenLanguages && (
+            <div className="p-3 bg-gray-50 rounded">
+              <p><strong>구사 언어:</strong> {user.spokenLanguages}</p>
+            </div>
+          )}
+          
+          {user?.desiredLanguages && (
+            <div className="p-3 bg-gray-50 rounded">
+              <p><strong>배우고 싶은 언어:</strong> {user.desiredLanguages}</p>
+            </div>
+          )}
+          
+          {user?.membership && (
+            <div className="p-3 bg-gray-50 rounded">
+              <p><strong>멤버십:</strong> {user.membership}</p>
+            </div>
+          )}
+          
+          {user?.memberships && user.memberships.length > 0 && (
+            <div className="p-3 bg-gray-50 rounded">
+              <p><strong>활성 멤버십:</strong></p>
+              <ul className="mt-1 space-y-1">
+                {user.memberships.map((membership, index) => (
+                  <li key={index} className="text-xs bg-white px-2 py-1 rounded">
+                    {membership.branchName} - {membership.status}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+      </div>
+      
+      <div className="mt-6">
+        <button 
+          onClick={onClose} 
+          className="w-full py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+        >
+          닫기
+        </button>
+      </div>
+    </div>
+  </div>
+);
+
 export default function AdminStaffInfoPage() {
   const { user } = useUser();
   const [members, setMembers] = useState([]);
@@ -11,6 +103,7 @@ export default function AdminStaffInfoPage() {
   const [assignModal, setAssignModal] = useState({ open: false, userId: null, email: '' });
   const [assignRole, setAssignRole] = useState('STAFF');
   const [isMobile, setIsMobile] = useState(false);
+  const [selectedUser, setSelectedUser] = useState(null); // 선택된 사용자 상세 정보용
 
   // Filters / Search / Sort
   const [search, setSearch] = useState('');
@@ -186,6 +279,14 @@ export default function AdminStaffInfoPage() {
 
   return (
     <div className="p-4 sm:p-8">
+      {/* 사용자 상세 정보 모달 */}
+      {selectedUser && (
+        <UserDetailModal 
+          user={selectedUser} 
+          onClose={() => setSelectedUser(null)} 
+        />
+      )}
+      
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
         <h1 className="text-3xl sm:text-4xl font-bold text-gray-800">Staff Info</h1>
         <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
@@ -263,9 +364,12 @@ export default function AdminStaffInfoPage() {
             {filteredMembers.map(member => (
               <div key={member.id} className="bg-gray-50 p-4 rounded-lg border">
                 <div className="flex justify-between items-start mb-3">
-                  <div className="flex-1">
-                    <h3 className="font-semibold text-gray-900">{member.name}</h3>
-                    <p className="text-sm text-gray-600">{member.email}</p>
+                  <div 
+                    className="flex-1 cursor-pointer" 
+                    onClick={() => setSelectedUser(member)}
+                  >
+                    <h3 className="font-semibold text-gray-900 hover:text-blue-600">{member.name}</h3>
+                    <p className="text-sm text-gray-600 hover:text-blue-500">{member.email}</p>
                   </div>
                   <span className={`px-2 py-1 rounded-full text-xs font-medium ${getRoleColorClass(member.role)}`}>
                     {member.role}
@@ -300,8 +404,18 @@ export default function AdminStaffInfoPage() {
             <tbody className="bg-white divide-y divide-gray-200">
               {filteredMembers.map(member => (
                 <tr key={member.id}>
-                  <td className="px-6 py-4 whitespace-nowrap">{member.name}</td>
-                  <td className="px-6 py-4 whitespace-nowrap">{member.email}</td>
+                  <td 
+                    className="px-6 py-4 whitespace-nowrap cursor-pointer hover:text-blue-600 font-medium"
+                    onClick={() => setSelectedUser(member)}
+                  >
+                    {member.name}
+                  </td>
+                  <td 
+                    className="px-6 py-4 whitespace-nowrap cursor-pointer hover:text-blue-600"
+                    onClick={() => setSelectedUser(member)}
+                  >
+                    {member.email}
+                  </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className={`px-2 py-1 rounded-full text-xs font-medium ${getRoleColorClass(member.role)}`}>
                       {member.role}
