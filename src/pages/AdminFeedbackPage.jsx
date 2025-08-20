@@ -81,10 +81,13 @@ export default function AdminFeedbackPage() {
 
   // 사용자 역할 확인 (useEffect에 추가)
   useEffect(() => {
-    // 사용자 역할 가져오기 (UserContext 또는 API에서)
-    axios.get('/api/user/role').then(res => {
+    // 사용자 역할 가져오기 (올바른 API 엔드포인트 사용)
+    axios.get('/api/users/me').then(res => {
       setUserRole(res.data.role);
-    }).catch(() => setUserRole('member'));
+    }).catch(error => {
+      console.error('Failed to fetch user role:', error);
+      setUserRole('member');
+    });
   }, []);
 
   // 지부 필터링 로직
@@ -327,7 +330,6 @@ export default function AdminFeedbackPage() {
             <div className="bg-white p-6 rounded-lg shadow-md">
               <h2 className="text-2xl font-semibold mb-4">Event Feedback List</h2>
               <ul className="space-y-4">
-                {console.log('Rendering filteredEvents:', filteredEvents)}
                 {filteredEvents.map((event, index) => (
                   <li key={`filtered-event-${event.eventId || event.id || index}-${event.eventTitle || 'untitled'}`} className="p-4 border rounded-lg sm:flex justify-between items-center space-y-4 sm:space-y-0">
                     <div className="flex-grow">

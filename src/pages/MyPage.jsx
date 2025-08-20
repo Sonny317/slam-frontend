@@ -9,8 +9,12 @@ export default function MyPage() {
     
     const [userDetails, setUserDetails] = useState({
         name: "", bio: "", posts: [], comments: [], membership: null,
+        phone: "", major: "", studentId: "", interests: "", 
+        spokenLanguages: "", desiredLanguages: ""
     });
     const [showQrCode, setShowQrCode] = useState(false);
+    const [showEditForm, setShowEditForm] = useState(false);
+    const [editFormData, setEditFormData] = useState({});
     const qrCodeValue = JSON.stringify({ userId: userDetails.userId, name: userDetails.name });
 
     // 로그인하지 않은 사용자는 로그인 페이지로 리다이렉트
@@ -31,29 +35,128 @@ export default function MyPage() {
         );
     }
 
+    // ✅ 멤버십 카드의 Valid Until 날짜 계산
+    const calculateValidUntil = (branches) => {
+        if (!branches || branches.length === 0) return "N/A";
+        
+        const now = new Date();
+        const currentMonth = now.getMonth() + 1; // 1-12
+        
+        // TAIPEI는 이벤트 당일만
+        if (branches.includes('TAIPEI')) {
+            return "Event Day Only";
+        }
+        
+        // NCCU, NTU의 경우 학기별 계산
+        if (branches.some(branch => ['NCCU', 'NTU'].includes(branch))) {
+            // Fall Semester: 9-1월, Spring Semester: 2-6월
+            if (currentMonth >= 9 || currentMonth === 1) {
+                // Fall Semester
+                const endYear = currentMonth === 1 ? now.getFullYear() : now.getFullYear() + 1;
+                return `${endYear}-01-31 (Fall)`;
+            } else if (currentMonth >= 2 && currentMonth <= 6) {
+                // Spring Semester
+                return `${now.getFullYear()}-06-30 (Spring)`;
+            } else {
+                // 7-8월은 다음 Fall Semester
+                return `${now.getFullYear() + 1}-01-31 (Fall)`;
+            }
+        }
+        
+        return "N/A";
+    };
+
+    // ✅ 사용자의 실제 활성 지부 계산
+    const getActiveBranches = (userData) => {
+        const branches = [];
+        
+        // Admin/President는 모든 지부
+        if (userData.role === 'ADMIN' || userData.role === 'PRESIDENT') {
+            return ['NCCU', 'NTU', 'TAIPEI'];
+        }
+        
+        // membership 필드에서 추출
+        if (userData.membership) {
+            branches.push(userData.membership);
+        }
+        
+        // memberships 배열에서 활성 멤버십 추출
+        if (userData.memberships && userData.memberships.length > 0) {
+            userData.memberships.forEach(membership => {
+                if (typeof membership === 'string') {
+                    // "ACTIVE_NCCU" 형태에서 지부 이름만 추출
+                    if (membership.includes('_')) {
+                        const parts = membership.split('_');
+                        if (parts[0] === 'ACTIVE') {
+                            branches.push(parts[1]);
+                        }
+                    } else {
+                        branches.push(membership);
+                    }
+                } else if (membership && membership.branchName) {
+                    // 객체 형태의 멤버십
+                    branches.push(membership.branchName);
+                }
+            });
+        }
+        
+        // 중복 제거 및 반환
+        return [...new Set(branches)];
+    };
+
     // ✅ user 상태가 변경될 때마다 userDetails를 업데이트합니다.
     useEffect(() => {
         if (user.isLoggedIn) {
+            // 서버에서 최신 정보 가져오기
+            fetchUserData();
+        }
+    }, [user]); // Context의 user 객체가 바뀔 때마다 실행
+
+    // 서버에서 사용자 정보 가져오기
+    const fetchUserData = async () => {
+        try {
+            const response = await axios.get('/api/users/me');
+            const userData = response.data;
+            
+            const activeBranches = getActiveBranches(userData);
+            
             setUserDetails(prev => ({
                 ...prev,
-                name: user.name || 'Your Name',
-                bio: user.bio || '자기소개를 작성해주세요.',
-                membership: user.memberships && user.memberships.length > 0 
+                name: userData.name || 'Your Name',
+                bio: userData.bio || '자기소개를 작성해주세요.',
+                phone: userData.phone || '',
+                major: userData.major || '',
+                studentId: userData.studentId || '',
+                interests: userData.interests || '',
+                spokenLanguages: userData.spokenLanguages || '',
+                desiredLanguages: userData.desiredLanguages || '',
+                membership: activeBranches.length > 0 
                     ? { 
-                        branch: user.memberships.map(membership => {
-                            // "ACTIVE_NCCU" 형태에서 지부 이름만 추출
-                            return membership.includes('_') ? membership.split('_')[1] : membership;
-                        }).join(', '), 
-                        validUntil: "2025-12-31" 
+                        branch: activeBranches.join(', '), 
+                        validUntil: calculateValidUntil(activeBranches)
                     } 
                     : null,
             }));
             
+            // 편집 폼 데이터도 초기화
+            setEditFormData({
+                name: userData.name || '',
+                phone: userData.phone || '',
+                major: userData.major || '',
+                studentId: userData.studentId || '',
+                bio: userData.bio || '',
+                interests: userData.interests || '',
+                spokenLanguages: userData.spokenLanguages || '',
+                desiredLanguages: userData.desiredLanguages || ''
+            });
+            
             // 사용자의 게시글과 댓글 데이터 가져오기
             fetchUserPosts();
             fetchUserComments();
+        } catch (error) {
+            console.error('Failed to fetch user data:', error);
         }
-    }, [user]); // Context의 user 객체가 바뀔 때마다 실행
+    };
 
     // 사용자 게시글 가져오기
     const fetchUserPosts = async () => {
@@ -115,6 +218,40 @@ export default function MyPage() {
         setUserDetails(prevDetails => ({ ...prevDetails, bio: e.target.value }));
     };
 
+    // ✅ 기본 정보 수정 함수들
+    const handleEditFormChange = (e) => {
+        const { name, value } = e.target;
+        setEditFormData(prev => ({ ...prev, [name]: value }));
+    };
+
+    const handleSaveProfile = async () => {
+        try {
+            const response = await axios.post('/api/users/profile/update', editFormData);
+            alert('Profile updated successfully!');
+            
+            // 사용자 정보 새로고침
+            await fetchUserData();
+            setShowEditForm(false);
+        } catch (error) {
+            alert('Failed to update profile: ' + (error.response?.data || error.message));
+        }
+    };
+
+    const handleCancelEdit = () => {
+        // 편집 취소 시 원래 데이터로 복원
+        setEditFormData({
+            name: userDetails.name,
+            phone: userDetails.phone,
+            major: userDetails.major,
+            studentId: userDetails.studentId,
+            bio: userDetails.bio,
+            interests: userDetails.interests,
+            spokenLanguages: userDetails.spokenLanguages,
+            desiredLanguages: userDetails.desiredLanguages
+        });
+        setShowEditForm(false);
+    };
+
     return (
         <div className="bg-gray-100 min-h-screen">
             <main className="max-w-5xl mx-auto px-4 sm:px-6 py-12">
@@ -136,6 +273,14 @@ export default function MyPage() {
                             </div>
                             <h2 className="text-2xl font-bold mt-4">{userDetails.name || 'Your Name'}</h2>
                             <p className="text-sm text-gray-500">{user.email}</p>
+                            
+                            {/* 기본 정보 표시 */}
+                            <div className="text-xs text-gray-600 mt-2 space-y-1">
+                                {userDetails.phone && <p>📞 {userDetails.phone}</p>}
+                                {userDetails.major && <p>🎓 {userDetails.major}</p>}
+                                {userDetails.studentId && <p>🆔 {userDetails.studentId}</p>}
+                            </div>
+                            
                             <textarea
                                 className="w-full border-none p-2 text-center text-sm mt-2 bg-gray-50 rounded-md focus:ring-2 focus:ring-blue-500 transition"
                                 rows={3}
@@ -146,6 +291,15 @@ export default function MyPage() {
                             <button onClick={handleBioSave} className="mt-2 w-full py-2 text-xs bg-gray-200 text-gray-700 rounded hover:bg-gray-300 transition">
                                 Save Bio
                             </button>
+                            
+                            {/* 편집 버튼 */}
+                            <button 
+                                onClick={() => setShowEditForm(true)} 
+                                className="mt-2 w-full py-2 text-xs bg-green-600 text-white rounded hover:bg-green-700 transition"
+                            >
+                                Edit Profile
+                            </button>
+                            
                             <Link to="/change-password" className="mt-2 w-full inline-block text-center py-2 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 transition">
                                 Change Password
                             </Link>
@@ -227,6 +381,137 @@ export default function MyPage() {
                         </section>
                     </div>
                 </div>
+
+                {/* 편집 모달 */}
+                {showEditForm && (
+                    <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50 p-4">
+                        <div className="bg-white p-6 rounded-lg shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+                            <h2 className="text-xl font-bold mb-4">Edit Profile</h2>
+                            
+                            <div className="space-y-4">
+                                {/* 이름 */}
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Name *</label>
+                                    <input
+                                        type="text"
+                                        name="name"
+                                        value={editFormData.name || ''}
+                                        onChange={handleEditFormChange}
+                                        className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                        required
+                                    />
+                                </div>
+                                
+                                {/* 전화번호 */}
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
+                                    <input
+                                        type="tel"
+                                        name="phone"
+                                        value={editFormData.phone || ''}
+                                        onChange={handleEditFormChange}
+                                        className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                        placeholder="010-1234-5678"
+                                    />
+                                </div>
+                                
+                                {/* 전공 */}
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Major</label>
+                                    <input
+                                        type="text"
+                                        name="major"
+                                        value={editFormData.major || ''}
+                                        onChange={handleEditFormChange}
+                                        className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                        placeholder="Computer Science"
+                                    />
+                                </div>
+                                
+                                {/* 학번 */}
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Student ID</label>
+                                    <input
+                                        type="text"
+                                        name="studentId"
+                                        value={editFormData.studentId || ''}
+                                        onChange={handleEditFormChange}
+                                        className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                        placeholder="110512345"
+                                    />
+                                </div>
+                                
+                                {/* 관심사 */}
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Interests</label>
+                                    <input
+                                        type="text"
+                                        name="interests"
+                                        value={editFormData.interests || ''}
+                                        onChange={handleEditFormChange}
+                                        className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                        placeholder="Music, Travel, Programming"
+                                    />
+                                </div>
+                                
+                                {/* 구사 언어 */}
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Spoken Languages</label>
+                                    <input
+                                        type="text"
+                                        name="spokenLanguages"
+                                        value={editFormData.spokenLanguages || ''}
+                                        onChange={handleEditFormChange}
+                                        className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                        placeholder="Korean, English, Chinese"
+                                    />
+                                </div>
+                                
+                                {/* 배우고 싶은 언어 */}
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Desired Languages</label>
+                                    <input
+                                        type="text"
+                                        name="desiredLanguages"
+                                        value={editFormData.desiredLanguages || ''}
+                                        onChange={handleEditFormChange}
+                                        className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                        placeholder="Japanese, Spanish"
+                                    />
+                                </div>
+                                
+                                {/* 자기소개 */}
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Bio</label>
+                                    <textarea
+                                        name="bio"
+                                        value={editFormData.bio || ''}
+                                        onChange={handleEditFormChange}
+                                        rows={3}
+                                        className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                        placeholder="Tell us about yourself..."
+                                    />
+                                </div>
+                            </div>
+                            
+                            {/* 버튼들 */}
+                            <div className="flex gap-3 mt-6">
+                                <button 
+                                    onClick={handleCancelEdit}
+                                    className="flex-1 py-2 bg-gray-300 text-gray-700 rounded hover:bg-gray-400 transition"
+                                >
+                                    Cancel
+                                </button>
+                                <button 
+                                    onClick={handleSaveProfile}
+                                    className="flex-1 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition"
+                                >
+                                    Save Changes
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
             </main>
         </div>
     );

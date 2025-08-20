@@ -5,96 +5,149 @@ import { useUser } from '../context/UserContext';
 import { canAssignStaff, getRoleColorClass } from '../utils/permissions';
 
 // --- 사용자 상세 정보 모달 컴포넌트 ---
-const UserDetailModal = ({ user, onClose }) => (
-  <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50 p-4">
-    <div className="bg-white p-6 sm:p-8 rounded-lg shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
-      <div className="flex justify-between items-center mb-4">
-        <h2 className="text-xl sm:text-2xl font-bold">{user?.name || 'Unknown User'}</h2>
-        <button 
-          onClick={onClose}
-          className="text-gray-400 hover:text-gray-600 text-2xl font-bold"
-        >
-          ×
-        </button>
-      </div>
-      
-      <div className="space-y-3 text-sm">
-        <div className="grid grid-cols-1 gap-3">
-          <div className="p-3 bg-gray-50 rounded">
-            <p><strong>이메일:</strong> {user?.email || 'N/A'}</p>
+const UserDetailModal = ({ user, onClose, onDeleteMembership }) => {
+  const getActiveBranches = (member) => {
+    if (member?.role === 'ADMIN' || member?.role === 'PRESIDENT') {
+      return ['NCCU', 'NTU', 'TAIPEI'];
+    }
+    
+    const set = new Set();
+    const str = (member?.membership || '').trim();
+    if (str) set.add(str);
+    if (Array.isArray(member?.memberships)) {
+      for (const um of member.memberships) {
+        const b = (um?.branchName || '').trim();
+        const status = (um?.status || '').toUpperCase();
+        if (b && (status === 'ACTIVE' || status === '')) set.add(b);
+      }
+    }
+    return Array.from(set);
+  };
+
+  const branches = getActiveBranches(user);
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50 p-4">
+      <div className="bg-white p-6 sm:p-8 rounded-lg shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-xl sm:text-2xl font-bold">{user?.name || 'Unknown User'}</h2>
+          <button 
+            onClick={onClose}
+            className="text-gray-400 hover:text-gray-600 text-2xl font-bold"
+          >
+            ×
+          </button>
+        </div>
+        
+        <div className="space-y-3 text-sm">
+          <div className="grid grid-cols-1 gap-3">
+            {/* Email */}
+            <div className="p-3 bg-gray-50 rounded">
+              <p><strong>Email:</strong> {user?.email || 'N/A'}</p>
+            </div>
+            
+            {/* Role */}
+            <div className="p-3 bg-gray-50 rounded">
+              <p><strong>Role:</strong> 
+                <span className={`ml-2 px-2 py-1 rounded-full text-xs font-medium ${getRoleColorClass(user?.role)}`}>
+                  {user?.role || 'N/A'}
+                </span>
+              </p>
+            </div>
+            
+            {/* Branch */}
+            <div className="p-3 bg-gray-50 rounded">
+              <p><strong>Branch:</strong> {branches.join(', ') || 'N/A'}</p>
+            </div>
+            
+            {/* Student ID */}
+            {user?.studentId && (
+              <div className="p-3 bg-gray-50 rounded">
+                <p><strong>Student ID:</strong> {user.studentId}</p>
+              </div>
+            )}
+            
+            {/* Phone */}
+            {user?.phone && (
+              <div className="p-3 bg-gray-50 rounded">
+                <p><strong>Phone:</strong> {user.phone}</p>
+              </div>
+            )}
+            
+            {/* Major */}
+            {user?.major && (
+              <div className="p-3 bg-gray-50 rounded">
+                <p><strong>Major:</strong> {user.major}</p>
+              </div>
+            )}
+            
+            {/* Payment */}
+            {user?.paymentMethod && (
+              <div className="p-3 bg-gray-50 rounded">
+                <p><strong>Payment:</strong> {user.paymentMethod === 'transfer' ? `Transfer (${user.bankLast5 || 'N/A'})` : 'Cash'} - {user.amount || 'N/A'} NTD</p>
+              </div>
+            )}
+            
+            {/* Additional Info */}
+            {user?.affiliation && (
+              <div className="p-3 bg-gray-50 rounded">
+                <p><strong>Affiliation:</strong> {user.affiliation}</p>
+              </div>
+            )}
+            
+            {user?.bio && (
+              <div className="p-3 bg-gray-50 rounded">
+                <p><strong>Bio:</strong></p>
+                <p className="mt-1 text-gray-700">{user.bio}</p>
+              </div>
+            )}
+            
+            {user?.interests && (
+              <div className="p-3 bg-gray-50 rounded">
+                <p><strong>Interests:</strong> {user.interests}</p>
+              </div>
+            )}
+            
+            {user?.spokenLanguages && (
+              <div className="p-3 bg-gray-50 rounded">
+                <p><strong>Spoken Languages:</strong> {user.spokenLanguages}</p>
+              </div>
+            )}
+            
+            {user?.desiredLanguages && (
+              <div className="p-3 bg-gray-50 rounded">
+                <p><strong>Desired Languages:</strong> {user.desiredLanguages}</p>
+              </div>
+            )}
           </div>
+        </div>
+        
+        <div className="mt-6 space-y-2">
+          <button 
+            onClick={onClose} 
+            className="w-full py-2 bg-gray-200 rounded hover:bg-gray-300 transition-colors"
+          >
+            Close
+          </button>
           
-          <div className="p-3 bg-gray-50 rounded">
-            <p><strong>역할:</strong> 
-              <span className={`ml-2 px-2 py-1 rounded-full text-xs font-medium ${getRoleColorClass(user?.role)}`}>
-                {user?.role || 'N/A'}
-              </span>
-            </p>
-          </div>
-          
-          {user?.affiliation && (
-            <div className="p-3 bg-gray-50 rounded">
-              <p><strong>소속:</strong> {user.affiliation}</p>
-            </div>
-          )}
-          
-          {user?.bio && (
-            <div className="p-3 bg-gray-50 rounded">
-              <p><strong>자기소개:</strong></p>
-              <p className="mt-1 text-gray-700">{user.bio}</p>
-            </div>
-          )}
-          
-          {user?.interests && (
-            <div className="p-3 bg-gray-50 rounded">
-              <p><strong>관심사:</strong> {user.interests}</p>
-            </div>
-          )}
-          
-          {user?.spokenLanguages && (
-            <div className="p-3 bg-gray-50 rounded">
-              <p><strong>구사 언어:</strong> {user.spokenLanguages}</p>
-            </div>
-          )}
-          
-          {user?.desiredLanguages && (
-            <div className="p-3 bg-gray-50 rounded">
-              <p><strong>배우고 싶은 언어:</strong> {user.desiredLanguages}</p>
-            </div>
-          )}
-          
-          {user?.membership && (
-            <div className="p-3 bg-gray-50 rounded">
-              <p><strong>멤버십:</strong> {user.membership}</p>
-            </div>
-          )}
-          
-          {user?.memberships && user.memberships.length > 0 && (
-            <div className="p-3 bg-gray-50 rounded">
-              <p><strong>활성 멤버십:</strong></p>
-              <ul className="mt-1 space-y-1">
-                {user.memberships.map((membership, index) => (
-                  <li key={index} className="text-xs bg-white px-2 py-1 rounded">
-                    {membership.branchName} - {membership.status}
-                  </li>
-                ))}
-              </ul>
-            </div>
+          {onDeleteMembership && branches.length > 0 && (
+            <button 
+              onClick={() => {
+                if (window.confirm(`Are you sure you want to delete ${user?.name || 'this user'}'s membership?`)) {
+                  // 첫 번째 branch를 기준으로 삭제 (또는 사용자가 선택하도록 개선 가능)
+                  onDeleteMembership(user.id, branches[0]);
+                }
+              }} 
+              className="w-full py-2 bg-red-500 text-white rounded hover:bg-red-600 transition-colors"
+            >
+              Delete Membership
+            </button>
           )}
         </div>
       </div>
-      
-      <div className="mt-6">
-        <button 
-          onClick={onClose} 
-          className="w-full py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
-        >
-          닫기
-        </button>
-      </div>
     </div>
-  </div>
-);
+  );
+};
 
 export default function AdminStaffInfoPage() {
   const { user } = useUser();
@@ -275,6 +328,21 @@ export default function AdminStaffInfoPage() {
     }
   };
 
+  // ✅ 멤버십 삭제 함수
+  const handleDeleteMembership = async (userId, branchName) => {
+    try {
+      await axios.delete(`/api/admin/users/memberships?userId=${userId}&branchName=${branchName}`);
+      alert('Membership deleted successfully');
+      // 목록 새로고침
+      const response = await axios.get('/api/admin/users');
+      setMembers(response.data);
+      setSelectedUser(null); // 모달 닫기
+    } catch (error) {
+      console.error('Failed to delete membership:', error);
+      alert('Failed to delete membership');
+    }
+  };
+
 
 
   return (
@@ -283,7 +351,8 @@ export default function AdminStaffInfoPage() {
       {selectedUser && (
         <UserDetailModal 
           user={selectedUser} 
-          onClose={() => setSelectedUser(null)} 
+          onClose={() => setSelectedUser(null)}
+          onDeleteMembership={handleDeleteMembership}
         />
       )}
       
