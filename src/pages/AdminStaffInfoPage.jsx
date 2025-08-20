@@ -2,6 +2,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import axios from '../api/axios';
 import { useUser } from '../context/UserContext';
+import { canAssignStaff, getRoleColorClass } from '../utils/permissions';
 
 export default function AdminStaffInfoPage() {
   const { user } = useUser();
@@ -28,9 +29,8 @@ export default function AdminStaffInfoPage() {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  const canAssignStaff = useMemo(() => {
-    // ADMIN은 모두 가능, PRESIDENT도 STAFF로 지정 가능
-    return user?.role === 'ADMIN' || user?.role === 'PRESIDENT';
+  const canAssignStaffPermission = useMemo(() => {
+    return canAssignStaff(user?.role);
   }, [user?.role]);
 
   useEffect(() => {
@@ -148,7 +148,7 @@ export default function AdminStaffInfoPage() {
   };
 
   const openAssign = (member) => {
-    if (!canAssignStaff) return alert('권한이 없습니다.');
+    if (!canAssignStaffPermission) return alert('권한이 없습니다.');
     setAssignModal({ open: true, userId: member.id, email: member.email });
     setAssignRole('STAFF');
   };
@@ -177,16 +177,7 @@ export default function AdminStaffInfoPage() {
     }
   };
 
-  const getRoleColor = (role) => {
-    switch (role?.toUpperCase()) {
-      case 'ADMIN': return 'bg-red-100 text-red-800';
-      case 'PRESIDENT': return 'bg-purple-100 text-purple-800';
-      case 'LEADER': return 'bg-blue-100 text-blue-800';
-      case 'STAFF': return 'bg-green-100 text-green-800';
-      case 'MEMBER': return 'bg-gray-100 text-gray-800';
-      default: return 'bg-gray-100 text-gray-800';
-    }
-  };
+
 
   return (
     <div className="p-4 sm:p-8">
@@ -271,14 +262,14 @@ export default function AdminStaffInfoPage() {
                     <h3 className="font-semibold text-gray-900">{member.name}</h3>
                     <p className="text-sm text-gray-600">{member.email}</p>
                   </div>
-                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${getRoleColor(member.role)}`}>
+                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${getRoleColorClass(member.role)}`}>
                     {member.role}
                   </span>
                 </div>
                 <div className="text-sm text-gray-600 mb-3">
                   <span className="font-medium">Branch:</span> {getActiveBranches(member).join(', ') || '-'}
                 </div>
-                {canAssignStaff && (
+                {canAssignStaffPermission && (
                   <button 
                     onClick={() => openAssign(member)} 
                     className="text-blue-600 hover:text-blue-800 text-sm font-medium"
@@ -307,13 +298,13 @@ export default function AdminStaffInfoPage() {
                   <td className="px-6 py-4 whitespace-nowrap">{member.name}</td>
                   <td className="px-6 py-4 whitespace-nowrap">{member.email}</td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${getRoleColor(member.role)}`}>
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${getRoleColorClass(member.role)}`}>
                       {member.role}
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">{getActiveBranches(member).join(', ') || '-'}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm">
-                    {canAssignStaff && (
+                    {canAssignStaffPermission && (
                       <button onClick={() => openAssign(member)} className="text-blue-600 hover:underline">Assign as Staff</button>
                     )}
                   </td>

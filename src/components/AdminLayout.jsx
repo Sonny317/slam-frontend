@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { NavLink, Outlet, Link, Navigate } from 'react-router-dom';
 import { useUser } from '../context/UserContext';
+import { hasAdminAccess } from '../utils/permissions';
 
 const adminNavLinks = [
   { name: 'Dashboard', path: '/admin/dashboard' },
@@ -39,8 +40,8 @@ export default function AdminLayout() {
     };
   }, []);
 
-  // 사용자가 ADMIN이 아니거나 로그아웃 상태이면 메인 페이지로 쫓아내는 보안 장치
-  if (!user.isLoggedIn || user.role !== 'ADMIN') {
+  // STAFF 이상의 권한을 가진 사용자만 Admin 페이지 접근 허용
+  if (!user.isLoggedIn || !hasAdminAccess(user.role)) {
     return <Navigate to="/" replace />;
   }
 

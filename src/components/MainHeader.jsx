@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useUser } from '../context/UserContext';
 import NotificationBell from './NotificationBell';
+import { hasAdminAccess } from '../utils/permissions';
 
 export default function MainHeader() {
   const navigate = useNavigate();
@@ -142,7 +143,7 @@ export default function MainHeader() {
                   My Page
                 </button>
                 
-                {user.role === 'ADMIN' && (
+                {hasAdminAccess(user.role) && (
                   <button onClick={handleAdminPage} className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
                     Admin Page
                   </button>
@@ -208,7 +209,7 @@ export default function MainHeader() {
             ) : (
               <>
                  <button onClick={handleMyPage} className="w-full text-center py-2">My Page</button>
-                {user.role === 'ADMIN' && (
+                {hasAdminAccess(user.role) && (
                   <button onClick={handleAdminPage} className="w-full text-center py-2">Admin Page</button>
                 )}
                 <button onClick={handleLogout} className="w-full text-center py-2 text-red-500">Log out</button>
