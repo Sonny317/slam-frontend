@@ -95,7 +95,7 @@ export default function NotificationBell() {
   const getNotificationMessage = (notification) => {
     switch (notification.type) {
       case 'membership_approved':
-        return `Your ${notification.data?.branch} membership has been approved!`;
+        return `Your membership has been approved! 🎉 Ready to join upcoming events?`;
       case 'membership_rejected':
         return `Your ${notification.data?.branch} membership application was not approved.`;
       case 'comment':
@@ -164,6 +164,10 @@ export default function NotificationBell() {
                   key={notification.id}
                   className={`p-4 border-b border-gray-100 hover:bg-gray-50 cursor-pointer transition-colors ${
                     !notification.read ? 'bg-blue-50' : ''
+                  } ${
+                    notification.type === 'membership_approved' && !notification.read 
+                      ? 'bg-gradient-to-r from-green-50 to-blue-50 border-l-4 border-green-400 hover:bg-gradient-to-r hover:from-green-100 hover:to-blue-100' 
+                      : ''
                   }`}
                   onClick={() => {
                     if (!notification.read) {
@@ -171,7 +175,9 @@ export default function NotificationBell() {
                     }
                     setShowDropdown(false);
                     // Handle navigation based on notification type
-                    if (notification.data?.postId) {
+                    if (notification.type === 'membership_approved') {
+                      window.location.href = '/events';
+                    } else if (notification.data?.postId) {
                       window.location.href = `/community/post/${notification.data.postId}`;
                     } else if (notification.data?.eventId) {
                       window.location.href = `/events/${notification.data.eventId}`;

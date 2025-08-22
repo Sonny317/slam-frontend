@@ -3,6 +3,7 @@ import axios from "../api/axios";
 import { Link } from "react-router-dom";
 import { QRCodeSVG } from "qrcode.react";
 import { useUser } from '../context/UserContext';
+import { calculateUserBadges, getNextBadgeProgress } from '../utils/badges';
 
 export default function MyPage() {
    const { user, updateUserImage } = useUser();
@@ -10,11 +11,13 @@ export default function MyPage() {
     const [userDetails, setUserDetails] = useState({
         name: "", bio: "", posts: [], comments: [], membership: null,
         phone: "", major: "", studentId: "", interests: "", 
-        spokenLanguages: "", desiredLanguages: ""
+        spokenLanguages: "", desiredLanguages: "", badges: [], userStats: {}
     });
     const [showQrCode, setShowQrCode] = useState(false);
     const [showEditForm, setShowEditForm] = useState(false);
     const [editFormData, setEditFormData] = useState({});
+    const [showAllPosts, setShowAllPosts] = useState(false);
+    const [showAllComments, setShowAllComments] = useState(false);
     const qrCodeValue = JSON.stringify({ userId: userDetails.userId, name: userDetails.name });
 
     // 로그인하지 않은 사용자는 로그인 페이지로 리다이렉트
@@ -22,13 +25,13 @@ export default function MyPage() {
         return (
             <div className="min-h-screen bg-gray-50 flex items-center justify-center">
                 <div className="text-center">
-                    <h1 className="text-2xl font-bold text-gray-800 mb-4">로그인이 필요합니다</h1>
-                    <p className="text-gray-600 mb-6">마이페이지를 이용하려면 로그인해주세요.</p>
+                    <h1 className="text-2xl font-bold text-gray-800 mb-4">Login Required</h1>
+                    <p className="text-gray-600 mb-6">Please log in to access your profile page.</p>
                     <Link 
                         to="/login" 
                         className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors"
                     >
-                        로그인하기
+                        Log In
                     </Link>
                 </div>
             </div>
@@ -153,6 +156,26 @@ export default function MyPage() {
             // 사용자의 게시글과 댓글 데이터 가져오기
             fetchUserPosts();
             fetchUserComments();
+            
+            // ✅ 사용자 통계 계산 및 뱃지 업데이트
+            const userStats = {
+                posts: userData.postCount || 0,
+                comments: userData.commentCount || 0,
+                likes: userData.totalLikes || 0,
+                events: userData.eventCount || 0,
+                membership: activeBranches.length > 0,
+                membershipCount: userData.membershipCount || 0,
+                trendingPosts: userData.trendingPosts || 0,
+                helpfulReactions: userData.helpfulReactions || 0
+            };
+            
+            const earnedBadges = calculateUserBadges(userStats);
+            
+            setUserDetails(prev => ({
+                ...prev,
+                badges: earnedBadges,
+                userStats: userStats
+            }));
         } catch (error) {
             console.error('Failed to fetch user data:', error);
         }
@@ -260,12 +283,12 @@ export default function MyPage() {
                     <div className="lg:col-span-1 space-y-8">
                         <div className="bg-white p-6 rounded-lg shadow-md text-center">
                             <div className="relative w-32 h-32 mx-auto">
-                                <img
-                                    src={user.profileImage}
-                                    alt="Profile"
-                                    className="w-full h-full rounded-full object-cover border-4 border-white shadow-lg"
-                                    onError={(e) => { e.target.onerror = null; e.target.src = "/default_profile.jpg"; }}
-                                />
+                                {/* ✅ 이니셜 아바타 */}
+                                <div className="w-full h-full rounded-full bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center border-4 border-white shadow-lg">
+                                    <span className="text-white text-4xl font-bold">
+                                        {(userDetails.name || user.name || 'U').charAt(0).toUpperCase()}
+                                    </span>
+                                </div>
                                 <label htmlFor="profile-upload" className="absolute bottom-1 right-1 bg-blue-600 p-2 rounded-full cursor-pointer hover:bg-blue-700 transition-colors">
                                     <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
                                     <input id="profile-upload" type="file" className="hidden" accept="image/*" onChange={handleImageSelectAndUpload} />
@@ -340,13 +363,66 @@ export default function MyPage() {
                                 </div>
                             </div>
                         )}
+                        
+                        {/* ✅ 뱃지/업적 섹션 */}
+                        <div className="bg-white p-6 rounded-lg shadow-md">
+                            <h3 className="text-lg font-semibold mb-4 flex items-center">
+                                <span className="mr-2">🏆</span>
+                                Achievements
+                            </h3>
+                            
+                            {userDetails.badges && userDetails.badges.length > 0 ? (
+                                <div className="space-y-3">
+                                    {userDetails.badges.map((category, index) => (
+                                        <div key={index} className="border border-gray-200 rounded-lg p-3 cursor-pointer hover:bg-gray-50 transition-colors" onClick={() => alert(`${category.name}\n\nCurrent Level: ${category.currentLevel}\nDescription: ${category.description}\n\nLevel Requirements:\n${category.levels.map((level, i) => `${i+1}. ${level.name}: ${level.description}`).join('\n')}`)}>
+                                            <div className="flex items-center justify-between">
+                                                <div className="flex items-center space-x-2 flex-1 min-w-0">
+                                                    <span className="text-lg flex-shrink-0">{category.icon}</span>
+                                                    <div className="flex-1 min-w-0">
+                                                        <h4 className="font-medium text-sm">{category.name}</h4>
+                                                        <p className="text-xs text-gray-500 truncate">{category.description}</p>
+                                                    </div>
+                                                </div>
+                                                <div className="text-right flex-shrink-0 ml-2">
+                                                    <div className="bg-green-100 text-green-800 px-2 py-1 rounded text-xs font-medium">
+                                                        Level {category.currentLevel}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : (
+                                <p className="text-gray-500 text-center py-8">No achievements yet. Start participating to earn badges!</p>
+                            )}
+                        </div>
                     </div>
                     <div className="lg:col-span-2 space-y-8">
+
+                        {/* ✅ Posts 섹션 (접기/펼치기 기능) */}
                         <section className="bg-white p-6 rounded-lg shadow-md">
-                            <h2 className="text-xl font-semibold mb-4 border-b pb-2">📌 My Posts</h2>
+                            <div className="flex items-center justify-between mb-4 border-b pb-2">
+                                <h2 className="text-xl font-semibold">📌 My Posts</h2>
+                                {userDetails.posts.length > 3 && (
+                                    <button
+                                        onClick={() => setShowAllPosts(!showAllPosts)}
+                                        className="text-blue-600 hover:text-blue-800 text-sm font-medium flex items-center space-x-1"
+                                    >
+                                        <span>{showAllPosts ? 'Show Less' : `Show All (${userDetails.posts.length})`}</span>
+                                        <svg 
+                                            className={`w-4 h-4 transition-transform ${showAllPosts ? 'rotate-180' : ''}`} 
+                                            fill="none" 
+                                            stroke="currentColor" 
+                                            viewBox="0 0 24 24"
+                                        >
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                        </svg>
+                                    </button>
+                                )}
+                            </div>
                             {userDetails.posts.length > 0 ? (
                                 <ul className="space-y-3">
-                                    {userDetails.posts.map((post) => (
+                                    {(showAllPosts ? userDetails.posts : userDetails.posts.slice(0, 3)).map((post) => (
                                         <li key={post.id} className="p-3 rounded-md hover:bg-gray-50 transition-colors">
                                             <Link to={`/community/${post.id}`} className="block">
                                                 <p className="font-semibold text-blue-700 hover:text-blue-900">{post.title}</p>
@@ -359,14 +435,32 @@ export default function MyPage() {
                                     ))}
                                 </ul>
                             ) : (
-                                <p className="text-gray-500 text-center py-4">아직 작성한 게시글이 없습니다.</p>
+                                <p className="text-gray-500 text-center py-4">No posts yet.</p>
                             )}
                         </section>
                         <section className="bg-white p-6 rounded-lg shadow-md">
-                            <h2 className="text-xl font-semibold mb-4 border-b pb-2">💬 My Comments</h2>
+                            <div className="flex items-center justify-between mb-4 border-b pb-2">
+                                <h2 className="text-xl font-semibold">💬 My Comments</h2>
+                                {userDetails.comments.length > 3 && (
+                                    <button
+                                        onClick={() => setShowAllComments(!showAllComments)}
+                                        className="text-blue-600 hover:text-blue-800 text-sm font-medium flex items-center space-x-1"
+                                    >
+                                        <span>{showAllComments ? 'Show Less' : `Show All (${userDetails.comments.length})`}</span>
+                                        <svg 
+                                            className={`w-4 h-4 transition-transform ${showAllComments ? 'rotate-180' : ''}`} 
+                                            fill="none" 
+                                            stroke="currentColor" 
+                                            viewBox="0 0 24 24"
+                                        >
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                        </svg>
+                                    </button>
+                                )}
+                            </div>
                             {userDetails.comments.length > 0 ? (
                                 <ul className="space-y-3">
-                                    {userDetails.comments.map((comment) => (
+                                    {(showAllComments ? userDetails.comments : userDetails.comments.slice(0, 3)).map((comment) => (
                                         <li key={comment.id} className="p-3 rounded-md hover:bg-gray-50 transition-colors">
                                             <p className="italic text-gray-700">"{comment.text}"</p>
                                             <p className="text-gray-500 text-xs mt-1">
@@ -376,7 +470,7 @@ export default function MyPage() {
                                     ))}
                                 </ul>
                             ) : (
-                                <p className="text-gray-500 text-center py-4">아직 작성한 댓글이 없습니다.</p>
+                                <p className="text-gray-500 text-center py-4">No comments yet.</p>
                             )}
                         </section>
                     </div>
