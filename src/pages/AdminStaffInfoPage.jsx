@@ -555,14 +555,34 @@ export default function AdminStaffInfoPage() {
                   <div><span className="font-medium">Nationality:</span> {member.nationality || '-'}</div>
                   <div><span className="font-medium">Joined:</span> {member.createdAt ? new Date(member.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) : 'Unknown'}</div>
                 </div>
-                {shouldShowAssignButton(user?.role, member.role) && user?.id !== member.id && getAssignableRoles(user?.role, member.role).length > 0 && (
-                  <button 
-                    onClick={() => openAssign(member)} 
-                    className="text-blue-600 hover:text-blue-800 text-sm font-medium"
-                  >
-                    Assign Role
-                  </button>
-                )}
+                {(() => {
+                  const canShow = shouldShowAssignButton(user?.role, member.role);
+                  const isNotSelf = user?.id !== member.id;
+                  const assignableRoles = getAssignableRoles(user?.role, member.role);
+                  const hasRoles = assignableRoles.length > 0;
+                  
+                  // 디버깅 로그 (개발자 도구 Console에서 확인)
+                  if (member.role === 'STAFF' || member.role === 'MEMBER') {
+                    console.log(`🔍 버튼 표시 체크 - ${member.name} (${member.role}):`, {
+                      currentUserRole: user?.role,
+                      targetRole: member.role,
+                      canShow,
+                      isNotSelf,
+                      assignableRoles,
+                      hasRoles,
+                      finalShow: canShow && isNotSelf && hasRoles
+                    });
+                  }
+                  
+                  return canShow && isNotSelf && hasRoles && (
+                    <button 
+                      onClick={() => openAssign(member)} 
+                      className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                    >
+                      Assign Role
+                    </button>
+                  );
+                })()}
               </div>
             ))}
           </div>
@@ -606,9 +626,16 @@ export default function AdminStaffInfoPage() {
                     {member.createdAt ? new Date(member.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) : 'Unknown'}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm">
-                    {shouldShowAssignButton(user?.role, member.role) && user?.id !== member.id && getAssignableRoles(user?.role, member.role).length > 0 && (
-                      <button onClick={() => openAssign(member)} className="text-blue-600 hover:underline">Assign Role</button>
-                    )}
+                    {(() => {
+                      const canShow = shouldShowAssignButton(user?.role, member.role);
+                      const isNotSelf = user?.id !== member.id;
+                      const assignableRoles = getAssignableRoles(user?.role, member.role);
+                      const hasRoles = assignableRoles.length > 0;
+                      
+                      return canShow && isNotSelf && hasRoles && (
+                        <button onClick={() => openAssign(member)} className="text-blue-600 hover:underline">Assign Role</button>
+                      );
+                    })()}
                   </td>
                 </tr>
               ))}
