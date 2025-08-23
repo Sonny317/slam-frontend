@@ -46,10 +46,12 @@ export default function EventDetailPage() {
     fetchEventAndRsvp();
   }, [eventId, user.isLoggedIn]);
 
-  // Live countdown to the event date/time (registration closes when event starts)
+  // ✅ 등록 데드라인까지의 카운트다운 (데드라인이 있으면 데드라인 기준, 없으면 이벤트 시작 시간 기준)
   useEffect(() => {
     if (!eventData?.eventDateTime) return;
-    const targetMs = new Date(eventData.eventDateTime).getTime();
+    const targetMs = eventData.registrationDeadline 
+      ? new Date(eventData.registrationDeadline).getTime()
+      : new Date(eventData.eventDateTime).getTime();
 
     const tick = () => {
       const now = Date.now();
@@ -71,7 +73,7 @@ export default function EventDetailPage() {
     tick();
     const id = setInterval(tick, 1000);
     return () => clearInterval(id);
-  }, [eventData?.eventDateTime]);
+  }, [eventData?.eventDateTime, eventData?.registrationDeadline]);
 
   const handleRsvpClick = (attendingStatus) => {
     if (!user.isLoggedIn) {
@@ -159,6 +161,19 @@ export default function EventDetailPage() {
     return themeIcons[theme] || '🎯';
   };
 
+  // ✅ 용량 경고 표시 여부 계산
+  const shouldShowCapacityWarning = () => {
+    if (!eventData?.showCapacityWarning || !eventData?.capacityWarningThreshold) return false;
+    const spotsLeft = eventData.capacity - (eventData.currentAttendees || 0);
+    return spotsLeft <= eventData.capacityWarningThreshold;
+  };
+
+  // ✅ 등록 데드라인 여부 확인
+  const isRegistrationClosed = () => {
+    if (timeLeft === "Closed") return true;
+    return false;
+  };
+
   if (loading) {
     return <div className="text-center py-20">Loading event details...</div>;
   }
@@ -198,7 +213,99 @@ export default function EventDetailPage() {
                 <span className="text-sm">🗺️</span>
               </a>
             </p>
+            {/* ✅ 등록 데드라인 표시 */}
+            {eventData.registrationDeadline && (
+              <p><strong>📋 Registration Deadline:</strong> {formatDate(eventData.registrationDeadline)}</p>
+            )}
           </div>
+
+          {/* ✅ 가격 정보 표시 - 멤버십 보유자에게는 표시하지 않음 */}
+          {(() => {
+            // 사용자가 해당 지부의 멤버십을 보유하고 있는지 확인
+            const isStaff = user?.isLoggedIn && ['ADMIN', 'STAFF', 'PRESIDENT'].includes(user.role);
+            const hasMembership = user?.isLoggedIn && (user.memberships || []).some(membership => {
+              const branchName = membership.includes('_') ? membership.split('_')[1] : membership;
+              return branchName === eventData.branch;
+            });
+            
+            // 스태프이거나 해당 지부 멤버십이 있으면 가격 정보를 표시하지 않음
+            if (isStaff || hasMembership) {
+              return null;
+            }
+            
+            // Early Bird 상태 계산
+            const isEarlyBirdActive = eventData.earlyBirdPrice && eventData.earlyBirdEndDate && 
+              new Date() < new Date(eventData.earlyBirdEndDate) && 
+              eventData.earlyBirdCapacity && 
+              (eventData.currentAttendees || 0) < eventData.earlyBirdCapacity;
+            
+            // 현재 가격 결정
+            const currentPrice = isEarlyBirdActive ? eventData.earlyBirdPrice : eventData.price;
+            const savings = eventData.price - eventData.earlyBirdPrice;
+            const savingsPercentage = Math.round((savings / eventData.price) * 100);
+            
+            return (
+              <div className="bg-gradient-to-r from-green-50 to-blue-50 p-4 rounded-lg mb-6 border border-green-200">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-3">
+                    <span className="text-2xl">💰</span>
+                    <div>
+                      {isEarlyBirdActive ? (
+                        <div>
+                          <p className="text-lg font-bold text-green-600">Early Bird Price: NT${eventData.earlyBirdPrice}</p>
+                          <p className="text-sm text-gray-600">Regular Price: <span className="line-through">NT${eventData.price}</span></p>
+                          <p className="text-xs text-orange-600 font-semibold">
+                            You Save NT${savings} ({savingsPercentage}% OFF!)
+                          </p>
+                          {eventData.earlyBirdEndDate && (
+                            <p className="text-xs text-orange-600">
+                              Early Bird Deadline: {new Date(eventData.earlyBirdEndDate).toLocaleDateString()}
+                            </p>
+                          )}
+                          {eventData.earlyBirdCapacity && (
+                            <p className="text-xs text-orange-600">
+                              Early Bird Spots Left: {eventData.earlyBirdCapacity - (eventData.currentAttendees || 0)}
+                            </p>
+                          )}
+                        </div>
+                      ) : (
+                        <div>
+                          <p className="text-lg font-bold text-blue-600">Event Fee: NT${eventData.price}</p>
+                          {eventData.earlyBirdPrice && (
+                            <p className="text-xs text-gray-500">
+                              Early Bird pricing ended
+                            </p>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  {isEarlyBirdActive && (
+                    <span className="bg-yellow-100 text-yellow-800 px-3 py-2 rounded-full text-sm font-bold animate-pulse">
+                      🐦 Early Bird!
+                    </span>
+                  )}
+                </div>
+              </div>
+            );
+          })()}
+
+          {/* ✅ 용량 경고 표시 */}
+          {shouldShowCapacityWarning() && (
+            <div className="bg-red-50 border-l-4 border-red-400 p-4 mb-6">
+              <div className="flex items-center">
+                <span className="text-red-500 text-xl mr-3">⚠️</span>
+                <div>
+                  <p className="text-red-800 font-bold">
+                    Hurry up! Only {eventData.capacity - (eventData.currentAttendees || 0)} spots left!
+                  </p>
+                  <p className="text-red-600 text-sm">
+                    Current registrations: {eventData.currentAttendees || 0}/{eventData.capacity}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Countdown banner (linked to event date/time) */}
           <div className="mb-8">
@@ -215,14 +322,17 @@ export default function EventDetailPage() {
               ) : (
                 <>
                   <span className="animate-bounce">⚡</span>
-                  <span>HURRY! Registration closes in {timeLeft}</span>
+                  <span>
+                    HURRY! Registration closes in {timeLeft}
+                    {eventData.registrationDeadline ? '' : ' (when event starts)'}
+                  </span>
                   <span className="animate-bounce">⏰</span>
                 </>
               )}
             </div>
           </div>
 
-          {user.isLoggedIn && isRsvpLoaded && (
+          {user.isLoggedIn && isRsvpLoaded && !isRegistrationClosed() && (
             <div className="bg-gradient-to-r from-blue-50 to-purple-50 p-6 rounded-xl mb-8 border border-blue-100">
               {!showAfterPartyOptions ? (
                 <>
@@ -234,22 +344,33 @@ export default function EventDetailPage() {
                   <div className="flex justify-center gap-4 mb-4">
                     <button 
                       onClick={() => handleRsvpClick(true)}
-                      className={`font-bold py-3 px-8 rounded-full transition-all duration-200 flex items-center space-x-2 shadow-md ${
+                      className={`font-bold py-3 px-8 rounded-full transition-all duration-200 flex items-center space-x-2 shadow-md relative ${
                         isAttending 
-                          ? 'bg-gradient-to-r from-green-500 to-blue-600 text-white scale-105 shadow-lg' 
+                          ? 'bg-gradient-to-r from-green-500 to-green-600 text-white scale-105 shadow-xl ring-4 ring-green-200' 
                           : 'bg-white text-blue-600 border-2 border-blue-600 hover:bg-blue-50 hover:scale-105'
                       }`}>
+                      {isAttending && (
+                        <div className="absolute -top-2 -right-2 bg-green-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold animate-pulse">
+                          ✓
+                        </div>
+                      )}
                       <span className="text-lg">{isAttending ? '🎉' : '👋'}</span>
                       <span>Count me in!</span>
+                      {isAttending && <span className="text-lg animate-bounce">✨</span>}
                     </button>
                     <button 
                       onClick={() => handleRsvpClick(false)}
-                      className={`font-bold py-3 px-8 rounded-full transition-all duration-200 flex items-center space-x-2 shadow-md ${
-                        !isAttending 
-                          ? 'bg-gray-500 text-white scale-105 shadow-lg' 
+                      className={`font-bold py-3 px-8 rounded-full transition-all duration-200 flex items-center space-x-2 shadow-md relative ${
+                        isAttending === false 
+                          ? 'bg-gradient-to-r from-gray-500 to-gray-600 text-white scale-105 shadow-xl ring-4 ring-gray-200' 
                           : 'bg-white text-gray-600 border-2 border-gray-300 hover:bg-gray-50 hover:scale-105'
                       }`}>
-                      <span className="text-lg">{!isAttending ? '😔' : '🤷‍♂️'}</span>
+                      {isAttending === false && (
+                        <div className="absolute -top-2 -right-2 bg-gray-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold animate-pulse">
+                          ✓
+                        </div>
+                      )}
+                      <span className="text-lg">{isAttending === false ? '😔' : '🤷‍♂️'}</span>
                       <span>Maybe next time</span>
                     </button>
                   </div>
@@ -290,10 +411,25 @@ export default function EventDetailPage() {
               )}
             </div>
           )}
+
+          {/* ✅ 등록 마감 안내 */}
+          {user.isLoggedIn && isRegistrationClosed() && (
+            <div className="bg-gray-100 p-6 rounded-xl mb-8 border border-gray-300 text-center">
+              <h2 className="text-xl font-semibold mb-2 text-gray-700 flex items-center justify-center space-x-2">
+                <span>🔒</span>
+                <span>Registration is now closed</span>
+              </h2>
+              <p className="text-gray-600">
+                {eventData.registrationDeadline 
+                  ? 'The registration deadline has passed.' 
+                  : 'Registration closes when the event starts.'}
+              </p>
+            </div>
+          )}
           
           <div className="prose max-w-none">
             <h2 className="text-2xl font-semibold mb-2">About this event</h2>
-            <p>{eventData.description}</p>
+            <p className="whitespace-pre-wrap text-gray-700 leading-relaxed">{eventData.description}</p>
           </div>
 
 

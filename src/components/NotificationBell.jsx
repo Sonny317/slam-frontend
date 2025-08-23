@@ -104,7 +104,11 @@ export default function NotificationBell() {
     
     switch (notification.type) {
       case 'membership_approved':
+<<<<<<< HEAD
         return `Your ${data?.branch} membership has been approved!`;
+=======
+        return `Your membership has been approved! 🎉 Ready to join upcoming events?`;
+>>>>>>> cf59f2044427cf4167599ec7dd019e220301ebe0
       case 'membership_rejected':
         return `Your ${data?.branch} membership application was not approved.`;
       case 'comment':
@@ -178,6 +182,10 @@ export default function NotificationBell() {
                   key={notification.id}
                   className={`p-4 border-b border-gray-100 hover:bg-gray-50 cursor-pointer transition-colors ${
                     !notification.read ? 'bg-blue-50' : ''
+                  } ${
+                    notification.type === 'membership_approved' && !notification.read 
+                      ? 'bg-gradient-to-r from-green-50 to-blue-50 border-l-4 border-green-400 hover:bg-gradient-to-r hover:from-green-100 hover:to-blue-100' 
+                      : ''
                   }`}
                   onClick={() => {
                     if (!notification.read) {
@@ -185,6 +193,7 @@ export default function NotificationBell() {
                     }
                     setShowDropdown(false);
                     // Handle navigation based on notification type
+<<<<<<< HEAD
                     const data = typeof notification.data === 'string' ? JSON.parse(notification.data) : notification.data;
                     
                     if (data?.postId) {
@@ -194,6 +203,14 @@ export default function NotificationBell() {
                     } else if (notification.type === 'staff_invitation') {
                       // Redirect to staff onboarding or dashboard
                       window.location.href = '/profile';
+=======
+                    if (notification.type === 'membership_approved') {
+                      window.location.href = '/events';
+                    } else if (notification.data?.postId) {
+                      window.location.href = `/community/post/${notification.data.postId}`;
+                    } else if (notification.data?.eventId) {
+                      window.location.href = `/events/${notification.data.eventId}`;
+>>>>>>> cf59f2044427cf4167599ec7dd019e220301ebe0
                     }
                   }}
                 >

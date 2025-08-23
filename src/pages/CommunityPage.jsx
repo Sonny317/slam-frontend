@@ -33,6 +33,23 @@ const DcardPostCard = ({ post, onDelete, isPinned }) => {
     return `${Math.floor(diffInMinutes / 1440)}d ago`;
   };
 
+  // ✅ 해시태그를 파란색으로 렌더링하는 함수
+  const renderContentWithHashtags = (content) => {
+    if (!content) return content;
+    
+    const parts = content.split(/(#\w+)/g);
+    return parts.map((part, index) => {
+      if (part.startsWith('#')) {
+        return (
+          <span key={index} className="text-blue-600 font-medium">
+            {part}
+          </span>
+        );
+      }
+      return part;
+    });
+  };
+
   return (
     <div className={`bg-white rounded-lg border border-gray-200 hover:shadow-md transition-all duration-200 cursor-pointer relative ${isPinned ? 'ring-2 ring-blue-200' : ''}`}>
       {/* Pinned Badge */}
@@ -93,7 +110,12 @@ const DcardPostCard = ({ post, onDelete, isPinned }) => {
               {post.author?.charAt(0)?.toUpperCase() || 'A'}
             </div>
             <div>
-              <p className="font-medium text-gray-900">{post.author || 'Anonymous'}</p>
+              <Link 
+                to={`/users/profile?author=${encodeURIComponent(post.author || 'Anonymous')}`}
+                className="font-medium text-gray-900 hover:text-blue-600 transition-colors"
+              >
+                {post.author || 'Anonymous'}
+              </Link>
               <div className="flex items-center space-x-2 text-xs text-gray-500">
                 <span>{formatTimeAgo(post.createdAt)}</span>
                 <span>•</span>
@@ -106,7 +128,7 @@ const DcardPostCard = ({ post, onDelete, isPinned }) => {
         {/* Post Content */}
         <div className="mb-3">
           <h3 className="font-semibold text-gray-900 mb-2 line-clamp-2">{post.title}</h3>
-          <p className="text-gray-600 text-sm line-clamp-3">{post.content}</p>
+          <p className="text-gray-600 text-sm line-clamp-3">{renderContentWithHashtags(post.content)}</p>
         </div>
 
         {/* Post Image */}
@@ -117,6 +139,28 @@ const DcardPostCard = ({ post, onDelete, isPinned }) => {
               alt="Post content" 
               className="w-full h-48 object-cover rounded-lg"
             />
+          </div>
+        )}
+
+        {/* Poll Preview */}
+        {post.pollOptions && post.pollOptions.length > 0 && (
+          <div className="mb-3 bg-blue-50 border border-blue-200 rounded-lg p-3">
+            <div className="flex items-center space-x-2 mb-2">
+              <span className="text-blue-600">📊</span>
+              <span className="text-sm font-medium text-blue-800">Poll</span>
+              <span className="text-xs text-blue-600">({post.pollOptions.length} options)</span>
+            </div>
+            <p className="text-xs text-blue-700">Click to view poll and vote</p>
+          </div>
+        )}
+
+        {/* Location Preview */}
+        {post.location && (
+          <div className="mb-3 bg-green-50 border border-green-200 rounded-lg p-2">
+            <div className="flex items-center space-x-2">
+              <span className="text-green-600">📍</span>
+              <span className="text-xs text-green-800 truncate">{post.location.address}</span>
+            </div>
           </div>
         )}
 
@@ -161,6 +205,7 @@ export default function CommunityPage() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [isDesktop, setIsDesktop] = useState(window.innerWidth >= 1024);
+  const [sortMode, setSortMode] = useState('latest'); // 'trending' or 'latest'
   
   const categories = [
     { id: 'All', name: 'All Posts', icon: '🏠', count: 0 },
@@ -221,6 +266,21 @@ export default function CommunityPage() {
     };
   }, []);
 
+  // ✅ Trending 알고리즘 (좋아요 + 댓글 + 최신성 기반)
+  const calculateTrendingScore = (post) => {
+    const now = new Date();
+    const postDate = new Date(post.createdAt);
+    const hoursAgo = (now - postDate) / (1000 * 60 * 60);
+    
+    // 시간 가중치 (최근 24시간 내 게시물에 가중치 부여)
+    const timeWeight = Math.max(0, 1 - (hoursAgo / 24));
+    
+    // 인기도 점수 (좋아요 * 2 + 댓글 * 3)
+    const engagementScore = (post.likes || 0) * 2 + (post.comments?.length || 0) * 3;
+    
+    return engagementScore * (1 + timeWeight);
+  };
+
   // 게시글 필터링 및 검색
   const filteredPosts = posts.filter(post => {
     const matchesCategory = category === 'All' || post.category === category;
@@ -231,9 +291,14 @@ export default function CommunityPage() {
     return matchesCategory && matchesSearch;
   });
   
-  // 고정 게시물과 일반 게시물 분리
+  // 고정 게시물과 일반 게시물 분리 및 정렬
   const pinned = filteredPosts.filter(post => post.isPinned);
-  const regular = filteredPosts.filter(post => !post.isPinned).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+  const regular = filteredPosts.filter(post => !post.isPinned);
+  
+  // 정렬 모드에 따라 정렬
+  const sortedRegular = sortMode === 'trending' 
+    ? regular.sort((a, b) => calculateTrendingScore(b) - calculateTrendingScore(a))
+    : regular.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
   // 카테고리별 게시글 수 계산
   const categoriesWithCount = categories.map(cat => ({
@@ -442,22 +507,7 @@ export default function CommunityPage() {
                 </div>
               </div>
 
-              {/* Quick Links */}
-              <div className="space-y-2">
-                <h3 className="text-sm font-semibold text-gray-900 mb-3 px-2">Quick Links</h3>
-                <Link to="/events" className="flex items-center space-x-2 px-2 py-2 text-sm text-gray-600 hover:text-blue-600 transition-colors">
-                  <span>🎉</span>
-                  <span>Upcoming Events</span>
-                </Link>
-                <Link to="/membership" className="flex items-center space-x-2 px-2 py-2 text-sm text-gray-600 hover:text-blue-600 transition-colors">
-                  <span>🎫</span>
-                  <span>Membership</span>
-                </Link>
-                <Link to="/brand-story" className="flex items-center space-x-2 px-2 py-2 text-sm text-gray-600 hover:text-blue-600 transition-colors">
-                  <span>📖</span>
-                  <span>About SLAM</span>
-                </Link>
-              </div>
+
             </div>
           </div>
         )}
@@ -465,20 +515,28 @@ export default function CommunityPage() {
         {/* Right Content - Posts Feed */}
         <div className="flex-1 bg-gray-50">
           <div className="max-w-2xl mx-auto p-4 md:p-6">
-            {/* Trending/Popular section */}
+            {/* Trending/Latest section */}
             <div className="mb-6">
               <div className="flex items-center space-x-3 mb-4 overflow-x-auto pb-2">
-                <button className="flex-shrink-0 px-4 py-2 bg-white rounded-full border border-gray-200 text-sm font-medium hover:bg-gray-50 transition-colors">
+                <button 
+                  onClick={() => setSortMode('trending')}
+                  className={`flex-shrink-0 px-4 py-2 rounded-full border text-sm font-medium transition-colors ${
+                    sortMode === 'trending' 
+                      ? 'bg-red-500 text-white border-red-500 shadow-lg' 
+                      : 'bg-white border-gray-200 hover:bg-gray-50'
+                  }`}
+                >
                   🔥 Trending
                 </button>
-                <button className="flex-shrink-0 px-4 py-2 bg-white rounded-full border border-gray-200 text-sm font-medium hover:bg-gray-50 transition-colors">
+                <button 
+                  onClick={() => setSortMode('latest')}
+                  className={`flex-shrink-0 px-4 py-2 rounded-full border text-sm font-medium transition-colors ${
+                    sortMode === 'latest' 
+                      ? 'bg-blue-500 text-white border-blue-500 shadow-lg' 
+                      : 'bg-white border-gray-200 hover:bg-gray-50'
+                  }`}
+                >
                   ⏰ Latest
-                </button>
-                <button className="flex-shrink-0 px-4 py-2 bg-white rounded-full border border-gray-200 text-sm font-medium hover:bg-gray-50 transition-colors">
-                  💬 Most Discussed
-                </button>
-                <button className="flex-shrink-0 px-4 py-2 bg-white rounded-full border border-gray-200 text-sm font-medium hover:bg-gray-50 transition-colors">
-                  ❤️ Most Liked
                 </button>
               </div>
             </div>
@@ -496,7 +554,7 @@ export default function CommunityPage() {
                 ))}
                 
                 {/* Regular Posts */}
-                {regular.map(post => (
+                {sortedRegular.map(post => (
                   <DcardPostCard key={post.id} post={post} onDelete={handleDeletePost} isPinned={false} />
                 ))}
                 

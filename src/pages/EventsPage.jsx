@@ -101,7 +101,7 @@ export default function EventsPage() {
                           I'm Going! (RSVP)
                         </Link>
                       ) : (
-                        <Link to="/membership" className="block w-full text-center bg-blue-600 text-white font-bold py-2 rounded-lg hover:bg-blue-700 transition-colors">
+                        <Link to={`/membership?branch=${event.branch}`} className="block w-full text-center bg-blue-600 text-white font-bold py-2 rounded-lg hover:bg-blue-700 transition-colors">
                           Join {event.branch} Membership
                         </Link>
                       )

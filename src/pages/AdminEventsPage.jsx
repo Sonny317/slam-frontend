@@ -5,7 +5,7 @@ import axios from '../api/axios';
 const EventForm = ({ event, onSave, onCancel }) => {
   const [formData, setFormData] = useState(event);
   const [imageFile, setImageFile] = useState(null);
-  const [showLocationPreview, setShowLocationPreview] = useState(false);
+
   const [customTheme, setCustomTheme] = useState('');
 
   const handleChange = (e) => {
@@ -29,7 +29,30 @@ const EventForm = ({ event, onSave, onCancel }) => {
     if (formData.description) data.append('description', formData.description);
     data.append('capacity', String(formData.capacity ?? 0));
     data.append('price', String(formData.price ?? 0));
+    
+    // ✅ 새로운 필드들 추가 - 모든 필드를 항상 전송
+    data.append('earlyBirdPrice', String(formData.earlyBirdPrice || ''));
+    data.append('earlyBirdEndDate', formData.earlyBirdEndDate || '');
+    data.append('earlyBirdCapacity', String(formData.earlyBirdCapacity || ''));
+    data.append('registrationDeadline', formData.registrationDeadline || '');
+    data.append('capacityWarningThreshold', String(formData.capacityWarningThreshold || ''));
+    data.append('showCapacityWarning', String(formData.showCapacityWarning || false));
+    
+    // ✅ 계좌 정보 추가 - 모든 필드를 항상 전송
+    data.append('bankName', formData.bankName || '');
+    data.append('bankAccount', formData.bankAccount || '');
+    data.append('accountName', formData.accountName || '');
+    
     if (imageFile) data.append('image', imageFile);
+    
+    // 🔍 디버깅: FormData 내용 확인
+    console.log('=== FormData Debug ===');
+    console.log('formData:', formData);
+    console.log('FormData entries:');
+    for (let [key, value] of data.entries()) {
+      console.log(`${key}: ${value}`);
+    }
+    
     onSave({ id: formData.id, formData: data, isMultipart: true });
   };
 
@@ -111,44 +134,17 @@ const EventForm = ({ event, onSave, onCancel }) => {
                     required 
                   />
                   {formData.location && (
-                    <div className="flex flex-col sm:flex-row items-start sm:items-center space-y-2 sm:space-y-0 sm:space-x-2">
-                      <button
-                        type="button"
-                        onClick={() => setShowLocationPreview(!showLocationPreview)}
-                        className="text-sm text-blue-600 hover:text-blue-800 flex items-center space-x-1"
-                      >
-                        <span>🗺️</span>
-                        <span>{showLocationPreview ? 'Hide map preview' : 'Show map preview'}</span>
-                      </button>
+                    <div className="flex items-center space-x-2">
                       <a
                         href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(formData.location)}`}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-sm text-green-600 hover:text-green-800 flex items-center space-x-1"
+                        className="inline-flex items-center space-x-1 text-sm bg-blue-100 text-blue-800 px-3 py-1 rounded-md hover:bg-blue-200 transition-colors"
                       >
                         <span>📍</span>
-                        <span>Open in Google Maps</span>
+                        <span>Open in Google Maps to Confirm</span>
                       </a>
-                    </div>
-                  )}
-                  {showLocationPreview && formData.location && (
-                    <div className="border rounded-md overflow-hidden bg-gray-50">
-                      <div className="p-4 text-center">
-                        <div className="text-4xl mb-2">🗺️</div>
-                        <p className="text-sm text-gray-600 mb-3">
-                          Location: <strong>{formData.location}</strong>
-                        </p>
-                        <div>
-                          <a
-                            href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(formData.location)}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-block bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 text-sm"
-                          >
-                            📍 View in Google Maps
-                          </a>
-                        </div>
-                      </div>
+                      <span className="text-xs text-gray-500">Click to verify location</span>
                     </div>
                   )}
                 </div>
@@ -178,9 +174,136 @@ const EventForm = ({ event, onSave, onCancel }) => {
                 <input type="number" name="capacity" value={formData.capacity} onChange={handleChange} className="mt-1 block w-full p-2 border rounded-md" />
             </div>
             <div>
-                <label className="block text-sm font-medium text-gray-700">Price (NTD)</label>
+                <label className="block text-sm font-medium text-gray-700">Regular Price (NTD)</label>
                 <input type="number" name="price" value={formData.price} onChange={handleChange} className="mt-1 block w-full p-2 border rounded-md" />
             </div>
+        </div>
+
+        {/* ✅ Registration Deadline */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700">Registration Deadline</label>
+          <input 
+            type="datetime-local" 
+            name="registrationDeadline" 
+            value={formData.registrationDeadline || ''} 
+            onChange={handleChange} 
+            className="mt-1 block w-full p-2 border rounded-md" 
+          />
+          <p className="text-xs text-gray-500 mt-1">Last date and time when users can register for the event</p>
+        </div>
+
+        {/* ✅ Early Bird Pricing Section */}
+        <div className="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
+          <h3 className="text-lg font-semibold mb-3 text-yellow-800">🐦 Early Bird Pricing <span className="text-sm font-normal text-red-600">(Optional)</span></h3>
+          
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Early Bird Price (NTD)</label>
+              <input 
+                type="number" 
+                name="earlyBirdPrice" 
+                value={formData.earlyBirdPrice || ''} 
+                onChange={handleChange} 
+                className="mt-1 block w-full p-2 border rounded-md" 
+                placeholder="e.g. 500"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Early Bird End Date</label>
+              <input 
+                type="datetime-local" 
+                name="earlyBirdEndDate" 
+                value={formData.earlyBirdEndDate || ''} 
+                onChange={handleChange} 
+                className="mt-1 block w-full p-2 border rounded-md" 
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Early Bird Capacity Limit</label>
+              <input 
+                type="number" 
+                name="earlyBirdCapacity" 
+                value={formData.earlyBirdCapacity || ''} 
+                onChange={handleChange} 
+                className="mt-1 block w-full p-2 border rounded-md" 
+                placeholder="e.g. 20"
+              />
+            </div>
+          </div>
+          <p className="text-xs text-gray-600 mt-2">
+            💡 Early bird conditions: When either the deadline or capacity limit is reached, pricing switches to regular rate.
+          </p>
+        </div>
+
+        {/* ✅ Capacity Warning Settings */}
+        <div className="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
+          <h3 className="text-lg font-semibold mb-3 text-yellow-800">⚠️ Capacity Warning Settings <span className="text-sm font-normal text-red-600">(Optional)</span></h3>
+          
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Warning Threshold (Spots Left)</label>
+            <input 
+              type="number" 
+              name="capacityWarningThreshold" 
+              value={formData.capacityWarningThreshold || ''} 
+              onChange={(e) => {
+                const value = e.target.value;
+                setFormData(prev => ({ 
+                  ...prev, 
+                  capacityWarningThreshold: value ? parseInt(value) : null,
+                  showCapacityWarning: value ? true : false
+                }));
+              }} 
+              className="mt-1 block w-full p-2 border rounded-md" 
+              placeholder="e.g. 20"
+            />
+            <p className="text-xs text-gray-600 mt-1">
+              💡 When spots left ≤ this number, show "Hurry up! Only X spots left!" warning message
+            </p>
+          </div>
+        </div>
+
+        {/* ✅ Bank Information Settings */}
+        <div className="bg-green-50 p-4 rounded-lg border border-green-200">
+          <h3 className="text-lg font-semibold mb-3 text-green-800">🏦 Bank Transfer Information <span className="text-sm font-normal text-red-600">(Optional)</span></h3>
+          <p className="text-xs text-green-600 mb-4">
+            💡 If provided, this will override the default branch account info for membership payments
+          </p>
+          
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Bank Name</label>
+              <input 
+                type="text" 
+                name="bankName" 
+                value={formData.bankName || ''} 
+                onChange={handleChange} 
+                className="mt-1 block w-full p-2 border rounded-md" 
+                placeholder="e.g. (822) Cathay United Bank"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Account Number</label>
+              <input 
+                type="text" 
+                name="bankAccount" 
+                value={formData.bankAccount || ''} 
+                onChange={handleChange} 
+                className="mt-1 block w-full p-2 border rounded-md" 
+                placeholder="e.g. 123-456-7890"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Account Name</label>
+              <input 
+                type="text" 
+                name="accountName" 
+                value={formData.accountName || ''} 
+                onChange={handleChange} 
+                className="mt-1 block w-full p-2 border rounded-md" 
+                placeholder="e.g. SLAM NTU"
+              />
+            </div>
+          </div>
         </div>
         <div className="flex flex-col sm:flex-row justify-end gap-4 pt-4">
           <button type="button" onClick={onCancel} className="bg-gray-200 px-4 py-2 rounded-md hover:bg-gray-300">Cancel</button>
@@ -219,7 +342,23 @@ export default function AdminEventsPage() {
         const response = await axios.get('/api/admin/events');
         console.log('AdminEventsPage - API Response:', response.data);
         console.log('AdminEventsPage - Total events:', response.data.length);
-        setEvents(response.data);
+        
+        // ✅ 백엔드에서 누락된 필드들에 기본값 설정
+        const eventsWithDefaults = response.data.map(event => ({
+          ...event,
+          earlyBirdPrice: event.earlyBirdPrice || null,
+          earlyBirdEndDate: event.earlyBirdEndDate || null,
+          earlyBirdCapacity: event.earlyBirdCapacity || null,
+          registrationDeadline: event.registrationDeadline || null,
+          capacityWarningThreshold: event.capacityWarningThreshold || null,
+          showCapacityWarning: event.showCapacityWarning || false,
+          bankName: event.bankName || '',
+          bankAccount: event.bankAccount || '',
+          accountName: event.accountName || ''
+        }));
+        
+        console.log('Events with defaults:', eventsWithDefaults);
+        setEvents(eventsWithDefaults);
       } catch (error) {
         console.error("Failed to fetch events:", error);
       } finally {
@@ -261,19 +400,81 @@ Can't wait to see you there! 🌟`;
     const ordinals = ['1st', '2nd', '3rd'];
     const defaultTitle = `SLAM ${ordinals[cycleNumber - 1]} Event`;
 
-    setCurrentEvent({ 
+    setCurrentEvent({ 
       id: null, branch: 'NCCU', title: defaultTitle, eventDateTime: '', endTime: '',
       location: '', description: defaultDescription, imageUrl: '', theme: '',
-      capacity: 0, price: 0 
+      capacity: 0, price: 0, 
+      // ✅ 새로운 필드들 기본값
+      earlyBirdPrice: null, earlyBirdEndDate: '', earlyBirdCapacity: null,
+      registrationDeadline: '', capacityWarningThreshold: null, showCapacityWarning: false,
+      // ✅ 계좌 정보 기본값
+      bankName: '', bankAccount: '', accountName: ''
     });
     setIsEditing(true);
   };
 
-  const handleEdit = (event) => {
-    const formattedEvent = { ...event, eventDateTime: event.eventDateTime.slice(0, 16) };
-    setCurrentEvent(formattedEvent);
-    setIsEditing(true);
-  };
+  const handleEdit = (event) => {
+    // 🔍 디버깅: 원본 이벤트 데이터 확인
+    console.log('=== Original Event Data Debug ===');
+    console.log('Original event:', event);
+    console.log('earlyBirdPrice:', event.earlyBirdPrice);
+    console.log('earlyBirdEndDate:', event.earlyBirdEndDate);
+    console.log('earlyBirdCapacity:', event.earlyBirdCapacity);
+    console.log('registrationDeadline:', event.registrationDeadline);
+    console.log('capacityWarningThreshold:', event.capacityWarningThreshold);
+    console.log('showCapacityWarning:', event.showCapacityWarning);
+    console.log('bankName:', event.bankName);
+    console.log('bankAccount:', event.bankAccount);
+    console.log('accountName:', event.accountName);
+    
+    const formattedEvent = { 
+      ...event, 
+      eventDateTime: event.eventDateTime.slice(0, 16),
+      // ✅ 날짜 필드들 포맷팅
+      earlyBirdEndDate: event.earlyBirdEndDate ? event.earlyBirdEndDate.slice(0, 16) : '',
+      registrationDeadline: event.registrationDeadline ? event.registrationDeadline.slice(0, 16) : '',
+      // ✅ Early Bird 필드들 보존
+      earlyBirdPrice: event.earlyBirdPrice || null,
+      earlyBirdCapacity: event.earlyBirdCapacity || null,
+      // ✅ Capacity Warning 필드들 보존
+      capacityWarningThreshold: event.capacityWarningThreshold || null,
+      showCapacityWarning: event.showCapacityWarning || false,
+      // ✅ Bank 정보 필드들 보존
+      bankName: event.bankName || '',
+      bankAccount: event.bankAccount || '',
+      accountName: event.accountName || ''
+    };
+    
+    // 🔍 디버깅: 포맷팅된 이벤트 데이터 확인
+    console.log('=== Formatted Event Data Debug ===');
+    console.log('Formatted event:', formattedEvent);
+    
+    setCurrentEvent(formattedEvent);
+    setIsEditing(true);
+  };
+
+  // ✅ 이벤트 복제 함수 (내용만 복사, 새로운 이벤트 생성)
+  const handleDuplicate = (event) => {
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 7); // 1주일 후로 설정
+    const futureDateTime = tomorrow.toISOString().slice(0, 16);
+
+    const duplicatedEvent = {
+      ...event,
+      id: null, // 새로운 이벤트이므로 ID 제거
+      title: `${event.title} (Copy)`, // 제목에 (Copy) 추가
+      eventDateTime: futureDateTime, // 1주일 후로 설정
+      // 날짜 관련 필드들 초기화
+      earlyBirdEndDate: '',
+      registrationDeadline: '',
+      // 참석자 관련 필드들 초기화
+      currentAttendees: 0,
+      archived: false
+    };
+
+    setCurrentEvent(duplicatedEvent);
+    setIsEditing(true);
+  };
   
   const handleSave = async (payload) => {
     const isNew = !payload.id;
@@ -289,6 +490,12 @@ Can't wait to see you there! 🌟`;
       } else {
         response = await axios[method](url, payload);
       }
+      
+      // 🔍 디버깅: API 응답 확인
+      console.log('=== API Response Debug ===');
+      console.log('Response data:', response.data);
+      console.log('Response status:', response.status);
+      
       alert(`Event ${isNew ? 'created' : 'updated'} successfully!`);
       if (isNew) {
         setEvents(prev => [...prev, response.data]);
@@ -298,6 +505,12 @@ Can't wait to see you there! 🌟`;
       setIsEditing(false);
       setCurrentEvent(null);
     } catch (error) {
+      // 🔍 디버깅: 에러 상세 정보
+      console.error('=== API Error Debug ===');
+      console.error('Error:', error);
+      console.error('Error response:', error.response);
+      console.error('Error message:', error.message);
+      
       alert(`Failed to save event: ${error.response?.data?.message || error.message}`);
     }
   };
@@ -337,6 +550,33 @@ Can't wait to see you there! 🌟`;
       ));
     } catch (error) {
       alert(`Failed to archive event: ${error.response?.data?.message || error.message}`);
+    }
+  };
+
+  // ✅ Past Events를 Upcoming으로 되돌리는 함수
+  const handleRestoreToUpcoming = async (eventId) => {
+    if (!window.confirm("이 이벤트를 Upcoming Events로 되돌리시겠습니까?")) return;
+    try {
+      // 미래 날짜로 변경하여 Upcoming Events로 이동
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      const futureDateTime = tomorrow.toISOString();
+      
+      await axios.put(`/api/admin/events?eventId=${eventId}`, {
+        eventDateTime: futureDateTime,
+        archived: false
+      });
+      
+      alert('Event restored to Upcoming Events successfully.');
+      
+      // 로컬 상태 업데이트
+      setEvents(prev => prev.map(e => 
+        e.id === eventId 
+          ? { ...e, eventDateTime: futureDateTime, archived: false } 
+          : e
+      ));
+    } catch (error) {
+      alert(`Failed to restore event: ${error.response?.data?.message || error.message}`);
     }
   };
 
@@ -417,11 +657,17 @@ Can't wait to see you there! 🌟`;
                       <div className="flex-1">
                         <h3 className="font-semibold text-gray-900">{event.title}</h3>
                         <p className="text-sm text-gray-600">{event.branch}</p>
-                        <p className="text-sm text-gray-500">{new Date(event.eventDateTime).toLocaleString()}</p>
+                        {event.theme && (
+                          <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-purple-100 text-purple-800 mt-1">
+                            {event.theme}
+                          </span>
+                        )}
+                        <p className="text-sm text-gray-500 mt-1">{new Date(event.eventDateTime).toLocaleString()}</p>
                       </div>
                     </div>
                     <div className="flex flex-wrap gap-2">
                       <button onClick={() => handleEdit(event)} className="text-blue-600 hover:text-blue-900 text-sm font-medium">Edit</button>
+                      <button onClick={() => handleDuplicate(event)} className="text-green-600 hover:text-green-900 text-sm font-medium">📋 Duplicate</button>
                       <button onClick={() => handleDelete(event.id)} className="text-red-600 hover:text-red-900 text-sm font-medium">Delete</button>
                       <button onClick={() => handleArchive(event.id)} className="text-gray-700 hover:text-black text-sm font-medium">Move to Past</button>
                     </div>
@@ -436,6 +682,7 @@ Can't wait to see you there! 🌟`;
                   <tr>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Title</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Branch</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Theme</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
                   </tr>
@@ -445,9 +692,19 @@ Can't wait to see you there! 🌟`;
                     <tr key={event.id}>
                       <td className="px-6 py-4 whitespace-nowrap font-semibold">{event.title}</td>
                       <td className="px-6 py-4 whitespace-nowrap">{event.branch}</td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        {event.theme ? (
+                          <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-purple-100 text-purple-800">
+                            {event.theme}
+                          </span>
+                        ) : (
+                          <span className="text-gray-400 text-xs">No theme</span>
+                        )}
+                      </td>
                       <td className="px-6 py-4 whitespace-nowrap">{new Date(event.eventDateTime).toLocaleString()}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                         <button onClick={() => handleEdit(event)} className="text-blue-600 hover:text-blue-900">Edit</button>
+                        <button onClick={() => handleDuplicate(event)} className="text-green-600 hover:text-green-900 ml-4">📋 Duplicate</button>
                         <button onClick={() => handleDelete(event.id)} className="text-red-600 hover:text-red-900 ml-4">Delete</button>
                         <button onClick={() => handleArchive(event.id)} className="text-gray-700 hover:text-black ml-4">Move to Past</button>
                       </td>
@@ -491,6 +748,18 @@ Can't wait to see you there! 🌟`;
                         className="text-indigo-600 hover:text-indigo-900 text-sm font-medium"
                       >
                         Edit
+                      </button>
+                      <button 
+                        onClick={() => handleDuplicate(event)} 
+                        className="text-green-600 hover:text-green-900 text-sm font-medium"
+                      >
+                        📋 Duplicate
+                      </button>
+                      <button 
+                        onClick={() => handleRestoreToUpcoming(event.id)} 
+                        className="text-orange-600 hover:text-orange-900 text-sm font-medium"
+                      >
+                        ↗️ Restore to Upcoming
                       </button>
                       <button 
                         onClick={() => handleDelete(event.id)} 
@@ -558,6 +827,18 @@ Can't wait to see you there! 🌟`;
                             className="text-indigo-600 hover:text-indigo-900 mr-4"
                           >
                             Edit
+                          </button>
+                          <button 
+                            onClick={() => handleDuplicate(event)} 
+                            className="text-green-600 hover:text-green-900 mr-4"
+                          >
+                            📋 Duplicate
+                          </button>
+                          <button 
+                            onClick={() => handleRestoreToUpcoming(event.id)} 
+                            className="text-orange-600 hover:text-orange-900 mr-4"
+                          >
+                            ↗️ Restore
                           </button>
                           <button 
                             onClick={() => handleDelete(event.id)} 

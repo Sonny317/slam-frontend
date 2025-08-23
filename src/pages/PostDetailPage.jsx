@@ -153,6 +153,24 @@ export default function PostDetailPage() {
         comments: [...(prev.comments || []), response.data]
       }));
 
+      // ✅ 게시글 작성자에게 알림 생성 (자기 게시글이 아닌 경우만)
+      if (post.author !== user?.name && post.author !== user?.email) {
+        try {
+          await axios.post('/api/notifications', {
+            type: 'comment',
+            recipientEmail: post.author,
+            message: `${user?.name || user?.email} commented on your post: "${post.title}"`,
+            data: {
+              postId: postId,
+              commentText: comment.substring(0, 100) + (comment.length > 100 ? '...' : '')
+            }
+          });
+        } catch (notificationError) {
+          console.error('Failed to create notification:', notificationError);
+          // 알림 실패해도 댓글 작성은 성공으로 처리
+        }
+      }
+
       setComment('');
       setReplyTo(null);
     } catch (error) {
@@ -190,6 +208,53 @@ export default function PostDetailPage() {
     if (diffInMinutes < 60) return `${diffInMinutes}m ago`;
     if (diffInMinutes < 1440) return `${Math.floor(diffInMinutes / 60)}h ago`;
     return `${Math.floor(diffInMinutes / 1440)}d ago`;
+  };
+
+  // ✅ 해시태그를 파란색으로 렌더링하는 함수
+  const renderContentWithHashtags = (content) => {
+    if (!content) return content;
+    
+    const parts = content.split(/(#\w+)/g);
+    return parts.map((part, index) => {
+      if (part.startsWith('#')) {
+        return (
+          <span key={index} className="text-blue-600 font-medium">
+            {part}
+          </span>
+        );
+      }
+      return part;
+    });
+  };
+
+  // ✅ Poll 투표 함수
+  const handlePollVote = async (optionIndex) => {
+    if (!user?.isLoggedIn) {
+      alert('Login is required to vote.');
+      return;
+    }
+    
+    if (post.hasUserVoted) {
+      alert('You have already voted in this poll.');
+      return;
+    }
+
+    try {
+      const response = await axios.post(`/api/posts/${postId}/poll/vote`, {
+        optionIndex: optionIndex
+      });
+
+      // 투표 결과로 게시글 업데이트
+      setPost(prev => ({
+        ...prev,
+        pollVotes: response.data.pollVotes,
+        hasUserVoted: true,
+        userVoteIndex: optionIndex
+      }));
+    } catch (error) {
+      console.error('Failed to vote:', error);
+      alert('Failed to submit vote.');
+    }
   };
 
   // 게시글 삭제
@@ -276,9 +341,97 @@ export default function PostDetailPage() {
           <div className="p-8">
             <div className="prose max-w-none">
               <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">
-                {post.content}
+                {renderContentWithHashtags(post.content)}
               </p>
             </div>
+            
+            {/* ✅ 해시태그 표시 */}
+            {post.tags && post.tags.length > 0 && (
+              <div className="mt-6 pt-4 border-t border-gray-100">
+                <div className="flex flex-wrap gap-2">
+                  {post.tags.map((tag, index) => (
+                    <span
+                      key={index}
+                      className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-medium hover:bg-blue-200 transition-colors cursor-pointer"
+                    >
+                      #{tag}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+            
+            {/* ✅ Poll 표시 */}
+            {post.pollOptions && post.pollOptions.length > 0 && (
+              <div className="mt-6 pt-4 border-t border-gray-100">
+                <div className="bg-gray-50 rounded-lg p-6">
+                  <h3 className="text-lg font-semibold mb-4 flex items-center">
+                    <span className="mr-2">📊</span>
+                    Poll
+                  </h3>
+                  <div className="space-y-3">
+                    {post.pollOptions.map((option, index) => {
+                      const votes = post.pollVotes?.[index] || 0;
+                      const totalVotes = post.pollOptions.reduce((sum, _, i) => sum + (post.pollVotes?.[i] || 0), 0);
+                      const percentage = totalVotes > 0 ? Math.round((votes / totalVotes) * 100) : 0;
+                      
+                      return (
+                        <div key={index} className="relative">
+                          <button
+                            onClick={() => handlePollVote(index)}
+                            disabled={!user?.isLoggedIn || post.hasUserVoted}
+                            className={`w-full text-left p-3 rounded-lg border transition-colors ${
+                              user?.isLoggedIn && !post.hasUserVoted
+                                ? 'hover:bg-blue-50 hover:border-blue-300 cursor-pointer'
+                                : 'cursor-not-allowed'
+                            } ${post.userVoteIndex === index ? 'bg-blue-100 border-blue-400' : 'bg-white border-gray-200'}`}
+                          >
+                            <div className="flex justify-between items-center">
+                              <span className="font-medium">{option}</span>
+                              <div className="flex items-center space-x-2">
+                                <span className="text-sm text-gray-600">{votes} votes</span>
+                                <span className="text-sm font-semibold text-blue-600">{percentage}%</span>
+                              </div>
+                            </div>
+                            {totalVotes > 0 && (
+                              <div className="mt-2 w-full bg-gray-200 rounded-full h-2">
+                                <div
+                                  className="bg-blue-500 h-2 rounded-full transition-all duration-300"
+                                  style={{ width: `${percentage}%` }}
+                                ></div>
+                              </div>
+                            )}
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <div className="mt-4 text-sm text-gray-500 text-center">
+                    {totalVotes} total votes
+                    {!user?.isLoggedIn && " • Login to vote"}
+                    {user?.isLoggedIn && post.hasUserVoted && " • You have already voted"}
+                  </div>
+                </div>
+              </div>
+            )}
+            
+            {/* ✅ 위치 표시 */}
+            {post.location && (
+              <div className="mt-6 pt-4 border-t border-gray-100">
+                <div className="flex items-center space-x-2 text-gray-600">
+                  <span>📍</span>
+                  <span className="text-sm">{post.location.address}</span>
+                  <a
+                    href={`https://www.google.com/maps?q=${post.location.lat},${post.location.lng}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-blue-600 hover:text-blue-800 text-sm underline"
+                  >
+                    View on Maps
+                  </a>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* 인터랙션 버튼 */}
