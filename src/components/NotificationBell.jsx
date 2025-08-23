@@ -22,9 +22,12 @@ export default function NotificationBell() {
   const fetchNotifications = async () => {
     if (!user?.isLoggedIn) return;
     
+    console.log("🔔 알림 조회 시작 - 사용자:", user);
+    
     try {
       const response = await axios.get('/api/notifications');
       const notifs = response.data || [];
+      console.log("📨 조회된 알림 개수:", notifs.length, notifs);
       setNotifications(notifs);
       setUnreadCount(notifs.filter(n => !n.read).length);
     } catch (error) {
@@ -87,23 +90,38 @@ export default function NotificationBell() {
         return '❤️';
       case 'event_reminder':
         return '📅';
+      case 'staff_invitation':
+        return '👑';
+      case 'role_change':
+        return '🔄';
       default:
         return '🔔';
     }
   };
 
   const getNotificationMessage = (notification) => {
+    const data = typeof notification.data === 'string' ? JSON.parse(notification.data) : notification.data;
+    
     switch (notification.type) {
       case 'membership_approved':
+<<<<<<< HEAD
+        return `Your ${data?.branch} membership has been approved!`;
+=======
         return `Your membership has been approved! 🎉 Ready to join upcoming events?`;
+>>>>>>> cf59f2044427cf4167599ec7dd019e220301ebe0
       case 'membership_rejected':
-        return `Your ${notification.data?.branch} membership application was not approved.`;
+        return `Your ${data?.branch} membership application was not approved.`;
       case 'comment':
-        return `${notification.data?.author} commented on your post: "${notification.data?.postTitle}"`;
+        return `${data?.author} commented on your post: "${data?.postTitle}"`;
       case 'like':
-        return `${notification.data?.author} liked your ${notification.data?.targetType}`;
+        return `${data?.author} liked your ${data?.targetType}`;
       case 'event_reminder':
-        return `Reminder: "${notification.data?.eventTitle}" starts in 1 hour`;
+        return `Reminder: "${data?.eventTitle}" starts in 1 hour`;
+      case 'staff_invitation':
+        return `You have been invited to join as ${data?.targetRole} by ${data?.assignerName}`;
+      case 'role_change':
+        const changeEmoji = data?.changeType === 'promotion' ? '⬆️' : data?.changeType === 'demotion' ? '⬇️' : '';
+        return `${changeEmoji} Your role changed from ${data?.previousRole} to ${data?.newRole} by ${data?.changerName}`;
       default:
         return notification.message || 'You have a new notification';
     }
@@ -175,12 +193,24 @@ export default function NotificationBell() {
                     }
                     setShowDropdown(false);
                     // Handle navigation based on notification type
+<<<<<<< HEAD
+                    const data = typeof notification.data === 'string' ? JSON.parse(notification.data) : notification.data;
+                    
+                    if (data?.postId) {
+                      window.location.href = `/community/post/${data.postId}`;
+                    } else if (data?.eventId) {
+                      window.location.href = `/events/${data.eventId}`;
+                    } else if (notification.type === 'staff_invitation') {
+                      // Redirect to staff onboarding or dashboard
+                      window.location.href = '/profile';
+=======
                     if (notification.type === 'membership_approved') {
                       window.location.href = '/events';
                     } else if (notification.data?.postId) {
                       window.location.href = `/community/post/${notification.data.postId}`;
                     } else if (notification.data?.eventId) {
                       window.location.href = `/events/${notification.data.eventId}`;
+>>>>>>> cf59f2044427cf4167599ec7dd019e220301ebe0
                     }
                   }}
                 >
