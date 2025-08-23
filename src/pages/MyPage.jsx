@@ -3,21 +3,105 @@ import axios from "../api/axios";
 import { Link } from "react-router-dom";
 import { QRCodeSVG } from "qrcode.react";
 import { useUser } from '../context/UserContext';
-import { calculateUserBadges, getNextBadgeProgress } from '../utils/badges';
+import { calculateUserBadges, getNextBadgeProgress, BADGE_CATEGORIES } from '../utils/badges';
+
+// ✅ 드롭다운 옵션들 정의
+const STATUS_OPTIONS = {
+  NCCU: ["Student"],
+  NTU: ["Student"],
+  TAIPEI: ["Student", "Professional", "Business Owner", "Freelancer", "Intern"]
+};
+
+// ✅ Taipei 멤버십 세부 산업 카테고리 (MembershipPage와 동일)
+const INDUSTRY_CATEGORIES = [
+  "Design & Creative",
+  "Education & Research",
+  "Finance & Banking", 
+  "Food & Beverage",
+  "Government & Public Service",
+  "Healthcare & Medical",
+  "Legal & Consulting",
+  "Manufacturing",
+  "Marketing & Advertising",
+  "Media & Communications",
+  "Non-profit & NGO",
+  "Real Estate",
+  "Retail & E-commerce",
+  "Technology & Software",
+  "Others"
+];
+
+// ✅ 통합 대분류 - 모든 학교에서 사용 가능한 표준화된 전공 카테고리 (알파벳 순)
+const unifiedMajors = [
+  "Agriculture & Life Sciences",
+  "Architecture & Planning",
+  "Business & Management", 
+  "Communication & Media Studies",
+  "Computer Science & Information Technology",
+  "Design & Arts",
+  "Economics & Finance",
+  "Education & Teaching",
+  "Engineering & Technology",
+  "Environmental Studies",
+  "Languages & Linguistics", 
+  "Law & Legal Studies",
+  "Liberal Arts & Humanities",
+  "Medicine & Health Sciences",
+  "Music & Performing Arts",
+  "Philosophy & Religious Studies",
+  "Political Science & International Relations",
+  "Public Health & Social Work",
+  "Science & Mathematics",
+  "Social Sciences & Psychology",
+  "Sports & Physical Education",
+  "Others"
+];
+
+const INTERESTS_OPTIONS = [
+  "Art", "Books", "Business", "Cooking", "Culture", "Dance", "Environment", "Fashion", 
+  "Fitness", "Food", "Gaming", "History", "Languages", "Movies", "Music", "Nature", 
+  "Photography", "Politics", "Programming", "Reading", "Science", "Sports", "Technology", "Travel"
+];
+
+const MBTI_OPTIONS = [
+  "INTJ", "INTP", "ENTJ", "ENTP", "INFJ", "INFP", "ENFJ", "ENFP",
+  "ISTJ", "ISFJ", "ESTJ", "ESFJ", "ISTP", "ISFP", "ESTP", "ESFP"
+];
+
+const LANGUAGE_OPTIONS = [
+  "Arabic", "Chinese", "Dutch", "English", "French", "German", 
+  "Hindi", "Indonesian", "Italian", "Japanese", "Korean", "Malay", "Norwegian", "Portuguese", 
+  "Russian", "Spanish", "Swedish", "Tagalog", "Thai", "Vietnamese", "Others"
+];
 
 export default function MyPage() {
    const { user, updateUserImage } = useUser();
     
     const [userDetails, setUserDetails] = useState({
         name: "", bio: "", posts: [], comments: [], membership: null,
-        phone: "", major: "", studentId: "", interests: "", 
-        spokenLanguages: "", desiredLanguages: "", badges: [], userStats: {}
+        phone: "", major: "", studentId: "", interests: [],
+        spokenLanguages: [], desiredLanguages: [], mbti: "", status: "", 
+        industry: "", networkingGoal: "", otherNetworkingGoal: "", badges: [], userStats: {}
     });
     const [showQrCode, setShowQrCode] = useState(false);
     const [showEditForm, setShowEditForm] = useState(false);
-    const [editFormData, setEditFormData] = useState({});
+    const [editFormData, setEditFormData] = useState({
+        detailedMajor: '',
+        otherMajor: '',
+        otherNetworkingGoal: ''
+    });
     const [showAllPosts, setShowAllPosts] = useState(false);
     const [showAllComments, setShowAllComments] = useState(false);
+    const [studentIdEditCount, setStudentIdEditCount] = useState(0); // 학번 수정 횟수 제한
+    // ✅ Others 언어 입력을 위한 상태
+    const [otherSpokenLanguage, setOtherSpokenLanguage] = useState('');
+    const [otherDesiredLanguage, setOtherDesiredLanguage] = useState('');
+    // ✅ 벳지 상세 정보 모달 상태
+    const [showBadgeModal, setShowBadgeModal] = useState(false);
+    const [selectedBadge, setSelectedBadge] = useState(null);
+    const [selectedBadgeLevel, setSelectedBadgeLevel] = useState(0);
+    // ✅ 화면 크기 감지를 위한 상태
+    const [isLargeScreen, setIsLargeScreen] = useState(false);
     const qrCodeValue = JSON.stringify({ userId: userDetails.userId, name: userDetails.name });
 
     // 로그인하지 않은 사용자는 로그인 페이지로 리다이렉트
@@ -107,6 +191,23 @@ export default function MyPage() {
         return [...new Set(branches)];
     };
 
+    // ✅ 화면 크기 감지 useEffect
+    useEffect(() => {
+        const handleResize = () => {
+            const newIsLargeScreen = window.innerWidth >= 1024;
+            setIsLargeScreen(newIsLargeScreen);
+        };
+
+        // 초기 화면 크기 설정
+        handleResize();
+
+        // 리사이즈 이벤트 리스너 추가
+        window.addEventListener('resize', handleResize);
+
+        // 클린업
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
+
     // ✅ user 상태가 변경될 때마다 userDetails를 업데이트합니다.
     useEffect(() => {
         if (user.isLoggedIn) {
@@ -115,24 +216,55 @@ export default function MyPage() {
         }
     }, [user]); // Context의 user 객체가 바뀔 때마다 실행
 
-    // 서버에서 사용자 정보 가져오기
+    // ✅ 사용자 정보를 가져올 때 멤버십 정보도 함께 가져오기 (Single Source of Truth)
     const fetchUserData = async () => {
         try {
+            // 1. 기본 사용자 정보 가져오기
             const response = await axios.get('/api/users/me');
             const userData = response.data;
             
+            // 2. 멤버십 신청 정보 가져오기 (있다면)
+            let membershipData = null;
+            try {
+                const membershipResponse = await axios.get('/api/memberships/my-application');
+                membershipData = membershipResponse.data;
+            } catch (error) {
+                // 멤버십 신청 정보가 없는 경우 (아직 신청하지 않음)
+                console.log('No membership application found');
+            }
+            
             const activeBranches = getActiveBranches(userData);
+
+            // ✅ 배열 형태의 데이터를 문자열로 변환 (기존 호환성)
+            const interests = Array.isArray(userData.interests) ? userData.interests :
+                            (userData.interests ? userData.interests.split(',').map(s => s.trim()) : []);
+            const spokenLanguages = Array.isArray(userData.spokenLanguages) ? userData.spokenLanguages :
+                                  (userData.spokenLanguages ? userData.spokenLanguages.split(',').map(s => s.trim()) : []);
+            const desiredLanguages = Array.isArray(userData.desiredLanguages) ? userData.desiredLanguages :
+                                   (userData.desiredLanguages ? userData.desiredLanguages.split(',').map(s => s.trim()) : []);
+
+            // ✅ 멤버십 정보와 사용자 정보를 통합 (Single Source of Truth)
+            // 우선순위: 멤버십 신청 정보 > 기존 사용자 정보
+            const integratedUserData = {
+                name: membershipData?.name || userData.name || 'Your Name',
+                phone: membershipData?.phone || userData.phone || '',
+                major: membershipData?.major || userData.major || '',
+                studentId: membershipData?.studentId || userData.studentId || '',
+                status: membershipData?.professionalStatus || userData.status || 
+                       (activeBranches.includes('TAIPEI') ? 'Professional' : 'Student'),
+                interests: interests,
+                spokenLanguages: spokenLanguages,
+                desiredLanguages: desiredLanguages,
+                mbti: userData.mbti || '',
+                bio: userData.bio || 'Tell us about yourself...',
+                industry: membershipData?.industry || userData.industry || '',
+                networkingGoal: membershipData?.networkingGoal || userData.networkingGoal || '',
+                otherNetworkingGoal: membershipData?.otherNetworkingGoal || userData.otherNetworkingGoal || ''
+            };
             
             setUserDetails(prev => ({
                 ...prev,
-                name: userData.name || 'Your Name',
-                bio: userData.bio || '자기소개를 작성해주세요.',
-                phone: userData.phone || '',
-                major: userData.major || '',
-                studentId: userData.studentId || '',
-                interests: userData.interests || '',
-                spokenLanguages: userData.spokenLanguages || '',
-                desiredLanguages: userData.desiredLanguages || '',
+                ...integratedUserData,
                 membership: activeBranches.length > 0 
                     ? { 
                         branch: activeBranches.join(', '), 
@@ -141,22 +273,32 @@ export default function MyPage() {
                     : null,
             }));
             
-            // 편집 폼 데이터도 초기화
+            // 편집 폼 데이터도 통합된 정보로 초기화
             setEditFormData({
-                name: userData.name || '',
-                phone: userData.phone || '',
-                major: userData.major || '',
-                studentId: userData.studentId || '',
-                bio: userData.bio || '',
-                interests: userData.interests || '',
-                spokenLanguages: userData.spokenLanguages || '',
-                desiredLanguages: userData.desiredLanguages || ''
+                name: integratedUserData.name,
+                phone: integratedUserData.phone,
+                major: integratedUserData.major,
+                detailedMajor: integratedUserData.detailedMajor || '',
+                otherMajor: integratedUserData.otherMajor || '',
+                studentId: integratedUserData.studentId,
+                bio: integratedUserData.bio,
+                interests: integratedUserData.interests,
+                spokenLanguages: integratedUserData.spokenLanguages,
+                desiredLanguages: integratedUserData.desiredLanguages,
+                mbti: integratedUserData.mbti,
+                status: integratedUserData.status,
+                industry: integratedUserData.industry || '',
+                networkingGoal: integratedUserData.networkingGoal || '',
+                otherNetworkingGoal: integratedUserData.otherNetworkingGoal || ''
             });
+
+            // 학번 수정 횟수 설정
+            setStudentIdEditCount(userData.studentIdEditCount || 0);
             
             // 사용자의 게시글과 댓글 데이터 가져오기
             fetchUserPosts();
             fetchUserComments();
-            
+
             // ✅ 사용자 통계 계산 및 뱃지 업데이트
             const userStats = {
                 posts: userData.postCount || 0,
@@ -168,9 +310,9 @@ export default function MyPage() {
                 trendingPosts: userData.trendingPosts || 0,
                 helpfulReactions: userData.helpfulReactions || 0
             };
-            
+
             const earnedBadges = calculateUserBadges(userStats);
-            
+
             setUserDetails(prev => ({
                 ...prev,
                 badges: earnedBadges,
@@ -225,31 +367,91 @@ export default function MyPage() {
         }
     };
 
-    const handleBioSave = async () => {
-        try {
-            const response = await axios.post("/api/users/profile/bio", {
-                bio: userDetails.bio,
-            });
-            alert("Bio saved successfully.");
-            setUserDetails(prev => ({ ...prev, bio: response.data.bio }));
-        } catch (error) {
-            alert("Save failed: " + (error.response?.data || "An error occurred."));
-        }
-    };
-
-    const handleBioChange = (e) => {
-        setUserDetails(prevDetails => ({ ...prevDetails, bio: e.target.value }));
-    };
-
     // ✅ 기본 정보 수정 함수들
     const handleEditFormChange = (e) => {
         const { name, value } = e.target;
         setEditFormData(prev => ({ ...prev, [name]: value }));
     };
 
+    // ✅ 태그 선택/해제 함수들
+    const handleTagToggle = (field, value) => {
+        setEditFormData(prev => {
+            if (field === 'mbti') {
+                // MBTI는 단일 선택
+                return { ...prev, [field]: prev[field] === value ? '' : value };
+            } else {
+                // 다른 태그들은 다중 선택
+                const currentTags = prev[field] || [];
+                const newTags = currentTags.includes(value)
+                    ? currentTags.filter(tag => tag !== value)
+                    : [...currentTags, value];
+                return { ...prev, [field]: newTags };
+            }
+        });
+    };
+
+    // ✅ Others 언어 추가 함수
+    const handleAddOtherLanguage = (field, otherValue, setOtherValue) => {
+        if (otherValue.trim()) {
+            setEditFormData(prev => {
+                const currentTags = prev[field] || [];
+                if (!currentTags.includes(otherValue.trim())) {
+                    return { ...prev, [field]: [...currentTags, otherValue.trim()] };
+                }
+                return prev;
+            });
+            setOtherValue('');
+        }
+    };
+
+    // ✅ 벳지 상세 정보 표시 함수
+    const showBadgeDetails = (badge, currentLevel) => {
+        setSelectedBadge(badge);
+        setSelectedBadgeLevel(currentLevel);
+        setShowBadgeModal(true);
+    };
+
+    // ✅ 프로필 저장 시 멤버십 정보도 함께 업데이트 (Single Source of Truth)
     const handleSaveProfile = async () => {
         try {
-            const response = await axios.post('/api/users/profile/update', editFormData);
+            // ✅ 학번 수정 횟수 체크
+            if (editFormData.studentId !== userDetails.studentId && studentIdEditCount >= 1) {
+                alert('Student ID can only be changed once. You have already used your chance.');
+                return;
+            }
+
+            // ✅ 배열 데이터를 문자열로 변환하여 전송
+            const dataToSend = {
+                ...editFormData,
+                interests: editFormData.interests.join(', '),
+                spokenLanguages: editFormData.spokenLanguages.join(', '),
+                desiredLanguages: editFormData.desiredLanguages.join(', '),
+                studentIdEditCount: editFormData.studentId !== userDetails.studentId ? studentIdEditCount + 1 : studentIdEditCount
+            };
+
+            // 1. 사용자 프로필 업데이트 (메인 데이터)
+            await axios.post('/api/users/profile/update', dataToSend);
+
+            // 2. 멤버십 정보가 있다면 함께 업데이트 (데이터 일관성 유지)
+            if (userDetails.membership) {
+                try {
+                    const membershipUpdateData = {
+                        name: editFormData.name,
+                        phone: editFormData.phone,
+                        major: editFormData.major,
+                        studentId: editFormData.studentId,
+                        professionalStatus: editFormData.status,
+                        industry: editFormData.industry,
+                        networkingGoal: editFormData.networkingGoal,
+                        otherNetworkingGoal: editFormData.otherNetworkingGoal
+                    };
+                    
+                    await axios.put('/api/memberships/update-profile', membershipUpdateData);
+                } catch (error) {
+                    console.log('Membership profile update not available or not needed');
+                }
+            }
+
             alert('Profile updated successfully!');
             
             // 사용자 정보 새로고침
@@ -266,13 +468,31 @@ export default function MyPage() {
             name: userDetails.name,
             phone: userDetails.phone,
             major: userDetails.major,
+            detailedMajor: userDetails.detailedMajor || '',
+            otherMajor: userDetails.otherMajor || '',
             studentId: userDetails.studentId,
             bio: userDetails.bio,
             interests: userDetails.interests,
             spokenLanguages: userDetails.spokenLanguages,
-            desiredLanguages: userDetails.desiredLanguages
+            desiredLanguages: userDetails.desiredLanguages,
+            mbti: userDetails.mbti,
+            status: userDetails.status,
+            industry: userDetails.industry || '',
+            networkingGoal: userDetails.networkingGoal || '',
+            otherNetworkingGoal: userDetails.otherNetworkingGoal || ''
         });
         setShowEditForm(false);
+    };
+
+    // ✅ 사용자의 지부에 따른 상태 옵션 가져오기
+    const getUserStatusOptions = () => {
+        const activeBranches = getActiveBranches(userDetails);
+        if (activeBranches.includes('TAIPEI')) {
+            return STATUS_OPTIONS.TAIPEI;
+        } else if (activeBranches.includes('NCCU') || activeBranches.includes('NTU')) {
+            return STATUS_OPTIONS.NCCU; // NCCU와 NTU는 동일
+        }
+        return STATUS_OPTIONS.TAIPEI; // 기본값
     };
 
     return (
@@ -302,23 +522,30 @@ export default function MyPage() {
                                 {userDetails.phone && <p>📞 {userDetails.phone}</p>}
                                 {userDetails.major && <p>🎓 {userDetails.major}</p>}
                                 {userDetails.studentId && <p>🆔 {userDetails.studentId}</p>}
+                                {userDetails.status && <p>💼 {userDetails.status}</p>}
+                                {userDetails.mbti && <p>🧠 {userDetails.mbti}</p>}
+                                {/* ✅ Taipei 멤버십 세부 정보 표시 */}
+                                {userDetails.status && userDetails.status !== 'Student' && userDetails.industry && (
+                                    <p>🏢 {userDetails.industry}</p>
+                                )}
+                                {userDetails.status && userDetails.status !== 'Student' && userDetails.networkingGoal && (
+                                    <p>🎯 {userDetails.networkingGoal}{userDetails.otherNetworkingGoal && userDetails.networkingGoal === 'Other' ? `: ${userDetails.otherNetworkingGoal}` : ''}</p>
+                                )}
                             </div>
                             
-                            <textarea
-                                className="w-full border-none p-2 text-center text-sm mt-2 bg-gray-50 rounded-md focus:ring-2 focus:ring-blue-500 transition"
-                                rows={3}
-                                value={userDetails.bio}
-                                onChange={handleBioChange}
-                                placeholder="Write a short bio..."
-                            />
-                            <button onClick={handleBioSave} className="mt-2 w-full py-2 text-xs bg-gray-200 text-gray-700 rounded hover:bg-gray-300 transition">
-                                Save Bio
-                            </button>
-                            
-                            {/* 편집 버튼 */}
+                            {/* ✅ Bio는 읽기 전용으로 표시 */}
+                            <div className="mt-3 p-3 bg-gray-50 rounded-md text-sm text-gray-700 min-h-[80px] flex items-center justify-center">
+                                {userDetails.bio ? (
+                                    <p className="text-center">{userDetails.bio}</p>
+                                ) : (
+                                    <p className="text-gray-500 text-center">No bio yet. Click Edit Profile to add one!</p>
+                                )}
+                            </div>
+
+                            {/* ✅ 편집 버튼 */}
                             <button 
                                 onClick={() => setShowEditForm(true)} 
-                                className="mt-2 w-full py-2 text-xs bg-green-600 text-white rounded hover:bg-green-700 transition"
+                                className="mt-3 w-full py-2 text-sm bg-green-600 text-white rounded hover:bg-green-700 transition"
                             >
                                 Edit Profile
                             </button>
@@ -327,6 +554,8 @@ export default function MyPage() {
                                 Change Password
                             </Link>
                         </div>
+
+                        {/* ✅ 멤버십 카드 - 실제 branch 정보 표시 */}
                         {userDetails.membership && (
                             <div className="bg-white p-6 rounded-lg shadow-md">
                                 <div className="bg-gradient-to-br from-blue-600 to-blue-800 p-6 rounded-lg shadow-xl text-white">
@@ -363,41 +592,243 @@ export default function MyPage() {
                                 </div>
                             </div>
                         )}
+
+                        {/* ✅ 3D 뱃지/업적 섹션 (모바일 버전) */}
+                        <div className="bg-white p-6 rounded-lg shadow-md lg:hidden">
+                            <h3 className="text-lg font-semibold mb-4 flex items-center">
+                                <span className="mr-2">🏆</span>
+                                Achievements
+                            </h3>
+
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                {/* 모든 벳지 카테고리를 표시 (달성 여부와 관계없이) */}
+                                {Object.values(BADGE_CATEGORIES).map((category, index) => {
+                                    const userBadge = userDetails.badges?.find(b => b.id === category.id);
+                                    const currentLevel = userBadge?.currentLevel || 0;
+                                    const isEarned = currentLevel > 0;
+                                    
+                                    return (
+                                        <div 
+                                            key={index} 
+                                            className={`relative group cursor-pointer transition-all duration-300 transform hover:scale-105 min-h-[200px] ${
+                                                isEarned 
+                                                    ? 'animate-pulse' 
+                                                    : 'opacity-60 hover:opacity-80'
+                                            }`}
+                                            onClick={() => showBadgeDetails(category, currentLevel)}
+                                        >
+                                            {/* 3D 벳지 효과 */}
+                                            <div className={`
+                                                relative p-4 rounded-xl shadow-lg border-2 transition-all duration-300 h-full flex flex-col justify-between
+                                                ${isEarned 
+                                                    ? 'bg-gradient-to-br from-yellow-400 to-orange-500 border-yellow-300 shadow-yellow-200/50' 
+                                                    : 'bg-gradient-to-br from-gray-300 to-gray-400 border-gray-200 shadow-gray-200/50'
+                                                }
+                                                group-hover:shadow-2xl group-hover:-translate-y-1
+                                            `}>
+                                                {/* 벳지 아이콘 */}
+                                                <div className="text-center mb-3">
+                                                    <span className={`text-4xl filter drop-shadow-lg ${
+                                                        isEarned ? 'animate-bounce' : ''
+                                                    }`}>
+                                                        {category.icon}
+                                                    </span>
+                                                </div>
+                                                
+                                                {/* 벳지 정보 */}
+                                                <div className="text-center flex-grow">
+                                                    <h4 className={`font-bold text-sm mb-1 ${
+                                                        isEarned ? 'text-white' : 'text-gray-700'
+                                                    }`}>
+                                                        {category.name}
+                                                    </h4>
+                                                    <p className={`text-xs mb-2 overflow-hidden ${
+                                                        isEarned ? 'text-yellow-100' : 'text-gray-600'
+                                                    }`} style={{
+                                                        display: '-webkit-box',
+                                                        WebkitLineClamp: 2,
+                                                        WebkitBoxOrient: 'vertical',
+                                                        overflow: 'hidden',
+                                                        textOverflow: 'ellipsis'
+                                                    }}>
+                                                        {category.description}
+                                                    </p>
+                                                    
+                                                    {/* 레벨 표시 */}
+                                                    <div className={`
+                                                        inline-block px-2 py-1 rounded-full text-xs font-bold
+                                                        ${isEarned 
+                                                            ? 'bg-white/20 text-white border border-white/30' 
+                                                            : 'bg-gray-200/50 text-gray-700 border border-gray-300/30'
+                                                        }
+                                                    `}>
+                                                        {isEarned ? `Level ${currentLevel}` : 'Not Earned'}
+                                                    </div>
+                                                </div>
+                                                
+                                                {/* 진행률 바 (달성한 경우만) */}
+                                                {isEarned && currentLevel < 3 && (
+                                                    <div className="mt-3">
+                                                        <div className="w-full bg-white/20 rounded-full h-2">
+                                                            <div 
+                                                                className="bg-white h-2 rounded-full transition-all duration-500"
+                                                                style={{ width: `${(currentLevel / 3) * 100}%` }}
+                                                            ></div>
+                                                        </div>
+                                                        <p className="text-xs text-white/80 mt-1 text-center">
+                                                            {currentLevel}/3 Levels
+                                                        </p>
+                                                    </div>
+                                                )}
+                                            </div>
+                                            
+                                            {/* 3D 그림자 효과 */}
+                                            <div className={`
+                                                absolute inset-0 rounded-xl transition-all duration-300
+                                                ${isEarned 
+                                                    ? 'bg-gradient-to-br from-yellow-600 to-orange-600' 
+                                                    : 'bg-gradient-to-br from-gray-500 to-gray-600'
+                                                }
+                                                -z-10 blur-sm opacity-50 group-hover:opacity-70
+                                            `}></div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                            
+                            {/* 벳지 획득 가이드 */}
+                            <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                                <h4 className="text-sm font-semibold text-blue-800 mb-2">💡 How to earn badges:</h4>
+                                <ul className="text-xs text-blue-700 space-y-1">
+                                    <li>• <strong>Community:</strong> Post, comment, and get likes</li>
+                                    <li>• <strong>Events:</strong> Attend SLAM events regularly</li>
+                                    <li>• <strong>Membership:</strong> Register for multiple semesters</li>
+                                    <li>• <strong>Influence:</strong> Create trending content</li>
+                                    <li>• <strong>Special:</strong> Help others and get recognized</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                    <div className="lg:col-span-2 space-y-8">
                         
-                        {/* ✅ 뱃지/업적 섹션 */}
+                        {/* ✅ 3D 뱃지/업적 섹션 (PC 버전 - 조건부 렌더링) */}
+                        {isLargeScreen && (
                         <div className="bg-white p-6 rounded-lg shadow-md">
                             <h3 className="text-lg font-semibold mb-4 flex items-center">
                                 <span className="mr-2">🏆</span>
                                 Achievements
                             </h3>
-                            
-                            {userDetails.badges && userDetails.badges.length > 0 ? (
-                                <div className="space-y-3">
-                                    {userDetails.badges.map((category, index) => (
-                                        <div key={index} className="border border-gray-200 rounded-lg p-3 cursor-pointer hover:bg-gray-50 transition-colors" onClick={() => alert(`${category.name}\n\nCurrent Level: ${category.currentLevel}\nDescription: ${category.description}\n\nLevel Requirements:\n${category.levels.map((level, i) => `${i+1}. ${level.name}: ${level.description}`).join('\n')}`)}>
-                                            <div className="flex items-center justify-between">
-                                                <div className="flex items-center space-x-2 flex-1 min-w-0">
-                                                    <span className="text-lg flex-shrink-0">{category.icon}</span>
-                                                    <div className="flex-1 min-w-0">
-                                                        <h4 className="font-medium text-sm">{category.name}</h4>
-                                                        <p className="text-xs text-gray-500 truncate">{category.description}</p>
+
+                            {/* PC 버전: 5개 벳지를 한 줄로 배치 */}
+                            <div className="grid grid-cols-5 gap-4">
+                                {/* 모든 벳지 카테고리를 표시 (달성 여부와 관계없이) */}
+                                {Object.values(BADGE_CATEGORIES).map((category, index) => {
+                                    const userBadge = userDetails.badges?.find(b => b.id === category.id);
+                                    const currentLevel = userBadge?.currentLevel || 0;
+                                    const isEarned = currentLevel > 0;
+                                    
+                                    return (
+                                        <div 
+                                            key={index} 
+                                            className={`relative group cursor-pointer transition-all duration-300 transform hover:scale-105 min-h-[200px] ${
+                                                isEarned 
+                                                    ? 'animate-pulse' 
+                                                    : 'opacity-60 hover:opacity-80'
+                                            }`}
+                                            onClick={() => showBadgeDetails(category, currentLevel)}
+                                        >
+                                            {/* 3D 벳지 효과 */}
+                                            <div className={`
+                                                relative p-4 rounded-xl shadow-lg border-2 transition-all duration-300 h-full flex flex-col justify-between
+                                                ${isEarned 
+                                                    ? 'bg-gradient-to-br from-yellow-400 to-orange-500 border-yellow-300 shadow-yellow-200/50' 
+                                                    : 'bg-gradient-to-br from-gray-300 to-gray-400 border-gray-200 shadow-gray-200/50'
+                                                }
+                                                group-hover:shadow-2xl group-hover:-translate-y-1
+                                            `}>
+                                                {/* 벳지 아이콘 */}
+                                                <div className="text-center mb-3">
+                                                    <span className={`text-3xl filter drop-shadow-lg ${
+                                                        isEarned ? 'animate-bounce' : ''
+                                                    }`}>
+                                                        {category.icon}
+                                                    </span>
+                                                </div>
+                                                
+                                                {/* 벳지 정보 */}
+                                                <div className="text-center flex-grow">
+                                                    <h4 className={`font-bold text-xs mb-1 ${
+                                                        isEarned ? 'text-white' : 'text-gray-700'
+                                                    }`}>
+                                                        {category.name}
+                                                    </h4>
+                                                    <p className={`text-xs mb-2 overflow-hidden ${
+                                                        isEarned ? 'text-yellow-100' : 'text-gray-600'
+                                                    }`} style={{
+                                                        display: '-webkit-box',
+                                                        WebkitLineClamp: 2,
+                                                        WebkitBoxOrient: 'vertical',
+                                                        overflow: 'hidden',
+                                                        textOverflow: 'ellipsis'
+                                                    }}>
+                                                        {category.description}
+                                                    </p>
+                                                    
+                                                    {/* 레벨 표시 */}
+                                                    <div className={`
+                                                        inline-block px-2 py-1 rounded-full text-xs font-bold
+                                                        ${isEarned 
+                                                            ? 'bg-white/20 text-white border border-white/30' 
+                                                            : 'bg-gray-200/50 text-gray-700 border border-gray-300/30'
+                                                        }
+                                                    `}>
+                                                        {isEarned ? `Level ${currentLevel}` : 'Not Earned'}
                                                     </div>
                                                 </div>
-                                                <div className="text-right flex-shrink-0 ml-2">
-                                                    <div className="bg-green-100 text-green-800 px-2 py-1 rounded text-xs font-medium">
-                                                        Level {category.currentLevel}
+                                                
+                                                {/* 진행률 바 (달성한 경우만) */}
+                                                {isEarned && currentLevel < 3 && (
+                                                    <div className="mt-3">
+                                                        <div className="w-full bg-white/20 rounded-full h-2">
+                                                            <div 
+                                                                className="bg-white h-2 rounded-full transition-all duration-500"
+                                                                style={{ width: `${(currentLevel / 3) * 100}%` }}
+                                                            ></div>
+                                                        </div>
+                                                        <p className="text-xs text-white/80 mt-1 text-center">
+                                                            {currentLevel}/3 Levels
+                                                        </p>
                                                     </div>
-                                                </div>
+                                                )}
                                             </div>
+                                            
+                                            {/* 3D 그림자 효과 */}
+                                            <div className={`
+                                                absolute inset-0 rounded-xl transition-all duration-300
+                                                ${isEarned 
+                                                    ? 'bg-gradient-to-br from-yellow-600 to-orange-600' 
+                                                    : 'bg-gradient-to-br from-gray-500 to-gray-600'
+                                                }
+                                                -z-10 blur-sm opacity-50 group-hover:opacity-70
+                                            `}></div>
                                         </div>
-                                    ))}
-                                </div>
-                            ) : (
-                                <p className="text-gray-500 text-center py-8">No achievements yet. Start participating to earn badges!</p>
-                            )}
+                                    );
+                                })}
+                            </div>
+                            
+                            {/* 벳지 획득 가이드 */}
+                            <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                                <h4 className="text-sm font-semibold text-blue-800 mb-2">💡 How to earn badges:</h4>
+                                <ul className="text-xs text-blue-700 space-y-1">
+                                    <li>• <strong>Community:</strong> Post, comment, and get likes</li>
+                                    <li>• <strong>Events:</strong> Attend SLAM events regularly</li>
+                                    <li>• <strong>Membership:</strong> Register for multiple semesters</li>
+                                    <li>• <strong>Influence:</strong> Create trending content</li>
+                                    <li>• <strong>Special:</strong> Help others and get recognized</li>
+                                </ul>
+                            </div>
                         </div>
-                    </div>
-                    <div className="lg:col-span-2 space-y-8">
+                        )}
 
                         {/* ✅ Posts 섹션 (접기/펼치기 기능) */}
                         <section className="bg-white p-6 rounded-lg shadow-md">
@@ -409,10 +840,10 @@ export default function MyPage() {
                                         className="text-blue-600 hover:text-blue-800 text-sm font-medium flex items-center space-x-1"
                                     >
                                         <span>{showAllPosts ? 'Show Less' : `Show All (${userDetails.posts.length})`}</span>
-                                        <svg 
-                                            className={`w-4 h-4 transition-transform ${showAllPosts ? 'rotate-180' : ''}`} 
-                                            fill="none" 
-                                            stroke="currentColor" 
+                                        <svg
+                                            className={`w-4 h-4 transition-transform ${showAllPosts ? 'rotate-180' : ''}`}
+                                            fill="none"
+                                            stroke="currentColor"
                                             viewBox="0 0 24 24"
                                         >
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
@@ -447,10 +878,10 @@ export default function MyPage() {
                                         className="text-blue-600 hover:text-blue-800 text-sm font-medium flex items-center space-x-1"
                                     >
                                         <span>{showAllComments ? 'Show Less' : `Show All (${userDetails.comments.length})`}</span>
-                                        <svg 
-                                            className={`w-4 h-4 transition-transform ${showAllComments ? 'rotate-180' : ''}`} 
-                                            fill="none" 
-                                            stroke="currentColor" 
+                                        <svg
+                                            className={`w-4 h-4 transition-transform ${showAllComments ? 'rotate-180' : ''}`}
+                                            fill="none"
+                                            stroke="currentColor"
                                             viewBox="0 0 24 24"
                                         >
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
@@ -476,13 +907,13 @@ export default function MyPage() {
                     </div>
                 </div>
 
-                {/* 편집 모달 */}
+                {/* ✅ 개선된 편집 모달 */}
                 {showEditForm && (
                     <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50 p-4">
-                        <div className="bg-white p-6 rounded-lg shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+                        <div className="bg-white p-6 rounded-lg shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
                             <h2 className="text-xl font-bold mb-4">Edit Profile</h2>
                             
-                            <div className="space-y-4">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 {/* 이름 */}
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-1">Name *</label>
@@ -505,73 +936,330 @@ export default function MyPage() {
                                         value={editFormData.phone || ''}
                                         onChange={handleEditFormChange}
                                         className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                        placeholder="010-1234-5678"
+                                        placeholder="0912-345-678"
                                     />
                                 </div>
                                 
-                                {/* 전공 */}
+
+
+                                                                {/* Status (이름 필드와 동일한 길이) */}
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Major</label>
-                                    <input
-                                        type="text"
-                                        name="major"
-                                        value={editFormData.major || ''}
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                                    <select
+                                        name="status"
+                                        value={editFormData.status || ''}
                                         onChange={handleEditFormChange}
                                         className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                        placeholder="Computer Science"
-                                    />
+                                    >
+                                        {getUserStatusOptions().map(option => (
+                                            <option key={option} value={option}>{option}</option>
+                                        ))}
+                                    </select>
                                 </div>
+
+                                                                {/* ✅ Student ID (Student 선택 시에만 표시) - 전체 너비 */}
+                                {editFormData.status === 'Student' && (
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                                            Student ID
+                                            {studentIdEditCount >= 1 && (
+                                                <span className="text-red-500 ml-1">(Can only change once)</span>
+                                            )}
+                                        </label>
+                                        <input
+                                            type="text"
+                                            name="studentId"
+                                            value={editFormData.studentId || ''}
+                                            onChange={handleEditFormChange}
+                                            className={`w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                                                studentIdEditCount >= 1 ? 'bg-gray-100 cursor-not-allowed' : ''
+                                            }`}
+                                            placeholder="110512345"
+                                            disabled={studentIdEditCount >= 1}
+                                        />
+                                        {studentIdEditCount >= 1 && (
+                                            <p className="text-xs text-red-500 mt-1">You have already used your chance to change Student ID</p>
+                                        )}
+                                    </div>
+                                )}
+
+                                {/* ✅ Major (Student 선택 시에만 표시) - 전체 너비 */}
+                                {editFormData.status === 'Student' && (
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Major</label>
+                                        <select
+                                            name="major"
+                                            value={editFormData.major || ''}
+                                            onChange={handleEditFormChange}
+                                            className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                        >
+                                            <option value="">Select your field of study</option>
+                                            {unifiedMajors.map(major => (
+                                                <option key={major} value={major}>{major}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                )}
+
+                                {/* ✅ Detailed Major (Student 선택 시에만 표시) - 전체 너비 */}
+                                {editFormData.status === 'Student' && editFormData.major && editFormData.major !== 'Others' && (
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Detailed Major (Optional)</label>
+                                        <input 
+                                            type="text" 
+                                            name="detailedMajor" 
+                                            placeholder="e.g., Computer Science, Business Administration, International Relations" 
+                                            value={editFormData.detailedMajor || ''}
+                                            onChange={handleEditFormChange}
+                                            className="w-full p-2 border border-gray-300 rounded-md text-sm text-gray-700 bg-gray-50 focus:ring-2 focus:ring-blue-200" 
+                                        />
+                                    </div>
+                                )}
                                 
-                                {/* 학번 */}
+                                {/* ✅ 기타 전공 입력 (Student 선택 시에만 표시) - 전체 너비 */}
+                                {editFormData.status === 'Student' && editFormData.major === 'Others' && (
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Specify Major</label>
+                                        <input 
+                                            type="text" 
+                                            name="otherMajor" 
+                                            placeholder="Please specify your field of study" 
+                                            value={editFormData.otherMajor || ''}
+                                            onChange={handleEditFormChange}
+                                            className="w-full p-2 border border-gray-300 rounded-md" 
+                                            required
+                                        />
+                                    </div>
+                                )}
+                                
+                                
+
+
+
+                                {/* ✅ Industry (Professional 계열만 표시) */}
+                                {editFormData.status && editFormData.status !== 'Student' && (
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Industry</label>
+                                        <select
+                                            name="industry"
+                                            value={editFormData.industry || ''}
+                                            onChange={handleEditFormChange}
+                                            className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                        >
+                                            <option value="">Select Industry</option>
+                                            {INDUSTRY_CATEGORIES.map(option => (
+                                                <option key={option} value={option}>{option}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                )}
+
+                                {/* ✅ Goal (Professional 계열만 표시) */}
+                                {editFormData.status && editFormData.status !== 'Student' && (
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Goal</label>
+                                        <select
+                                            name="networkingGoal"
+                                            value={editFormData.networkingGoal || ''}
+                                            onChange={handleEditFormChange}
+                                            className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                        >
+                                            <option value="">Select your goal</option>
+                                            {/* 비즈니스 네트워킹 */}
+                                            <option value="Business Partner">Business Partner</option>
+                                            <option value="Client / Customer">Client / Customer</option>
+                                            <option value="Employee / Team Member">Employee / Team Member</option>
+                                            <option value="Investor">Investor</option>
+                                            <option value="Mentor / Advisor">Mentor / Advisor</option>
+                                            {/* 일반 네트워킹 */}
+                                            <option value="Expand Social Network">Expand Social Network</option>
+                                            <option value="Make New Friends">Make New Friends</option>
+                                            <option value="Find Hobby Partners">Find Hobby Partners</option>
+                                            {/* 데이팅 & 관계 */}
+                                            <option value="Dating & Relationships">Dating & Relationships</option>
+                                            <option value="Find Life Partner">Find Life Partner</option>
+                                            {/* 기타 */}
+                                            <option value="Cultural Exchange">Cultural Exchange</option>
+                                            <option value="Language Exchange">Language Exchange</option>
+                                            <option value="Other">Other</option>
+                                        </select>
+                                        
+                                        {/* ✅ Other 선택 시 텍스트 입력 필드 */}
+                                        {editFormData.networkingGoal === 'Other' && (
+                                            <div className="mt-2">
+                                                <input
+                                                    type="text"
+                                                    name="otherNetworkingGoal"
+                                                    placeholder="Please specify your goal..."
+                                                    value={editFormData.otherNetworkingGoal || ''}
+                                                    onChange={handleEditFormChange}
+                                                    className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                                    required
+                                                />
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* ✅ 태그 형식 필드들 */}
+                            <div className="mt-6 space-y-4">
+                                {/* MBTI */}
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Student ID</label>
-                                    <input
-                                        type="text"
-                                        name="studentId"
-                                        value={editFormData.studentId || ''}
-                                        onChange={handleEditFormChange}
-                                        className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                        placeholder="110512345"
-                                    />
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">MBTI</label>
+                                    <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-2 p-3 border border-gray-300 rounded-md min-h-[80px] bg-gray-50">
+                                        {MBTI_OPTIONS.map(mbti => (
+                                            <button
+                                                key={mbti}
+                                                type="button"
+                                                onClick={() => handleTagToggle('mbti', mbti)}
+                                                className={`px-2 py-2 rounded-full text-xs font-medium transition-all duration-200 hover:scale-105 ${
+                                                    editFormData.mbti === mbti
+                                                        ? 'bg-purple-500 text-white shadow-md'
+                                                        : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-200'
+                                                }`}
+                                            >
+                                                {mbti}
+                                            </button>
+                                        ))}
+                                    </div>
+                                    <p className="text-xs text-gray-500 mt-1">Click to select your MBTI type</p>
                                 </div>
-                                
+
                                 {/* 관심사 */}
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Interests</label>
-                                    <input
-                                        type="text"
-                                        name="interests"
-                                        value={editFormData.interests || ''}
-                                        onChange={handleEditFormChange}
-                                        className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                        placeholder="Music, Travel, Programming"
-                                    />
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">Interests</label>
+                                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2 p-3 border border-gray-300 rounded-md min-h-[80px] bg-gray-50">
+                                        {INTERESTS_OPTIONS.map(interest => (
+                                            <button
+                                                key={interest}
+                                                type="button"
+                                                onClick={() => handleTagToggle('interests', interest)}
+                                                className={`px-2 py-2 rounded-full text-xs font-medium transition-all duration-200 hover:scale-105 ${
+                                                    editFormData.interests?.includes(interest)
+                                                        ? 'bg-blue-500 text-white shadow-md'
+                                                        : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-200'
+                                                }`}
+                                            >
+                                                {interest}
+                                            </button>
+                                        ))}
+                                    </div>
+                                    <p className="text-xs text-gray-500 mt-1">Click to select/deselect interests</p>
                                 </div>
                                 
                                 {/* 구사 언어 */}
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Spoken Languages</label>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">Spoken Languages</label>
+                                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-7 gap-2 p-3 border border-gray-300 rounded-md min-h-[80px] bg-gray-50">
+                                        {LANGUAGE_OPTIONS.filter(lang => lang !== 'Others').map(language => (
+                                            <button
+                                                key={language}
+                                                type="button"
+                                                onClick={() => handleTagToggle('spokenLanguages', language)}
+                                                className={`px-2 py-2 rounded-full text-xs font-medium transition-all duration-200 hover:scale-105 ${
+                                                    editFormData.spokenLanguages?.includes(language)
+                                                        ? 'bg-green-500 text-white shadow-md'
+                                                        : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-200'
+                                                }`}
+                                            >
+                                                {language}
+                                            </button>
+                                        ))}
+                                        {/* 사용자가 추가한 기타 언어들 */}
+                                        {editFormData.spokenLanguages?.filter(lang => !LANGUAGE_OPTIONS.includes(lang)).map(language => (
+                                            <button
+                                                key={language}
+                                                type="button"
+                                                onClick={() => handleTagToggle('spokenLanguages', language)}
+                                                className="px-2 py-2 rounded-full text-xs bg-green-500 text-white shadow-md"
+                                            >
+                                                {language} ✕
+                                            </button>
+                                        ))}
+                                    </div>
+                                    <p className="text-xs text-gray-500 mt-1">Click to select/deselect languages you can speak</p>
+                                    
+                                    {/* Others 입력 필드 */}
+                                    <div className="mt-2 flex gap-2">
                                     <input
                                         type="text"
-                                        name="spokenLanguages"
-                                        value={editFormData.spokenLanguages || ''}
-                                        onChange={handleEditFormChange}
-                                        className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                        placeholder="Korean, English, Chinese"
-                                    />
+                                            value={otherSpokenLanguage}
+                                            onChange={(e) => setOtherSpokenLanguage(e.target.value)}
+                                            placeholder="Add other language..."
+                                            className="flex-1 p-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                                            onKeyPress={(e) => {
+                                                if (e.key === 'Enter') {
+                                                    e.preventDefault();
+                                                    handleAddOtherLanguage('spokenLanguages', otherSpokenLanguage, setOtherSpokenLanguage);
+                                                }
+                                            }}
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={() => handleAddOtherLanguage('spokenLanguages', otherSpokenLanguage, setOtherSpokenLanguage)}
+                                            className="px-3 py-1 text-sm bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors"
+                                        >
+                                            Add
+                                        </button>
+                                    </div>
                                 </div>
                                 
                                 {/* 배우고 싶은 언어 */}
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Desired Languages</label>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">Desired Languages</label>
+                                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-7 gap-2 p-3 border border-gray-300 rounded-md min-h-[80px] bg-gray-50">
+                                        {LANGUAGE_OPTIONS.filter(lang => lang !== 'Others').map(language => (
+                                            <button
+                                                key={language}
+                                                type="button"
+                                                onClick={() => handleTagToggle('desiredLanguages', language)}
+                                                className={`px-2 py-2 rounded-full text-xs font-medium transition-all duration-200 hover:scale-105 ${
+                                                    editFormData.desiredLanguages?.includes(language)
+                                                        ? 'bg-purple-500 text-white shadow-md'
+                                                        : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-200'
+                                                }`}
+                                            >
+                                                {language}
+                                            </button>
+                                        ))}
+                                        {/* 사용자가 추가한 기타 언어들 */}
+                                        {editFormData.desiredLanguages?.filter(lang => !LANGUAGE_OPTIONS.includes(lang)).map(language => (
+                                            <button
+                                                key={language}
+                                                type="button"
+                                                onClick={() => handleTagToggle('desiredLanguages', language)}
+                                                className="px-2 py-2 rounded-full text-xs bg-purple-500 text-white shadow-md"
+                                            >
+                                                {language} ✕
+                                            </button>
+                                        ))}
+                                    </div>
+                                    <p className="text-xs text-gray-500 mt-1">Click to select/deselect languages you want to learn</p>
+                                    
+                                    {/* Others 입력 필드 */}
+                                    <div className="mt-2 flex gap-2">
                                     <input
                                         type="text"
-                                        name="desiredLanguages"
-                                        value={editFormData.desiredLanguages || ''}
-                                        onChange={handleEditFormChange}
-                                        className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                        placeholder="Japanese, Spanish"
-                                    />
+                                            value={otherDesiredLanguage}
+                                            onChange={(e) => setOtherDesiredLanguage(e.target.value)}
+                                            placeholder="Add other language..."
+                                            className="flex-1 p-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                                            onKeyPress={(e) => {
+                                                if (e.key === 'Enter') {
+                                                    e.preventDefault();
+                                                    handleAddOtherLanguage('desiredLanguages', otherDesiredLanguage, setOtherDesiredLanguage);
+                                                }
+                                            }}
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={() => handleAddOtherLanguage('desiredLanguages', otherDesiredLanguage, setOtherDesiredLanguage)}
+                                            className="px-3 py-1 text-sm bg-purple-500 text-white rounded-md hover:bg-purple-700 transition-colors"
+                                        >
+                                            Add
+                                        </button>
+                                    </div>
                                 </div>
                                 
                                 {/* 자기소개 */}
@@ -601,6 +1289,122 @@ export default function MyPage() {
                                     className="flex-1 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition"
                                 >
                                     Save Changes
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* ✅ 벳지 상세 정보 모달 */}
+                {showBadgeModal && selectedBadge && (
+                    <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50 p-4">
+                        <div className="bg-white p-6 rounded-lg shadow-2xl w-full max-w-md max-h-[90vh] overflow-y-auto">
+                            {/* 벳지 헤더 */}
+                            <div className="text-center mb-6">
+                                <div className={`inline-block p-4 rounded-full mb-4 ${
+                                    selectedBadgeLevel > 0 
+                                        ? 'bg-gradient-to-br from-yellow-400 to-orange-500' 
+                                        : 'bg-gradient-to-br from-gray-300 to-gray-400'
+                                }`}>
+                                    <span className="text-6xl filter drop-shadow-lg">
+                                        {selectedBadge.icon}
+                                    </span>
+                                </div>
+                                <h2 className={`text-xl font-bold mb-2 ${
+                                    selectedBadgeLevel > 0 ? 'text-gray-800' : 'text-gray-600'
+                                }`}>
+                                    {selectedBadge.name}
+                                </h2>
+                                <p className="text-gray-600 text-sm">
+                                    {selectedBadge.description}
+                                </p>
+                            </div>
+
+                            {/* 현재 상태 */}
+                            <div className="mb-6 p-4 bg-gray-50 rounded-lg">
+                                <h3 className="font-semibold text-gray-800 mb-2">Current Status</h3>
+                                {selectedBadgeLevel > 0 ? (
+                                    <div className="text-center">
+                                        <div className="text-2xl font-bold text-green-600 mb-2">
+                                            Level {selectedBadgeLevel} Achieved! 🎉
+                                        </div>
+                                        <div className="w-full bg-gray-200 rounded-full h-3 mb-2">
+                                            <div 
+                                                className="bg-green-500 h-3 rounded-full transition-all duration-500"
+                                                style={{ width: `${(selectedBadgeLevel / 3) * 100}%` }}
+                                            ></div>
+                                        </div>
+                                        <p className="text-sm text-gray-600">
+                                            {selectedBadgeLevel}/3 Levels Completed
+                                        </p>
+                                    </div>
+                                ) : (
+                                    <div className="text-center text-gray-500">
+                                        <div className="text-lg mb-2">Not earned yet</div>
+                                        <p className="text-sm">Start participating to earn this badge!</p>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* 레벨별 요구사항 */}
+                            <div className="mb-6">
+                                <h3 className="font-semibold text-gray-800 mb-3">Level Requirements</h3>
+                                <div className="space-y-3">
+                                    {selectedBadge.levels.map((level, index) => (
+                                        <div key={index} className={`p-3 rounded-lg border-2 transition-all ${
+                                            index < selectedBadgeLevel 
+                                                ? 'border-green-300 bg-green-50' 
+                                                : index === selectedBadgeLevel 
+                                                    ? 'border-blue-300 bg-blue-50' 
+                                                    : 'border-gray-200 bg-gray-50'
+                                        }`}>
+                                            <div className="flex items-center justify-between mb-2">
+                                                <h4 className={`font-semibold text-sm ${
+                                                    index < selectedBadgeLevel 
+                                                        ? 'text-green-700' 
+                                                        : index === selectedBadgeLevel 
+                                                            ? 'text-blue-700' 
+                                                            : 'text-gray-600'
+                                                }`}>
+                                                    Level {index + 1}: {level.name}
+                                                </h4>
+                                                {index < selectedBadgeLevel && (
+                                                    <span className="text-green-600 text-lg">✅</span>
+                                                )}
+                                                {index === selectedBadgeLevel && (
+                                                    <span className="text-blue-600 text-lg">🎯</span>
+                                                )}
+                                            </div>
+                                            <p className={`text-xs ${
+                                                index < selectedBadgeLevel 
+                                                    ? 'text-green-600' 
+                                                    : index === selectedBadgeLevel 
+                                                        ? 'text-blue-600' 
+                                                        : 'text-gray-500'
+                                            }`}>
+                                                {level.description}
+                                            </p>
+                                            <div className={`text-xs font-medium mt-1 ${
+                                                index < selectedBadgeLevel 
+                                                    ? 'text-green-600' 
+                                                    : index === selectedBadgeLevel 
+                                                        ? 'text-blue-600' 
+                                                        : 'text-gray-500'
+                                            }`}>
+                                                Requirement: {level.requirement}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* 닫기 버튼 */}
+                            <div className="text-center">
+                                <button
+                                    onClick={() => setShowBadgeModal(false)}
+                                    className="px-6 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
+                                >
+                                    Close
                                 </button>
                             </div>
                         </div>

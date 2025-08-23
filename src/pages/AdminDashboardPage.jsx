@@ -302,6 +302,8 @@ export default function AdminDashboardPage() {
           )}
         </section>
 
+
+
         <section className="bg-white p-4 sm:p-6 rounded-lg shadow-md">
           <h2 className="text-xl sm:text-2xl font-semibold mb-4">Event Attendee Status</h2>
           <div className="mb-4">

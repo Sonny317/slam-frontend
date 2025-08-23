@@ -174,6 +174,31 @@ export default function AdminFeedbackPage() {
     }
   };
 
+  // 이벤트 삭제 처리
+  const handleDeleteEvent = async (eventId) => {
+    if (!window.confirm('Are you sure you want to delete this event? This will also delete all associated feedback and cannot be undone.')) {
+      return;
+    }
+    
+    try {
+      await axios.delete(`/api/admin/events/${eventId}`);
+      alert('Event deleted successfully!');
+      
+      // 이벤트 목록에서 제거
+      setEvents(prev => prev.filter(e => (e.id || e.eventId) !== eventId));
+      setPastEvents(prev => prev.filter(e => (e.id || e.eventId) !== eventId));
+      
+      // 선택된 이벤트가 삭제된 경우 선택 해제
+      if (selectedEventId === eventId) {
+        setSelectedEventId('');
+        setSummary(null);
+        setGameRows([]);
+      }
+    } catch (error) {
+      alert('Failed to delete event: ' + (error.response?.data?.message || error.message));
+    }
+  };
+
   // 체크박스 선택 처리
   const handleEventSelection = (eventId, isChecked) => {
     const newSelection = new Set(selectedPastEvents);
@@ -304,9 +329,7 @@ export default function AdminFeedbackPage() {
           <button onClick={() => setActiveTab('staff')} className={`py-4 px-1 border-b-2 font-medium ${activeTab === 'staff' ? 'border-indigo-500 text-indigo-600' : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'}`}>
             👥 Staff Feedback
           </button>
-          <button onClick={() => setActiveTab('games')} className={`py-4 px-1 border-b-2 font-medium ${activeTab === 'games' ? 'border-indigo-500 text-indigo-600' : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'}`}>
-            🎯 Game Analytics
-          </button>
+
         </nav>
       </div>
       
@@ -340,6 +363,7 @@ export default function AdminFeedbackPage() {
                       <button onClick={() => generateQrUrl(event, 'member')} className="text-sm bg-gray-200 px-3 py-2 rounded-lg hover:bg-gray-300">Member QR</button>
                       <button onClick={() => generateQrUrl(event, 'staff')} className="text-sm bg-gray-200 px-3 py-2 rounded-lg hover:bg-gray-300">Staff QR</button>
                       <button onClick={() => setSelectedEventId(event.id || event.eventId)} className="text-sm bg-blue-100 text-blue-800 px-3 py-2 rounded-lg hover:bg-blue-200">View Details</button>
+                      <button onClick={() => handleDeleteEvent(event.id || event.eventId)} className="text-sm bg-red-100 text-red-800 px-3 py-2 rounded-lg hover:bg-red-200">Delete</button>
                     </div>
                   </li>
                 ))}
@@ -1053,33 +1077,7 @@ export default function AdminFeedbackPage() {
           </div>
         )}
 
-        {activeTab === 'games' && (
-          <div className="bg-white p-6 rounded-lg shadow-md">
-            <h2 className="text-2xl font-semibold mb-4">Cumulative Game Ratings</h2>
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Game Name</th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Average Rating</th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total Feedbacks</th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {mockGameStats.map(stat => (
-                    <tr key={stat.gameId}>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{stat.name}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        <span className="font-bold text-yellow-500 text-lg">{stat.avgRating.toFixed(1)} ★</span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{stat.feedbackCount}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
+
       </div>
       {/* Create New Feedback Modal */}
       {showCreateModal && (

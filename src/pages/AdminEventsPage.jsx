@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import axios from '../api/axios';
 
 // --- 이벤트 생성/수정 폼 컴포넌트 ---
 const EventForm = ({ event, onSave, onCancel }) => {
   const [formData, setFormData] = useState(event);
   const [imageFile, setImageFile] = useState(null);
-
   const [customTheme, setCustomTheme] = useState('');
+
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -16,6 +17,8 @@ const EventForm = ({ event, onSave, onCancel }) => {
   const handleDateChange = (e) => {
     setFormData(prev => ({ ...prev, eventDateTime: e.target.value }));
   };
+
+
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -43,11 +46,14 @@ const EventForm = ({ event, onSave, onCancel }) => {
     data.append('bankAccount', formData.bankAccount || '');
     data.append('accountName', formData.accountName || '');
     
+
+    
     if (imageFile) data.append('image', imageFile);
     
     // 🔍 디버깅: FormData 내용 확인
     console.log('=== FormData Debug ===');
     console.log('formData:', formData);
+
     console.log('FormData entries:');
     for (let [key, value] of data.entries()) {
       console.log(`${key}: ${value}`);
@@ -305,6 +311,9 @@ const EventForm = ({ event, onSave, onCancel }) => {
             </div>
           </div>
         </div>
+
+
+
         <div className="flex flex-col sm:flex-row justify-end gap-4 pt-4">
           <button type="button" onClick={onCancel} className="bg-gray-200 px-4 py-2 rounded-md hover:bg-gray-300">Cancel</button>
           <button type="submit" className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700">Save Event</button>

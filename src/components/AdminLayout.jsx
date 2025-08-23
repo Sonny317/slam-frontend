@@ -7,6 +7,7 @@ const adminNavLinks = [
   { name: 'Dashboard', path: '/admin/dashboard' },
   { name: 'Member Management', path: '/admin/members' },
   { name: 'Event Management', path: '/admin/events' },
+  { name: 'Game Management', path: '/admin/games' },
   { name: 'QR Scanner', path: '/admin/scanner' },
   { name: 'Action Plan', path: '/admin/tasks' },
   { name: 'Feedback', path: '/admin/feedback' },

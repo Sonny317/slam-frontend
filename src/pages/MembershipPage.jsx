@@ -345,7 +345,7 @@ export default function MembershipPage() {
     userType: '', studentId: '', major: '', otherMajor: '', detailedMajor: '', phone: '', professionalStatus: '',
     industry: '', otherIndustry: '', country: '', otherCountry: '', stayDuration: '', foodAllergies: '', bankLast5: '', 
     howDidYouHear: '', friendReferralName: '', otherSource: '',
-    networkingGoal: '', networkingDescription: ''
+    networkingGoal: '', networkingDescription: '', otherNetworkingGoal: ''
   });
   
   // ✅ 이벤트별 계좌 정보 상태를 컴포넌트 최상위로 이동
@@ -375,11 +375,21 @@ export default function MembershipPage() {
         alert("Please specify your industry.");
         return;
       }
+      // ✅ Goal 검증
+      if (formData.professionalStatus !== 'Student' && !formData.networkingGoal) {
+        alert("Please select your main goal.");
+        return;
+      }
+      // ✅ 기타 Goal 입력 검증
+      if (formData.networkingGoal === 'Other' && !formData.otherNetworkingGoal) {
+        alert("Please specify your goal.");
+        return;
+      }
       // ✅ 국적 Others 선택 시 상세 입력 검증
       if (formData.country === '— Others' && !formData.otherCountry) {
         alert("Please specify your country.");
-        return;
-      }
+        return;
+      }
     } else {
       if (!formData.userType || !formData.studentId || !formData.major) {
         alert("Please fill out your Status, Student ID, and Major.");
@@ -473,9 +483,48 @@ export default function MembershipPage() {
               )}
             </>
           )}
+
+          {/* ✅ Goal 선택 (Professional 계열만 표시) */}
+          {formData.professionalStatus && formData.professionalStatus !== 'Student' && (
+            <>
+              <select name="networkingGoal" value={formData.networkingGoal} onChange={handleChange} className="w-full p-2 border rounded bg-green-50 focus:bg-white focus:ring-2 focus:ring-green-200" required>
+                <option value="">What's your main goal?</option>
+                {/* 비즈니스 네트워킹 */}
+                <option value="Business Partner">Business Partner</option>
+                <option value="Client / Customer">Client / Customer</option>
+                <option value="Employee / Team Member">Employee / Team Member</option>
+                <option value="Investor">Investor</option>
+                <option value="Mentor / Advisor">Mentor / Advisor</option>
+                {/* 일반 네트워킹 */}
+                <option value="Expand Social Network">Expand Social Network</option>
+                <option value="Make New Friends">Make New Friends</option>
+                <option value="Find Hobby Partners">Find Hobby Partners</option>
+                {/* 데이팅 & 관계 */}
+                <option value="Dating & Relationships">Dating & Relationships</option>
+                <option value="Find Life Partner">Find Life Partner</option>
+                {/* 기타 */}
+                <option value="Cultural Exchange">Cultural Exchange</option>
+                <option value="Language Exchange">Language Exchange</option>
+                <option value="Other">Other</option>
+              </select>
+
+              {/* ✅ Other 선택 시 텍스트 입력 필드 */}
+              {formData.networkingGoal === 'Other' && (
+                <input 
+                  type="text" 
+                  name="otherNetworkingGoal" 
+                  placeholder="Please specify your goal..." 
+                  value={formData.otherNetworkingGoal}
+                  onChange={handleChange}
+                  className="w-full p-2 border rounded bg-yellow-50 focus:bg-white focus:ring-2 focus:ring-yellow-200 mt-2" 
+                  required
+                />
+              )}
+            </>
+          )}
           <select name="userType" value={formData.userType} onChange={handleChange} className="w-full p-2 border rounded" required>
-              <option value="">What's your background?</option>
-              <option value="local">Local</option>
+              <option value="">Where are you from?</option>
+              <option value="taiwan">Taiwan</option>
               <option value="foreigner">International</option>
           </select>
           {formData.userType === 'foreigner' && (
