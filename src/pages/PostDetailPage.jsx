@@ -239,6 +239,11 @@ export default function PostDetailPage() {
       return;
     }
 
+    // Confirm before submitting the vote
+    const optionLabel = post?.pollOptions?.[optionIndex] ?? `Option ${optionIndex + 1}`;
+    const confirmed = window.confirm(`Do you want to vote for "${optionLabel}"?`);
+    if (!confirmed) return;
+
     try {
       const response = await axios.post(`/api/posts/${postId}/poll/vote`, {
         optionIndex: optionIndex
@@ -324,9 +329,9 @@ export default function PostDetailPage() {
                       />
                     ) : null}
                     <div className={`w-6 h-6 bg-gradient-to-br from-blue-400 to-purple-500 rounded-full flex items-center justify-center text-white text-xs font-semibold ${(post._avatars?.[post.author]?.profileImage) ? 'hidden' : ''}`}>
-                      {post.author?.charAt(0)?.toUpperCase() || 'A'}
+                      {(post._avatars?.[post.author]?.name || post.authorDisplayName || post.author)?.charAt(0)?.toUpperCase() || 'A'}
                     </div>
-                    <span>by {post.author}</span>
+                    <span>by {post._avatars?.[post.author]?.name || post.authorDisplayName || post.authorEmail || post.author}</span>
                   </Link>
                  <span>{post.createdAt ? new Date(post.createdAt).toLocaleDateString() : ''}</span>
                </div>
@@ -369,48 +374,54 @@ export default function PostDetailPage() {
                     <span className="mr-2">📊</span>
                     Poll
                   </h3>
-                  <div className="space-y-3">
-                    {post.pollOptions.map((option, index) => {
-                      const votes = post.pollVotes?.[index] || 0;
-                      const totalVotes = post.pollOptions.reduce((sum, _, i) => sum + (post.pollVotes?.[i] || 0), 0);
-                      const percentage = totalVotes > 0 ? Math.round((votes / totalVotes) * 100) : 0;
+                  {(() => {
+                    const totalVotes = (post.pollOptions || []).reduce((sum, _, i) => sum + (post.pollVotes?.[i] || 0), 0);
+                    return (
+                      <>
+                        <div className="space-y-3">
+                          {post.pollOptions.map((option, index) => {
+                            const votes = post.pollVotes?.[index] || 0;
+                            const percentage = totalVotes > 0 ? Math.round((votes / totalVotes) * 100) : 0;
                       
-                      return (
-                        <div key={index} className="relative">
-                          <button
-                            onClick={() => handlePollVote(index)}
-                            disabled={!user?.isLoggedIn || post.hasUserVoted}
-                            className={`w-full text-left p-3 rounded-lg border transition-colors ${
-                              user?.isLoggedIn && !post.hasUserVoted
-                                ? 'hover:bg-blue-50 hover:border-blue-300 cursor-pointer'
-                                : 'cursor-not-allowed'
-                            } ${post.userVoteIndex === index ? 'bg-blue-100 border-blue-400' : 'bg-white border-gray-200'}`}
-                          >
-                            <div className="flex justify-between items-center">
-                              <span className="font-medium">{option}</span>
-                              <div className="flex items-center space-x-2">
-                                <span className="text-sm text-gray-600">{votes} votes</span>
-                                <span className="text-sm font-semibold text-blue-600">{percentage}%</span>
+                            return (
+                              <div key={index} className="relative">
+                                <button
+                                  onClick={() => handlePollVote(index)}
+                                  disabled={!user?.isLoggedIn || post.hasUserVoted}
+                                  className={`w-full text-left p-3 rounded-lg border transition-colors ${
+                                    user?.isLoggedIn && !post.hasUserVoted
+                                      ? 'hover:bg-blue-50 hover:border-blue-300 cursor-pointer'
+                                      : 'cursor-not-allowed'
+                                  } ${post.userVoteIndex === index ? 'bg-blue-100 border-blue-400' : 'bg-white border-gray-200'}`}
+                                >
+                                  <div className="flex justify-between items-center">
+                                    <span className="font-medium">{option}</span>
+                                    <div className="flex items-center space-x-2">
+                                      <span className="text-sm text-gray-600">{votes} votes</span>
+                                      <span className="text-sm font-semibold text-blue-600">{percentage}%</span>
+                                    </div>
+                                  </div>
+                                  {totalVotes > 0 && (
+                                    <div className="mt-2 w-full bg-gray-200 rounded-full h-2">
+                                      <div
+                                        className="bg-blue-500 h-2 rounded-full transition-all duration-300"
+                                        style={{ width: `${percentage}%` }}
+                                      ></div>
+                                    </div>
+                                  )}
+                                </button>
                               </div>
-                            </div>
-                            {totalVotes > 0 && (
-                              <div className="mt-2 w-full bg-gray-200 rounded-full h-2">
-                                <div
-                                  className="bg-blue-500 h-2 rounded-full transition-all duration-300"
-                                  style={{ width: `${percentage}%` }}
-                                ></div>
-                              </div>
-                            )}
-                          </button>
+                            );
+                          })}
                         </div>
-                      );
-                    })}
-                  </div>
-                  <div className="mt-4 text-sm text-gray-500 text-center">
-                    {totalVotes} total votes
-                    {!user?.isLoggedIn && " • Login to vote"}
-                    {user?.isLoggedIn && post.hasUserVoted && " • You have already voted"}
-                  </div>
+                        <div className="mt-4 text-sm text-gray-500 text-center">
+                          {totalVotes} total votes
+                          {!user?.isLoggedIn && " • Login to vote"}
+                          {user?.isLoggedIn && post.hasUserVoted && " • You have already voted"}
+                        </div>
+                      </>
+                    );
+                  })()}
                 </div>
               </div>
             )}
@@ -590,12 +601,12 @@ export default function PostDetailPage() {
                           />
                         ) : null}
                         <div className={`w-10 h-10 bg-gradient-to-br from-blue-400 to-purple-500 rounded-full flex items-center justify-center text-white font-semibold flex-shrink-0 ${(post._avatars?.[comment.author]?.profileImage) ? 'hidden' : ''}`}>
-                          {comment.author?.charAt(0)?.toUpperCase() || 'A'}
+                          {(post._avatars?.[comment.author]?.name || comment.authorDisplayName || comment.author)?.charAt(0)?.toUpperCase() || 'A'}
                         </div>
                         <div className="flex-1">
                           <div className="flex items-center space-x-2 mb-1">
                             <Link to={`/users/profile?author=${encodeURIComponent(comment.author)}`} className="font-medium text-gray-900 hover:text-blue-600 transition-colors">
-                              {comment.author}
+                              {post._avatars?.[comment.author]?.name || comment.authorDisplayName || comment.authorEmail || comment.author}
                             </Link>
                             <span className="text-sm text-gray-500">•</span>
                             <span className="text-sm text-gray-500">{formatTimeAgo(comment.createdAt)}</span>

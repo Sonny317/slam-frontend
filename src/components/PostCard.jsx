@@ -80,7 +80,7 @@ export default function PostCard({ post, onDelete }) {
         <div className="text-xs text-gray-500 flex items-center gap-2">
           <Link to={`/users/profile?author=${encodeURIComponent(post.author)}`} className="flex items-center gap-2 hover:opacity-80">
             <img src={(avatars?.[post.author]?.profileImage) || '/default_profile.jpg'} alt="avatar" className="w-6 h-6 rounded-full object-cover" />
-            <span>by {post.author}</span>
+            <span>by {post.authorDisplayName || post.authorEmail || post.author}</span>
           </Link>
         </div>
         <div className="flex gap-4 text-gray-500">

@@ -23,10 +23,8 @@ export default function StaffOnboardingPage() {
 
   const teamOptions = [
     'GA (General Affairs)',
-    'PR (Public Relations)', 
     'EP (Event Planning)',
-    'Finance',
-    'IT',
+    'PR (Public Relations)', 
     'Other'
   ];
 
@@ -38,7 +36,7 @@ export default function StaffOnboardingPage() {
       setToken(tokenParam);
       fetchTokenInfo(tokenParam);
     } else {
-      alert('유효하지 않은 접근입니다.');
+      alert('Invalid access.');
       navigate('/');
     }
   }, [location, navigate]);
@@ -56,7 +54,7 @@ export default function StaffOnboardingPage() {
         navigate('/');
       }
     } catch (error) {
-      const errorMessage = error.response?.data?.message || '토큰 정보를 불러오는데 실패했습니다.';
+      const errorMessage = error.response?.data?.message || 'Failed to load token information.';
       alert(errorMessage);
       navigate('/');
     } finally {
@@ -77,31 +75,38 @@ export default function StaffOnboardingPage() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    // 필수 필드 검증
+    // Required fields
     const requiredFields = ['nationality', 'major', 'phoneNumber', 'university', 'team'];
     const missingFields = requiredFields.filter(field => !formData[field].trim());
     
     if (missingFields.length > 0) {
-      alert('모든 필수 항목을 입력해주세요.');
+      alert('Please fill in all required fields.');
+      return;
+    }
+
+    // If Other is selected, require custom affiliation/team input
+    if (formData.team === 'Other' && !formData.affiliation.trim()) {
+      alert('Please enter your affiliation/team for "Other".');
       return;
     }
 
     try {
       setSubmitting(true);
       
-      const response = await axios.post('/api/staff/onboarding/complete', {
-        token: token,
-        ...formData
-      });
+      const payload = { token: token, ...formData };
+      if (payload.team === 'Other') {
+        payload.team = (formData.affiliation || '').trim();
+      }
+      const response = await axios.post('/api/staff/onboarding/complete', payload);
       
       if (response.data.success) {
         alert(response.data.message);
-        navigate('/login'); // 완료 후 로그인 페이지로 이동
+        navigate('/login'); // redirect after completion
       } else {
         alert(response.data.message);
       }
     } catch (error) {
-      const errorMessage = error.response?.data?.message || '온보딩 완료에 실패했습니다.';
+      const errorMessage = error.response?.data?.message || 'Failed to complete onboarding.';
       alert(errorMessage);
     } finally {
       setSubmitting(false);
@@ -113,7 +118,7 @@ export default function StaffOnboardingPage() {
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
           <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">정보를 불러오는 중...</p>
+          <p className="mt-4 text-gray-600">Loading...</p>
         </div>
       </div>
     );
@@ -122,41 +127,35 @@ export default function StaffOnboardingPage() {
   return (
     <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md mx-auto">
-        {/* 헤더 */}
+        {/* Header */}
         <div className="text-center mb-8">
           <img 
             src="/slam_logo_web_rgb.jpg" 
             alt="SLAM Logo" 
             className="mx-auto h-16 w-auto mb-4"
           />
-          <h1 className="text-3xl font-bold text-gray-900">
-            축하합니다! 🎉
-          </h1>
-          <p className="mt-2 text-gray-600">
-            SLAM {tokenInfo?.targetRole} 스태프로 임명되셨습니다
-          </p>
+          <h1 className="text-3xl font-bold text-gray-900">Congratulations! 🎉</h1>
+          <p className="mt-2 text-gray-600">You have been appointed as SLAM {tokenInfo?.targetRole}.</p>
           <div className="mt-4 p-4 bg-blue-50 rounded-lg">
             <p className="text-sm text-blue-800">
-              <strong>임명자:</strong> {tokenInfo?.assignedBy}<br/>
-              <strong>대상 역할:</strong> {tokenInfo?.targetRole}<br/>
-              <strong>만료일:</strong> {new Date(tokenInfo?.expiryDate).toLocaleDateString()}
+              <strong>Assigned by:</strong> {tokenInfo?.assignedBy}<br/>
+              <strong>Target role:</strong> {tokenInfo?.targetRole}<br/>
+              <strong>Expires on:</strong> {new Date(tokenInfo?.expiryDate).toLocaleDateString()}
             </p>
           </div>
         </div>
 
-        {/* 폼 */}
+        {/* Form */}
         <div className="bg-white py-8 px-6 shadow rounded-lg">
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
-              <h2 className="text-lg font-medium text-gray-900 mb-4">
-                스태프 활동을 위해 상세 정보를 입력해주세요
-              </h2>
+              <h2 className="text-lg font-medium text-gray-900 mb-4">Please provide your details to start staff activities</h2>
             </div>
 
-            {/* 국적 */}
+            {/* Nationality */}
             <div>
               <label htmlFor="nationality" className="block text-sm font-medium text-gray-700">
-                국적 <span className="text-red-500">*</span>
+                Nationality <span className="text-red-500">*</span>
               </label>
               <input
                 id="nationality"
@@ -166,14 +165,14 @@ export default function StaffOnboardingPage() {
                 value={formData.nationality}
                 onChange={handleInputChange}
                 className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                placeholder="예: 한국, 대만, 일본"
+                placeholder="e.g., Korea, Taiwan, Japan"
               />
             </div>
 
-            {/* 학번 */}
+            {/* Student ID */}
             <div>
               <label htmlFor="studentId" className="block text-sm font-medium text-gray-700">
-                학번 (선택사항)
+                Student ID (optional)
               </label>
               <input
                 id="studentId"
@@ -182,14 +181,14 @@ export default function StaffOnboardingPage() {
                 value={formData.studentId}
                 onChange={handleInputChange}
                 className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                placeholder="예: 110512345"
+                placeholder="e.g., 110512345"
               />
             </div>
 
-            {/* 전공 */}
+            {/* Major */}
             <div>
               <label htmlFor="major" className="block text-sm font-medium text-gray-700">
-                전공 <span className="text-red-500">*</span>
+                Major <span className="text-red-500">*</span>
               </label>
               <input
                 id="major"
@@ -199,14 +198,15 @@ export default function StaffOnboardingPage() {
                 value={formData.major}
                 onChange={handleInputChange}
                 className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                placeholder="예: 컴퓨터공학, 경영학"
+                placeholder="e.g., ICI-3"
               />
+              <p className="mt-1 text-xs text-gray-500">Format: Department-Grade. Example: ICI-3</p>
             </div>
 
-            {/* 전화번호 */}
+            {/* Phone Number */}
             <div>
               <label htmlFor="phoneNumber" className="block text-sm font-medium text-gray-700">
-                전화번호 <span className="text-red-500">*</span>
+                Phone Number <span className="text-red-500">*</span>
               </label>
               <input
                 id="phoneNumber"
@@ -216,14 +216,14 @@ export default function StaffOnboardingPage() {
                 value={formData.phoneNumber}
                 onChange={handleInputChange}
                 className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                placeholder="예: 010-1234-5678"
+                placeholder="e.g., 010-1234-5678"
               />
             </div>
 
-            {/* 소속 학교 */}
+            {/* University */}
             <div>
               <label htmlFor="university" className="block text-sm font-medium text-gray-700">
-                소속 학교 <span className="text-red-500">*</span>
+                University <span className="text-red-500">*</span>
               </label>
               <input
                 id="university"
@@ -233,14 +233,14 @@ export default function StaffOnboardingPage() {
                 value={formData.university}
                 onChange={handleInputChange}
                 className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                placeholder="예: 서울대학교, 政治大學"
+                placeholder="e.g., Seoul National University, NCCU"
               />
             </div>
 
-            {/* 소속 팀 */}
+            {/* Affiliation / Team */}
             <div>
               <label htmlFor="team" className="block text-sm font-medium text-gray-700">
-                소속 팀 <span className="text-red-500">*</span>
+                Affiliation / Team <span className="text-red-500">*</span>
               </label>
               <select
                 id="team"
@@ -250,17 +250,28 @@ export default function StaffOnboardingPage() {
                 onChange={handleInputChange}
                 className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
               >
-                <option value="">팀을 선택해주세요</option>
+                <option value="">Please select your team</option>
                 {teamOptions.map(team => (
                   <option key={team} value={team}>{team}</option>
                 ))}
               </select>
+              {formData.team === 'Other' && (
+                <input
+                  id="affiliation"
+                  name="affiliation"
+                  type="text"
+                  value={formData.affiliation}
+                  onChange={handleInputChange}
+                  className="mt-2 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="Enter your affiliation/team"
+                />
+              )}
             </div>
 
-            {/* 자기소개 */}
+            {/* Bio */}
             <div>
               <label htmlFor="bio" className="block text-sm font-medium text-gray-700">
-                자기소개 (선택사항)
+                Bio (optional)
               </label>
               <textarea
                 id="bio"
@@ -269,11 +280,11 @@ export default function StaffOnboardingPage() {
                 value={formData.bio}
                 onChange={handleInputChange}
                 className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                placeholder="자신을 소개해주세요..."
+                placeholder="Tell us about yourself..."
               />
             </div>
 
-            {/* 제출 버튼 */}
+            {/* Submit Button */}
             <div>
               <button
                 type="submit"
@@ -290,18 +301,16 @@ export default function StaffOnboardingPage() {
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                     </svg>
-                    처리 중...
+                    Processing...
                   </>
                 ) : (
-                  '온보딩 완료'
+                  'Complete Onboarding'
                 )}
               </button>
             </div>
 
             <div className="text-center">
-              <p className="text-xs text-gray-500">
-                정보 입력을 완료하면 SLAM 스태프로서의 활동을 시작할 수 있습니다.
-              </p>
+              <p className="text-xs text-gray-500">Once completed, you can start your activities as SLAM staff. You can manage these details later in My Page.</p>
             </div>
           </form>
         </div>

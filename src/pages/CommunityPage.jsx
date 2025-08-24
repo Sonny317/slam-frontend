@@ -1,6 +1,6 @@
 // src/pages/CommunityPage.jsx
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import PostCard from '../components/PostCard';
 import axios from '../api/axios';
 import { useUser } from '../context/UserContext';
@@ -9,6 +9,7 @@ import { useUser } from '../context/UserContext';
 const DcardPostCard = ({ post, onDelete, isPinned }) => {
   const { user } = useUser();
   const [showMenu, setShowMenu] = useState(false);
+  const navigate = useNavigate();
 
   const handleDelete = async () => {
     if (window.confirm('Are you sure you want to delete this post?')) {
@@ -107,15 +108,28 @@ const DcardPostCard = ({ post, onDelete, isPinned }) => {
               />
             ) : null}
             <div className={`w-8 h-8 bg-gradient-to-br from-blue-400 to-purple-500 rounded-full flex items-center justify-center text-white text-sm font-semibold ${post.profileImage ? 'hidden' : ''}`}>
-              {post.author?.charAt(0)?.toUpperCase() || 'A'}
+              {(post._avatars?.[post.author]?.name || post.authorDisplayName || post.author)?.charAt(0)?.toUpperCase() || 'A'}
             </div>
             <div>
-              <Link 
-                to={`/users/profile?author=${encodeURIComponent(post.author || 'Anonymous')}`}
+              <span 
                 className="font-medium text-gray-900 hover:text-blue-600 transition-colors"
+                role="link"
+                tabIndex={0}
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  navigate(`/users/profile?author=${encodeURIComponent(post.author || 'Anonymous')}`);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    navigate(`/users/profile?author=${encodeURIComponent(post.author || 'Anonymous')}`);
+                  }
+                }}
               >
-                {post.author || 'Anonymous'}
-              </Link>
+                {post._avatars?.[post.author]?.name || post.authorDisplayName || post.authorEmail || post.author || 'Anonymous'}
+              </span>
               <div className="flex items-center space-x-2 text-xs text-gray-500">
                 <span>{formatTimeAgo(post.createdAt)}</span>
                 <span>•</span>
