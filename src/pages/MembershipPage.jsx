@@ -12,10 +12,38 @@ const DEFAULT_API_DATA = {
 };
 // --------------------------------------------------------------------
 
-const membershipDetails = {
-  NCCU: { title: "Elevate Your NCCU Experience with SLAM 🌟", benefits: [ "3 SLAM MEETs (Value: 1050 NTD)", "Exclusive Newsletter for Taipei Life Hacks (200NTD)", "Discounts at Partner Restaurants & Bars (250NTD)", "Priority for Outings (BBQ, Bowling etc.)" ] },
-  NTU: { title: "Supercharge Your NTU Life with SLAM 🚀", benefits: [ "3 Exclusive NTU Chapter MEETs", "Joint events with other SLAM branches", "Networking opportunities with top students", "Access to all SLAM partnership benefits" ] },
-  TAIPEI: { title: "Expand Your Network in Taipei with SLAM 💼", benefits: [ "Monthly themed social events for professionals", "Connect with local & international talent", "Exclusive partnership deals in the city", "A chance to escape your work bubble" ] }
+const getMembershipDetails = (branch, currentPrice = 800) => {
+  const baseBenefits = {
+    NCCU: [
+      `3 SLAM MEETs (Value: ${Math.round(currentPrice * 1.3)} NTD)`,
+      "Exclusive Newsletter for Taipei Life Hacks (200NTD)",
+      "Discounts at Partner Restaurants & Bars (250NTD)",
+      "Priority for Outings (BBQ, Bowling etc.)"
+    ],
+    NTU: [
+      "3 Exclusive NTU Chapter MEETs",
+      "Joint events with other SLAM branches", 
+      "Networking opportunities with top students",
+      "Access to all SLAM partnership benefits"
+    ],
+    TAIPEI: [
+      "Monthly themed social events for professionals",
+      "Connect with local & international talent",
+      "Exclusive partnership deals in the city", 
+      "A chance to escape your work bubble"
+    ]
+  };
+
+  const titles = {
+    NCCU: "Elevate Your NCCU Experience with SLAM 🌟",
+    NTU: "Supercharge Your NTU Life with SLAM 🚀", 
+    TAIPEI: "Expand Your Network in Taipei with SLAM 💼"
+  };
+
+  return {
+    title: titles[branch],
+    benefits: baseBenefits[branch]
+  };
 };
 
 // ✅ 지부별 계좌 정보 (각 지부마다 다른 계좌)
@@ -94,7 +122,7 @@ const countryOptions = [
 // --- 새로운 반응형 SLAM 프로모션 카드 ---
 const SlamPromotionCard = ({ data, onRegisterClick }) => {
   const { totalCapacity, earlyBirdCap, currentMembers, registrationCloseDate, selectedBranch, currentPrice } = data;
-  const price = currentPrice || (currentMembers < earlyBirdCap ? 800 : 900);
+  const price = currentPrice || (currentMembers < earlyBirdCap ? (data.earlyBirdPrice || 800) : (data.regularPrice || 900));
   const spotsLeft = totalCapacity - currentMembers;
 
   // 남은 시간 계산
@@ -172,7 +200,7 @@ const SlamPromotionCard = ({ data, onRegisterClick }) => {
           
           {/* 제목 */}
           <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black text-center mb-2 leading-tight">
-            {membershipDetails[selectedBranch].title}
+            {getMembershipDetails(selectedBranch, price).title}
           </h1>
           
           {/* 부제목 */}
@@ -183,48 +211,108 @@ const SlamPromotionCard = ({ data, onRegisterClick }) => {
 
         {/* 가격 섹션 */}
         <div className="p-6 sm:p-8 lg:p-10">
-          <div className="bg-gradient-to-br from-red-50 to-orange-50 rounded-2xl p-6 sm:p-8 mb-6 text-center border-2 border-red-200 relative">
-            {/* Early Bird 배지 */}
-            <div className="absolute -top-4 -right-4 bg-gradient-to-r from-red-500 to-orange-500 text-white px-4 py-2 rounded-full text-sm font-bold shadow-lg animate-bounce z-10">
-              🐦 EARLY BIRD!
-            </div>
+          {(() => {
+            const earlyBirdPrice = apiData.earlyBirdPrice || 800;
+            const regularPrice = apiData.regularPrice || 900;
+            const earlyBirdCap = apiData.earlyBirdCap || 20;
+            const currentMembers = apiData.currentMembers || 0;
+            const isEarlyBirdActive = apiData.isEarlyBirdActive !== undefined ? apiData.isEarlyBirdActive : (currentMembers < earlyBirdCap);
+            const price = apiData.currentPrice || (isEarlyBirdActive ? earlyBirdPrice : regularPrice);
+            
+            return (
+              <>
+                <div className="bg-gradient-to-br from-red-50 to-orange-50 rounded-2xl p-6 sm:p-8 mb-6 text-center border-2 border-red-200 relative">
+                  {/* Early Bird 배지 - Early Bird 활성화 시에만 표시 */}
+                  {isEarlyBirdActive && (
+                    <div className="absolute -top-4 -right-4 bg-gradient-to-r from-red-500 to-orange-500 text-white px-4 py-2 rounded-full text-sm font-bold shadow-lg animate-bounce z-10">
+                      🐦 EARLY BIRD!
+                    </div>
+                  )}
 
-            <div className="text-sm sm:text-base text-slate-500 line-through mb-1">
-              Total Value: 1500 NTD
-            </div>
-            <div className="text-base sm:text-lg text-slate-400 line-through mb-2">
-              Regular Price: 900 NTD
-            </div>
-            <div className="text-4xl sm:text-5xl lg:text-6xl font-black text-red-600 mb-2 animate-pulse">
-              ⚡ {price} <span className="text-2xl sm:text-3xl lg:text-4xl">NTD</span>
-            </div>
-            <div className="text-lg sm:text-xl font-bold text-orange-600 mb-3">
-              You Save 700 NTD (47% OFF!)
-            </div>
-            <div className="inline-block bg-gradient-to-r from-red-100 to-orange-100 text-red-700 px-4 py-2 rounded-full text-sm sm:text-base font-semibold border border-red-300">
-              All Included ✨
-            </div>
-          </div>
+                  <div className="text-sm sm:text-base text-slate-500 line-through mb-1">
+                    Total Value: {apiData.totalValue || (regularPrice + 600)} NTD
+                  </div>
+                  <div className="text-base sm:text-lg text-slate-400 line-through mb-2">
+                    Regular Price: {regularPrice} NTD
+                  </div>
+                  <div className="text-4xl sm:text-5xl lg:text-6xl font-black text-red-600 mb-2 animate-pulse">
+                    ⚡ {price} <span className="text-2xl sm:text-3xl lg:text-4xl">NTD</span>
+                  </div>
+                  {isEarlyBirdActive ? (
+                    <div className="text-lg sm:text-xl font-bold text-orange-600 mb-3">
+                      You Save {regularPrice - price} NTD ({Math.round(((regularPrice - price) / regularPrice) * 100)}% OFF!)
+                    </div>
+                  ) : (
+                    <div className="text-lg sm:text-xl font-bold text-blue-600 mb-3">
+                      Regular Membership Price
+                    </div>
+                  )}
+                  <div className="inline-block bg-gradient-to-r from-red-100 to-orange-100 text-red-700 px-4 py-2 rounded-full text-sm sm:text-base font-semibold border border-red-300">
+                    All Included ✨
+                  </div>
+                </div>
 
-          {/* 얼리버드 카운트다운 박스 */}
-          <div className="bg-gradient-to-r from-yellow-50 to-amber-50 border-2 border-yellow-300 rounded-xl p-4 sm:p-6 mb-6 text-center">
-            <div className="flex items-center justify-center space-x-2 mb-2">
-              <span className="text-2xl animate-pulse">⏰</span>
-              <span className="text-sm sm:text-base font-bold text-yellow-800">HURRY UP!</span>
-              <span className="text-2xl animate-pulse">⚡</span>
-            </div>
-            <div className="text-lg sm:text-xl font-bold text-yellow-900 mb-1">
-              Only {earlyBirdCap - currentMembers} spots left
-            </div>
-            <div className="text-base sm:text-lg font-bold text-orange-600 bg-orange-100 px-3 py-1 rounded-lg inline-block">
-              {timeLeft}
-            </div>
-          </div>
+                                 {/* Early Bird 카운트다운 박스 - Early Bird 활성화 시에만 표시 */}
+                 {isEarlyBirdActive && (
+                   <div className="bg-gradient-to-r from-yellow-50 to-amber-50 border-2 border-yellow-300 rounded-xl p-4 sm:p-6 mb-6 text-center">
+                     <div className="flex items-center justify-center space-x-2 mb-2">
+                       <span className="text-2xl animate-pulse">⏰</span>
+                       <span className="text-sm sm:text-base font-bold text-yellow-800">HURRY UP!</span>
+                       <span className="text-2xl animate-pulse">⚡</span>
+                     </div>
+                     <div className="text-lg sm:text-xl font-bold text-yellow-900 mb-1">
+                       Only {earlyBirdCap - currentMembers} spots left
+                     </div>
+                     <div className="text-base sm:text-lg font-bold text-orange-600 bg-orange-100 px-3 py-1 rounded-lg inline-block">
+                       {(() => {
+                         const deadline = apiData.earlyBirdDeadline || "2025-03-15T23:59:59";
+                         const now = new Date();
+                         const deadlineDate = new Date(deadline);
+                         const diff = deadlineDate - now;
+                         if (diff <= 0) return "Early Bird Ended!";
+                         const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+                         const hours = Math.floor((diff / (1000 * 60 * 60)) % 24);
+                         const minutes = Math.floor((diff / (1000 * 60)) % 60);
+                         return `${days}d ${hours}h ${minutes}m left`;
+                       })()}
+                     </div>
+                   </div>
+                 )}
+
+                 {/* Regular Price Deadline - Early Bird 비활성화 시에만 표시 */}
+                 {!isEarlyBirdActive && (
+                   <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-300 rounded-xl p-4 sm:p-6 mb-6 text-center">
+                     <div className="flex items-center justify-center space-x-2 mb-2">
+                       <span className="text-2xl">📅</span>
+                       <span className="text-sm sm:text-base font-bold text-blue-800">REGULAR PRICING</span>
+                       <span className="text-2xl">💳</span>
+                     </div>
+                     <div className="text-lg sm:text-xl font-bold text-blue-900 mb-1">
+                       Regular membership price: {regularPrice} NTD
+                     </div>
+                     <div className="text-base sm:text-lg font-bold text-blue-600 bg-blue-100 px-3 py-1 rounded-lg inline-block">
+                       {(() => {
+                         const deadline = apiData.regularDeadline || "2025-09-12T23:59:59";
+                         const now = new Date();
+                         const deadlineDate = new Date(deadline);
+                         const diff = deadlineDate - now;
+                         if (diff <= 0) return "Registration Closed!";
+                         const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+                         const hours = Math.floor((diff / (1000 * 60 * 60)) % 24);
+                         const minutes = Math.floor((diff / (1000 * 60)) % 60);
+                         return `Deadline: ${days}d ${hours}h ${minutes}m`;
+                       })()}
+                     </div>
+                   </div>
+                 )}
+              </>
+            );
+          })()}
 
           {/* 혜택 섹션 */}
           <div className="space-y-4 mb-8">
             <h3 className="text-lg sm:text-xl font-bold text-center text-slate-800 mb-4">What's Included:</h3>
-            {membershipDetails[selectedBranch].benefits.map((benefit, i) => {
+            {getMembershipDetails(selectedBranch, price).benefits.map((benefit, i) => {
               // 혜택과 가치를 분리 (더 간단한 로직)
               const hasValue = benefit.includes('(Value:') || benefit.includes('(200NTD)') || benefit.includes('(250NTD)');
               const [mainBenefit, benefitValue] = hasValue ? benefit.split('(') : [benefit, null];
@@ -737,7 +825,7 @@ export default function MembershipPage() {
   );
 
     const renderPaymentForm = () => {
-    const price = apiData.currentPrice || (apiData.currentMembers < apiData.earlyBirdCap ? 800 : 900);
+    const price = apiData.currentPrice || (apiData.currentMembers < apiData.earlyBirdCap ? apiData.earlyBirdPrice : apiData.regularPrice);
     
     return (
         <div className="w-full">

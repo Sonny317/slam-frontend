@@ -7,6 +7,7 @@ export default function EventsPage() {
   const [events, setEvents] = useState([]);
   const [filter, setFilter] = useState('All');
   const [loading, setLoading] = useState(true);
+  const [attendanceStatuses, setAttendanceStatuses] = useState({});
   
   const { user } = useUser(); // ✅ refetchUser 함수를 제거합니다.
   const backendUrl = process.env.NODE_ENV === 'production' 
@@ -29,6 +30,26 @@ export default function EventsPage() {
         const futureEvents = response.data.filter(event => !event.archived && new Date(event.eventDateTime) > now);
         console.log('EventsPage - Future events:', futureEvents.length);
         setEvents(futureEvents);
+        
+        // ✅ 로그인된 사용자의 경우 참석 상태 확인
+        if (user?.isLoggedIn) {
+          const statusPromises = futureEvents.map(async (event) => {
+            try {
+              const statusResponse = await axios.get(`/api/events/${event.id}/attendance-status`);
+              return { eventId: event.id, status: statusResponse.data };
+            } catch (error) {
+              console.error(`Failed to fetch status for event ${event.id}:`, error);
+              return { eventId: event.id, status: { status: 'NOT_ATTENDING' } };
+            }
+          });
+          
+          const statuses = await Promise.all(statusPromises);
+          const statusMap = {};
+          statuses.forEach(({ eventId, status }) => {
+            statusMap[eventId] = status;
+          });
+          setAttendanceStatuses(statusMap);
+        }
       } catch (error) {
         console.error("Failed to fetch events:", error);
       } finally {
@@ -36,7 +57,7 @@ export default function EventsPage() {
       }
     };
     fetchEvents();
-  }, [filter]);
+  }, [filter, user?.isLoggedIn]);
 
   const branches = ['All', 'TAIPEI', 'NCCU', 'NTU'];
 
@@ -91,30 +112,52 @@ export default function EventsPage() {
                   
                   <div className="mt-auto pt-4 border-t border-gray-100">
                     {user?.isLoggedIn ? (
-                      // ✅ 백엔드에서 제공하는 권한 체크 결과 사용
                       (() => {
-                        console.log(`🔍 Event ${event.id} - canJoinForFree:`, event.canJoinForFree, 'eventType:', event.eventType, 'userRole:', user.role);
-                        return event.canJoinForFree;
-                      })() ? (
-                        <Link to={`/events/${event.id}`} className="block w-full text-center bg-green-500 text-white font-bold py-2 rounded-lg hover:bg-green-600 transition-colors">
-                          I'm Going! (RSVP)
-                        </Link>
-                      ) : (
-                        <Link to={
-                          event.eventType === 'SPECIAL_EVENT' 
-                            ? `/events/${event.id}/ticket` 
-                            : `/membership?branch=${encodeURIComponent(event.branch || 'NCCU')}`
-                        } className={`block w-full text-center font-bold py-2 rounded-lg transition-colors ${
-                          event.productType === 'Ticket' 
-                            ? 'bg-orange-500 text-white hover:bg-orange-600' 
-                            : 'bg-blue-600 text-white hover:bg-blue-700'
-                        }`}>
-                          {event.currentPrice && event.currentPrice > 0 
-                            ? `Join ${event.productType || 'Membership'} for ₩${event.currentPrice.toLocaleString()}`
-                            : event.joinButtonText || `Join ${event.productType || 'Membership'}`
-                          }
-                        </Link>
-                      )
+                        const status = attendanceStatuses[event.id];
+                        console.log(`🔍 Event ${event.id} - status:`, status, 'canJoinForFree:', event.canJoinForFree);
+                        
+                        // 승인 대기 중인 경우
+                        if (status?.status === 'PENDING_APPROVAL') {
+                          return (
+                            <div className="block w-full text-center bg-yellow-500 text-white font-bold py-2 rounded-lg">
+                              Wait for Approval
+                            </div>
+                          );
+                        }
+                        
+                        // 이미 참석 중인 경우
+                        if (status?.status === 'ATTENDING') {
+                          return (
+                            <div className="block w-full text-center bg-green-500 text-white font-bold py-2 rounded-lg">
+                              ✓ Attending
+                            </div>
+                          );
+                        }
+                        
+                        // 무료 참석 가능한 경우
+                        if (event.canJoinForFree) {
+                          return (
+                            <Link to={`/events/${event.id}`} className="block w-full text-center bg-green-500 text-white font-bold py-2 rounded-lg hover:bg-green-600 transition-colors">
+                              I'm Going! (RSVP)
+                            </Link>
+                          );
+                        }
+                        
+                        // 결제가 필요한 경우
+                        return (
+                          <Link to={
+                            event.eventType === 'SPECIAL_EVENT' 
+                              ? `/events/${event.id}/ticket` 
+                              : `/membership?branch=${encodeURIComponent(event.branch || 'NCCU')}`
+                          } className={`block w-full text-center font-bold py-2 rounded-lg transition-colors ${
+                            event.productType === 'Ticket' 
+                              ? 'bg-orange-500 text-white hover:bg-orange-600' 
+                              : 'bg-blue-600 text-white hover:bg-blue-700'
+                          }`}>
+                            {event.joinButtonText || `Join ${event.productType || 'Membership'}`}
+                          </Link>
+                        );
+                      })()
                     ) : (
                       <Link to="/login" className="block w-full text-center bg-gray-600 text-white font-bold py-2 rounded-lg hover:bg-gray-700 transition-colors">
                         Log in to Join
