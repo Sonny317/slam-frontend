@@ -33,18 +33,28 @@ const EventForm = ({ event, onSave, onCancel }) => {
     data.append('capacity', String(formData.capacity ?? 0));
     data.append('price', String(formData.price ?? 0));
     
-    // ✅ 새로운 필드들 추가 - 모든 필드를 항상 전송
-    data.append('earlyBirdPrice', String(formData.earlyBirdPrice || ''));
-    data.append('earlyBirdEndDate', formData.earlyBirdEndDate || '');
-    data.append('earlyBirdCapacity', String(formData.earlyBirdCapacity || ''));
-    data.append('registrationDeadline', formData.registrationDeadline || '');
-    data.append('capacityWarningThreshold', String(formData.capacityWarningThreshold || ''));
-    data.append('showCapacityWarning', String(formData.showCapacityWarning || false));
+    // ✅ 새로운 필드들 추가 - null/빈값 처리 개선
+    if (formData.earlyBirdPrice && formData.earlyBirdPrice !== '') {
+      data.append('earlyBirdPrice', String(formData.earlyBirdPrice));
+    }
+    if (formData.earlyBirdEndDate) {
+      data.append('earlyBirdEndDate', formData.earlyBirdEndDate);
+    }
+    if (formData.earlyBirdCapacity && formData.earlyBirdCapacity !== '') {
+      data.append('earlyBirdCapacity', String(formData.earlyBirdCapacity));
+    }
+    if (formData.registrationDeadline) {
+      data.append('registrationDeadline', formData.registrationDeadline);
+    }
+    if (formData.capacityWarningThreshold && formData.capacityWarningThreshold !== '') {
+      data.append('capacityWarningThreshold', String(formData.capacityWarningThreshold));
+    }
+    data.append('showCapacityWarning', String(Boolean(formData.showCapacityWarning)));
     
-    // ✅ 계좌 정보 추가 - 모든 필드를 항상 전송
-    data.append('bankName', formData.bankName || '');
-    data.append('bankAccount', formData.bankAccount || '');
-    data.append('accountName', formData.accountName || '');
+    // ✅ 계좌 정보 추가 - 빈값이 아닐 때만 전송
+    if (formData.bankAccount) {
+      data.append('bankAccount', formData.bankAccount);
+    }
     
 
     

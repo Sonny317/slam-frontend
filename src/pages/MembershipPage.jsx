@@ -3,12 +3,12 @@ import axios from '../api/axios';
 import { useNavigate, Link, useSearchParams } from 'react-router-dom'; // ✅ useSearchParams 추가
 import { useUser } from '../context/UserContext';
 
-// --- 가짜 데이터 (나중에 이 모든 데이터를 백엔드 API로부터 받아옵니다) ---
-const MOCK_API_DATA = {
-  totalCapacity: 80,
-  earlyBirdCap: 20,
-  currentMembers: 21, // ⬅️ 이 숫자를 15, 21, 75 등으로 바꿔가며 테스트해보세요!
-  registrationCloseDate: '2025-09-12T23:59:59', // 마감 날짜
+// --- 백엔드 API에서 가져올 데이터 ---
+const DEFAULT_API_DATA = {
+  totalCapacity: 80,
+  earlyBirdCap: 20,
+  currentMembers: 0,
+  registrationCloseDate: '2025-09-12T23:59:59', // 마감 날짜
 };
 // --------------------------------------------------------------------
 
@@ -93,8 +93,8 @@ const countryOptions = [
 
 // --- 새로운 반응형 SLAM 프로모션 카드 ---
 const SlamPromotionCard = ({ data, onRegisterClick }) => {
-  const { totalCapacity, earlyBirdCap, currentMembers, registrationCloseDate, selectedBranch } = data;
-  const price = currentMembers < earlyBirdCap ? 800 : 900;
+  const { totalCapacity, earlyBirdCap, currentMembers, registrationCloseDate, selectedBranch, currentPrice } = data;
+  const price = currentPrice || (currentMembers < earlyBirdCap ? 800 : 900);
   const spotsLeft = totalCapacity - currentMembers;
 
   // 남은 시간 계산
@@ -214,7 +214,7 @@ const SlamPromotionCard = ({ data, onRegisterClick }) => {
               <span className="text-2xl animate-pulse">⚡</span>
             </div>
             <div className="text-lg sm:text-xl font-bold text-yellow-900 mb-1">
-              Only {MOCK_API_DATA.earlyBirdCap - MOCK_API_DATA.currentMembers} spots left
+              Only {earlyBirdCap - currentMembers} spots left
             </div>
             <div className="text-base sm:text-lg font-bold text-orange-600 bg-orange-100 px-3 py-1 rounded-lg inline-block">
               {timeLeft}
@@ -286,13 +286,18 @@ export default function MembershipPage() {
   
   // ✅ URL에서 지부 정보가 있으면 미리 선택하고 step 2로 이동, 없으면 에러 표시
   const branchFromUrl = searchParams.get('branch');
+  console.log('🔍 MembershipPage Debug - branchFromUrl:', branchFromUrl);
+  console.log('🔍 MembershipPage Debug - searchParams:', searchParams.toString());
+  
   const [selectedBranch, setSelectedBranch] = useState(branchFromUrl || '');
   const [step, setStep] = useState(branchFromUrl ? 1 : 0); // 0 = 에러 상태, 1 = 프로모션 카드, 2 = 정보 입력, 3 = 결제
   const [branchCloseDate, setBranchCloseDate] = useState(null);
+  const [apiData, setApiData] = useState(DEFAULT_API_DATA);
 
-  // Staff/admin users should go directly to RSVP (events) instead of membership flow
+  // ✅ Staff/admin users should go directly to RSVP (events) instead of membership flow
   useEffect(() => {
-    if (user?.isLoggedIn && user.role === 'ADMIN') {
+    if (user?.isLoggedIn && ['ADMIN', 'STAFF', 'PRESIDENT', 'LEADER'].includes(user.role)) {
+      console.log('🔍 Admin/Staff user detected, redirecting to events:', user.role);
       navigate('/events', { replace: true });
     }
   }, [user, navigate]);
@@ -321,6 +326,25 @@ export default function MembershipPage() {
     // TODO: 실제로는 백엔드에서 현재 활성 이벤트의 계좌 정보를 가져와야 함
     // 지금은 기본 지부 정보 사용
     setEventBankInfo(branchBankInfo[selectedBranch]);
+  }, [selectedBranch]);
+
+  // ✅ 백엔드에서 멤버십 가격 정보 가져오기
+  useEffect(() => {
+    const fetchPricingData = async () => {
+      if (!selectedBranch) return;
+      try {
+        const response = await axios.get(`/api/memberships/pricing?branch=${selectedBranch}`);
+        setApiData({
+          ...DEFAULT_API_DATA,
+          ...response.data
+        });
+      } catch (error) {
+        console.error('Failed to fetch pricing data:', error);
+        // 에러 시 기본 데이터 사용
+        setApiData(DEFAULT_API_DATA);
+      }
+    };
+    fetchPricingData();
   }, [selectedBranch]);
 
   // Redirect unauthenticated users to login page
@@ -712,8 +736,8 @@ export default function MembershipPage() {
     </form>
   );
 
-  const renderPaymentForm = () => {
-    const price = MOCK_API_DATA.currentMembers < MOCK_API_DATA.earlyBirdCap ? 800 : 900;
+    const renderPaymentForm = () => {
+    const price = apiData.currentPrice || (apiData.currentMembers < apiData.earlyBirdCap ? 800 : 900);
     
     return (
         <div className="w-full">
@@ -853,7 +877,7 @@ export default function MembershipPage() {
         {step === 1 && (
           <div>
             <SlamPromotionCard
-              data={{...MOCK_API_DATA, selectedBranch, registrationCloseDate: branchCloseDate || MOCK_API_DATA.registrationCloseDate}}
+              data={{...apiData, selectedBranch, registrationCloseDate: branchCloseDate || apiData.registrationCloseDate}}
               onRegisterClick={() => setStep(2)}
             />
 

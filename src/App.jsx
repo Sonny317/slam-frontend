@@ -8,6 +8,7 @@ import MainPage from "./pages/MainPage";
 import BrandStoryPage from './pages/BrandStoryPage';
 import EventsPage from './pages/EventsPage';
 import EventDetailPage from './pages/EventDetailPage';
+import TicketPurchasePage from './pages/TicketPurchasePage';
 import MembershipPage from './pages/MembershipPage';
 import PartnershipPage from './pages/PartnershipPage';
 import LoginPage from "./pages/LoginPage";
@@ -58,6 +59,7 @@ export default function App() {
         <Route path="/about-us" element={<PublicLayout><BrandStoryPage /></PublicLayout>} />
         <Route path="/events" element={<PublicLayout><EventsPage /></PublicLayout>} />
         <Route path="/events/:eventId" element={<PublicLayout><EventDetailPage /></PublicLayout>} />
+        <Route path="/events/:eventId/ticket" element={<PublicLayout><TicketPurchasePage /></PublicLayout>} />
         <Route path="/membership" element={<PublicLayout><MembershipPage /></PublicLayout>} />
         <Route path="/partnership" element={<PublicLayout><PartnershipPage /></PublicLayout>} />
         <Route path="/community" element={<PublicLayout><CommunityPage /></PublicLayout>} />

@@ -91,18 +91,28 @@ export default function EventsPage() {
                   
                   <div className="mt-auto pt-4 border-t border-gray-100">
                     {user?.isLoggedIn ? (
-                      // Staff (ADMIN/STAFF/PRESIDENT) can RSVP for all branches without membership
-                      (isStaff || (user.memberships || []).some(membership => {
-                        // "ACTIVE_NCCU" 형태에서 지부 이름만 추출
-                        const branchName = membership.includes('_') ? membership.split('_')[1] : membership;
-                        return branchName === event.branch;
-                      })) ? (
+                      // ✅ 백엔드에서 제공하는 권한 체크 결과 사용
+                      (() => {
+                        console.log(`🔍 Event ${event.id} - canJoinForFree:`, event.canJoinForFree, 'eventType:', event.eventType, 'userRole:', user.role);
+                        return event.canJoinForFree;
+                      })() ? (
                         <Link to={`/events/${event.id}`} className="block w-full text-center bg-green-500 text-white font-bold py-2 rounded-lg hover:bg-green-600 transition-colors">
                           I'm Going! (RSVP)
                         </Link>
                       ) : (
-                        <Link to={`/membership?branch=${event.branch}`} className="block w-full text-center bg-blue-600 text-white font-bold py-2 rounded-lg hover:bg-blue-700 transition-colors">
-                          Join {event.branch} Membership
+                        <Link to={
+                          event.eventType === 'SPECIAL_EVENT' 
+                            ? `/events/${event.id}/ticket` 
+                            : `/membership?branch=${encodeURIComponent(event.branch || 'NCCU')}`
+                        } className={`block w-full text-center font-bold py-2 rounded-lg transition-colors ${
+                          event.productType === 'Ticket' 
+                            ? 'bg-orange-500 text-white hover:bg-orange-600' 
+                            : 'bg-blue-600 text-white hover:bg-blue-700'
+                        }`}>
+                          {event.currentPrice && event.currentPrice > 0 
+                            ? `Join ${event.productType || 'Membership'} for ₩${event.currentPrice.toLocaleString()}`
+                            : event.joinButtonText || `Join ${event.productType || 'Membership'}`
+                          }
                         </Link>
                       )
                     ) : (

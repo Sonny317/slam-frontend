@@ -36,14 +36,14 @@ export const canAssignRole = (assignerRole, targetRole) => {
   
   switch (assigner) {
     case 'ADMIN':
-      // Admin은 모든 역할 임명 가능
-      return true;
+      // Admin은 모든 역할 임명 가능 (Admin 제외)
+      return target !== 'ADMIN';
     case 'PRESIDENT':
-      // President는 하위 역할만 임명 가능 (Admin 제외)
-      return target === 'LEADER' || target === 'STAFF';
+      // President는 하위 역할만 임명 가능 (Admin, President 제외)
+      return target === 'LEADER' || target === 'STAFF' || target === 'MEMBER';
     case 'LEADER':
-      // Leader는 Staff만 임명 가능
-      return target === 'STAFF';
+      // Leader는 Staff와 Member만 임명 가능
+      return target === 'STAFF' || target === 'MEMBER';
     case 'STAFF':
     case 'MEMBER':
       // Staff와 Member는 임명 권한 없음
@@ -112,13 +112,13 @@ export const getAssignableRoles = (currentUserRole, targetUserRole = null) => {
   
   switch (currentUserRole?.toUpperCase()) {
     case 'ADMIN':
-      availableRoles = ['PRESIDENT', 'LEADER', 'STAFF'];
+      availableRoles = ['PRESIDENT', 'LEADER', 'STAFF', 'MEMBER'];
       break;
     case 'PRESIDENT':
-      availableRoles = ['LEADER', 'STAFF'];
+      availableRoles = ['LEADER', 'STAFF', 'MEMBER'];
       break;
     case 'LEADER':
-      availableRoles = ['STAFF'];
+      availableRoles = ['STAFF', 'MEMBER'];
       break;
     default:
       return [];
