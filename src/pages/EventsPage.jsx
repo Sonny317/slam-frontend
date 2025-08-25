@@ -9,7 +9,21 @@ export default function EventsPage() {
   const [loading, setLoading] = useState(true);
   const [attendanceStatuses, setAttendanceStatuses] = useState({});
   
-  const { user } = useUser(); // ✅ refetchUser 함수를 제거합니다.
+  const { user } = useUser();
+  
+  // ✅ 사용자 정보 새로고침 함수
+  const refreshUserInfo = async () => {
+    if (user?.isLoggedIn) {
+      try {
+        const response = await axios.get("/api/users/me");
+        console.log('🔍 EventsPage - Refreshed user info:', response.data);
+        // UserContext에서 사용자 정보 업데이트를 위해 페이지 새로고침
+        window.location.reload();
+      } catch (error) {
+        console.error('Failed to refresh user info:', error);
+      }
+    }
+  };
   const backendUrl = process.env.NODE_ENV === 'production' 
     ? "https://slam-backend.onrender.com" 
     : "http://localhost:8080";
@@ -76,6 +90,14 @@ export default function EventsPage() {
         <div className="text-center">
           <h1 className="text-4xl font-black text-gray-900 sm:text-5xl">Upcoming Events</h1>
           <p className="mt-4 text-xl text-gray-600">This is where the magic happens. Find your next adventure.</p>
+          {user?.isLoggedIn && (
+            <button 
+              onClick={refreshUserInfo}
+              className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              🔄 Refresh My Status
+            </button>
+          )}
         </div>
 
         <div className="flex justify-center gap-2 sm:gap-4 my-12">
@@ -115,6 +137,8 @@ export default function EventsPage() {
                       (() => {
                         const status = attendanceStatuses[event.id];
                         console.log(`🔍 Event ${event.id} - status:`, status, 'canJoinForFree:', event.canJoinForFree);
+                        console.log(`🔍 Event ${event.id} - user memberships:`, user.memberships);
+                        console.log(`🔍 Event ${event.id} - user role:`, user.role);
                         
                         // 승인 대기 중인 경우
                         if (status?.status === 'PENDING_APPROVAL') {

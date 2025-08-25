@@ -212,12 +212,12 @@ const SlamPromotionCard = ({ data, onRegisterClick }) => {
         {/* 가격 섹션 */}
         <div className="p-6 sm:p-8 lg:p-10">
           {(() => {
-            const earlyBirdPrice = apiData.earlyBirdPrice || 800;
-            const regularPrice = apiData.regularPrice || 900;
-            const earlyBirdCap = apiData.earlyBirdCap || 20;
-            const currentMembers = apiData.currentMembers || 0;
-            const isEarlyBirdActive = apiData.isEarlyBirdActive !== undefined ? apiData.isEarlyBirdActive : (currentMembers < earlyBirdCap);
-            const price = apiData.currentPrice || (isEarlyBirdActive ? earlyBirdPrice : regularPrice);
+            const earlyBirdPrice = data.earlyBirdPrice || 800;
+            const regularPrice = data.regularPrice || 900;
+            const earlyBirdCap = data.earlyBirdCap || 20;
+            const currentMembers = data.currentMembers || 0;
+            const isEarlyBirdActive = data.isEarlyBirdActive !== undefined ? data.isEarlyBirdActive : (currentMembers < earlyBirdCap);
+            const price = data.currentPrice || (isEarlyBirdActive ? earlyBirdPrice : regularPrice);
             
             return (
               <>
@@ -230,7 +230,7 @@ const SlamPromotionCard = ({ data, onRegisterClick }) => {
                   )}
 
                   <div className="text-sm sm:text-base text-slate-500 line-through mb-1">
-                    Total Value: {apiData.totalValue || (regularPrice + 600)} NTD
+                    Total Value: {data.totalValue || (regularPrice + 600)} NTD
                   </div>
                   <div className="text-base sm:text-lg text-slate-400 line-through mb-2">
                     Regular Price: {regularPrice} NTD
@@ -265,7 +265,7 @@ const SlamPromotionCard = ({ data, onRegisterClick }) => {
                      </div>
                      <div className="text-base sm:text-lg font-bold text-orange-600 bg-orange-100 px-3 py-1 rounded-lg inline-block">
                        {(() => {
-                         const deadline = apiData.earlyBirdDeadline || "2025-03-15T23:59:59";
+                         const deadline = data.earlyBirdDeadline || "2025-03-15T23:59:59";
                          const now = new Date();
                          const deadlineDate = new Date(deadline);
                          const diff = deadlineDate - now;
@@ -292,7 +292,7 @@ const SlamPromotionCard = ({ data, onRegisterClick }) => {
                      </div>
                      <div className="text-base sm:text-lg font-bold text-blue-600 bg-blue-100 px-3 py-1 rounded-lg inline-block">
                        {(() => {
-                         const deadline = apiData.regularDeadline || "2025-09-12T23:59:59";
+                         const deadline = data.regularDeadline || "2025-09-12T23:59:59";
                          const now = new Date();
                          const deadlineDate = new Date(deadline);
                          const diff = deadlineDate - now;
@@ -411,10 +411,34 @@ export default function MembershipPage() {
 
   // ✅ 이벤트별 계좌 정보 가져오기 useEffect를 컴포넌트 최상위로 이동
   useEffect(() => {
-    // TODO: 실제로는 백엔드에서 현재 활성 이벤트의 계좌 정보를 가져와야 함
-    // 지금은 기본 지부 정보 사용
-    setEventBankInfo(branchBankInfo[selectedBranch]);
-  }, [selectedBranch]);
+    console.log('🔍 Bank Account Debug - apiData.bankAccount:', apiData.bankAccount);
+    console.log('🔍 Bank Account Debug - selectedBranch:', selectedBranch);
+    
+    // 백엔드에서 받은 은행 정보가 있으면 사용, 없으면 기본 지부 정보 사용
+    if (apiData.bankAccount) {
+      // 백엔드에서 받은 "Bank - Account - AccountName" 형식을 파싱
+      const bankParts = apiData.bankAccount.split(' - ');
+      console.log('🔍 Bank Account Debug - bankParts:', bankParts);
+      
+      if (bankParts.length >= 3) {
+        const bankInfo = {
+          bank: bankParts[0],
+          account: bankParts[1],
+          accountName: bankParts[2]
+        };
+        console.log('🔍 Bank Account Debug - parsed bankInfo:', bankInfo);
+        setEventBankInfo(bankInfo);
+      } else {
+        // 파싱 실패 시 기본 정보 사용
+        console.log('🔍 Bank Account Debug - parsing failed, using default');
+        setEventBankInfo(branchBankInfo[selectedBranch]);
+      }
+    } else {
+      // 백엔드 정보가 없으면 기본 지부 정보 사용
+      console.log('🔍 Bank Account Debug - no bankAccount in apiData, using default');
+      setEventBankInfo(branchBankInfo[selectedBranch]);
+    }
+  }, [selectedBranch, apiData.bankAccount]);
 
   // ✅ 백엔드에서 멤버십 가격 정보 가져오기
   useEffect(() => {
@@ -422,6 +446,7 @@ export default function MembershipPage() {
       if (!selectedBranch) return;
       try {
         const response = await axios.get(`/api/memberships/pricing?branch=${selectedBranch}`);
+        console.log('🔍 Pricing API Response:', response.data);
         setApiData({
           ...DEFAULT_API_DATA,
           ...response.data
