@@ -228,9 +228,14 @@ export default function MyPage() {
             try {
                 const membershipResponse = await axios.get('/api/memberships/my-application');
                 membershipData = membershipResponse.data;
+                console.log('Membership application found:', membershipData);
             } catch (error) {
                 // 멤버십 신청 정보가 없는 경우 (아직 신청하지 않음)
-                console.log('No membership application found');
+                if (error.response?.status === 404) {
+                    console.log('No membership application found - user has not applied yet');
+                } else {
+                    console.error('Error fetching membership application:', error.response?.status, error.response?.data);
+                }
             }
             
             const activeBranches = getActiveBranches(userData);
