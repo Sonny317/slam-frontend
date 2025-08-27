@@ -39,6 +39,7 @@ import CommunityPage from './pages/CommunityPage'; // ✅ 커뮤니티 페이지
 import NewPostPage from './pages/NewPostPage'; // ✅ 새 게시글 작성 페이지 import
 import PostDetailPage from './pages/PostDetailPage'; // ✅ 게시글 상세 페이지 import
 import StaffOnboardingPage from './pages/StaffOnboardingPage'; // ✅ 스태프 온보딩 페이지 import
+import GoogleCallbackPage from './pages/GoogleCallbackPage'; // ✅ Google OAuth 콜백 페이지 import
 
 
 // --- Public Layout Component ---
@@ -74,6 +75,7 @@ export default function App() {
         <Route path="/reset-password" element={<ResetPasswordPage />} /> {/* ✅ 새 경로 추가 */}
         <Route path="/forgot-password" element={<PublicLayout><ForgotPasswordPage /></PublicLayout>} />
         <Route path="/staff-onboarding" element={<StaffOnboardingPage />} /> {/* ✅ 스태프 온보딩 페이지 추가 */}
+        <Route path="/auth/google/callback" element={<GoogleCallbackPage />} /> {/* ✅ Google OAuth 콜백 경로 수정 */}
 
         {/* Standalone Feedback Form Page */}
         <Route path="/feedback/event/:eventId" element={<FeedbackFormPage />} />
