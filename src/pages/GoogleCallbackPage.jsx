@@ -42,7 +42,7 @@ export default function GoogleCallbackPage() {
           localStorage.setItem('userEmail', response.data.email);
           localStorage.setItem('userName', response.data.name);
           localStorage.setItem('userRole', response.data.role);
-          localStorage.setItem('profileImage', response.data.profileImage);
+          localStorage.setItem('profileImage', response.data.profileImage || '');
           
           // UserContext의 login 함수를 사용하여 상태 업데이트
           await login(response.data.email, response.data.token);

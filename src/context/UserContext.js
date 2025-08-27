@@ -95,7 +95,7 @@ export const UserProvider = ({ children }) => {
         email: userData.email,
         name: name || userData.name || '',
         bio: userData.bio || '',
-        profileImage: userData.profileImage ? `${backendUrl}${userData.profileImage}` : defaultProfileImage,
+        profileImage: userData.profileImage && userData.profileImage !== 'null' ? `${backendUrl}${userData.profileImage}` : defaultProfileImage,
         role: role,
         memberships: userData.memberships || [],
       });
