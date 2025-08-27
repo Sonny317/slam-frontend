@@ -29,6 +29,7 @@ export default function GoogleCallbackPage() {
         }
 
         // 백엔드로 인증 코드 전송
+        console.log('Sending code to backend:', code);
         const response = await axios.post('/api/auth/google/callback', { code });
         
         console.log('Google callback response:', response.data);
