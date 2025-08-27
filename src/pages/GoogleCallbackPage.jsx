@@ -37,10 +37,22 @@ export default function GoogleCallbackPage() {
           // JWT 토큰을 저장하고 로그인 처리
           localStorage.setItem('jwtToken', response.data.token);
           
-          // 임시로 이메일이 없으면 기본값 사용
+          // Google OAuth 사용자는 별도 처리
           const email = response.data.email || 'temp@example.com';
-          await login(email, response.data.token);
-          navigate('/');
+          
+          // UserContext 업데이트 (Google OAuth 사용자용)
+          const userData = {
+            email: email,
+            name: response.data.name || 'Google User',
+            profileImage: response.data.profileImage || null,
+            role: response.data.role || 'USER'
+          };
+          
+          // UserContext에 직접 설정
+          localStorage.setItem('user', JSON.stringify(userData));
+          
+          // 페이지 새로고침으로 상태 업데이트
+          window.location.href = '/';
         } else {
           console.error('No token in response:', response.data);
           setError('로그인 처리 중 오류가 발생했습니다. 토큰을 받지 못했습니다.');
