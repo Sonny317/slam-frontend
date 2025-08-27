@@ -31,13 +31,19 @@ export default function GoogleCallbackPage() {
         // 백엔드로 인증 코드 전송
         const response = await axios.post('/api/auth/google/callback', { code });
         
+        console.log('Google callback response:', response.data);
+        
         if (response.data && response.data.token) {
           // JWT 토큰을 저장하고 로그인 처리
           localStorage.setItem('jwtToken', response.data.token);
-          await login(response.data.email, response.data.token);
+          
+          // 임시로 이메일이 없으면 기본값 사용
+          const email = response.data.email || 'temp@example.com';
+          await login(email, response.data.token);
           navigate('/');
         } else {
-          setError('로그인 처리 중 오류가 발생했습니다.');
+          console.error('No token in response:', response.data);
+          setError('로그인 처리 중 오류가 발생했습니다. 토큰을 받지 못했습니다.');
         }
       } catch (error) {
         console.error('Google callback error:', error);
