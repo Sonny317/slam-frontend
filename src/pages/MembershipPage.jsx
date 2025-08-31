@@ -15,7 +15,7 @@ const DEFAULT_API_DATA = {
 const getMembershipDetails = (branch, currentPrice = 800) => {
   const baseBenefits = {
     NCCU: [
-      `3 SLAM MEETs (Value: ${Math.round(currentPrice * 1.3)} NTD)`,
+      `3 SLAM MEETs (Value: 1200 NTD)`,
       "Exclusive Newsletter for Taipei Life Hacks (200NTD)",
       "Discounts at Partner Restaurants & Bars (250NTD)",
       "Priority for Outings (BBQ, Bowling etc.)"
@@ -121,29 +121,35 @@ const countryOptions = [
 
 // --- 새로운 반응형 SLAM 프로모션 카드 ---
 const SlamPromotionCard = ({ data, onRegisterClick }) => {
-  const { totalCapacity, earlyBirdCap, currentMembers, registrationCloseDate, selectedBranch, currentPrice } = data;
-  const price = currentPrice || (currentMembers < earlyBirdCap ? (data.earlyBirdPrice || 800) : (data.regularPrice || 900));
-  const spotsLeft = totalCapacity - currentMembers;
+    const { totalCapacity, earlyBirdCap, currentMembers, registrationCloseDate, selectedBranch, currentPrice } = data;
+  
+  // 백엔드에서 계산한 값을 우선적으로 사용
+  const isEarlyBirdActive = data.isEarlyBirdActive !== undefined ? data.isEarlyBirdActive : false;
+  const price = data.currentPrice || (isEarlyBirdActive ? (data.earlyBirdPrice || 800) : (data.regularPrice || 900));
+  
 
-  // 남은 시간 계산
-  const [timeLeft, setTimeLeft] = useState("");
-  useEffect(() => {
-    const interval = setInterval(() => {
-      const now = new Date();
-      const deadline = new Date(registrationCloseDate);
-      const diff = deadline - now;
-      if (diff <= 0) {
-        setTimeLeft("Registration Closed!");
-        return;
-      }
+  const spotsLeft = totalCapacity - currentMembers;
+
+    // 남은 시간 계산 - Early Bird 또는 Registration 데드라인에 따라
+  const [timeLeft, setTimeLeft] = useState("");
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const now = new Date();
+      const earlyBirdDeadline = data.earlyBirdDeadline || "2025-03-15T23:59:59";
+      const deadline = isEarlyBirdActive ? new Date(earlyBirdDeadline) : new Date(registrationCloseDate);
+      const diff = deadline - now;
+      if (diff <= 0) {
+        setTimeLeft(isEarlyBirdActive ? "Early Bird Ended!" : "Registration Closed!");
+        return;
+      }
       const days = Math.floor(diff / (1000 * 60 * 60 * 24));
       const hours = Math.floor((diff / (1000 * 60 * 60)) % 24);
       const minutes = Math.floor((diff / (1000 * 60)) % 60);
       const seconds = Math.floor((diff / 1000) % 60);
       setTimeLeft(`${days}d ${hours}h ${minutes}m ${seconds}s left`);
-    }, 1000);
-    return () => clearInterval(interval);
-  }, [registrationCloseDate]);
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [registrationCloseDate, data.earlyBirdDeadline, isEarlyBirdActive]);
 
   let urgencyMessage;
   if (spotsLeft <= 0) {
@@ -216,7 +222,9 @@ const SlamPromotionCard = ({ data, onRegisterClick }) => {
             const regularPrice = data.regularPrice || 900;
             const earlyBirdCap = data.earlyBirdCap || 20;
             const currentMembers = data.currentMembers || 0;
-            const isEarlyBirdActive = data.isEarlyBirdActive !== undefined ? data.isEarlyBirdActive : (currentMembers < earlyBirdCap);
+            
+            // 백엔드에서 계산한 값을 우선적으로 사용
+            const isEarlyBirdActive = data.isEarlyBirdActive !== undefined ? data.isEarlyBirdActive : false;
             const price = data.currentPrice || (isEarlyBirdActive ? earlyBirdPrice : regularPrice);
             
             return (
@@ -230,7 +238,7 @@ const SlamPromotionCard = ({ data, onRegisterClick }) => {
                   )}
 
                   <div className="text-sm sm:text-base text-slate-500 line-through mb-1">
-                    Total Value: {data.totalValue || (regularPrice + 600)} NTD
+                    Total Value: 1600 NTD
                   </div>
                   <div className="text-base sm:text-lg text-slate-400 line-through mb-2">
                     Regular Price: {regularPrice} NTD
@@ -240,11 +248,11 @@ const SlamPromotionCard = ({ data, onRegisterClick }) => {
                   </div>
                   {isEarlyBirdActive ? (
                     <div className="text-lg sm:text-xl font-bold text-orange-600 mb-3">
-                      You Save {regularPrice - price} NTD ({Math.round(((regularPrice - price) / regularPrice) * 100)}% OFF!)
+                      You Save {1600 - price} NTD ({Math.round(((1600 - price) / 1600) * 100)}% OFF!)
                     </div>
                   ) : (
                     <div className="text-lg sm:text-xl font-bold text-blue-600 mb-3">
-                      Regular Membership Price
+                      You Save {1600 - price} NTD ({Math.round(((1600 - price) / 1600) * 100)}% OFF!)
                     </div>
                   )}
                   <div className="inline-block bg-gradient-to-r from-red-100 to-orange-100 text-red-700 px-4 py-2 rounded-full text-sm sm:text-base font-semibold border border-red-300">
@@ -264,47 +272,46 @@ const SlamPromotionCard = ({ data, onRegisterClick }) => {
                        Only {earlyBirdCap - currentMembers} spots left
                      </div>
                      <div className="text-base sm:text-lg font-bold text-orange-600 bg-orange-100 px-3 py-1 rounded-lg inline-block">
-                       {(() => {
-                         const deadline = data.earlyBirdDeadline || "2025-03-15T23:59:59";
-                         const now = new Date();
-                         const deadlineDate = new Date(deadline);
-                         const diff = deadlineDate - now;
-                         if (diff <= 0) return "Early Bird Ended!";
-                         const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-                         const hours = Math.floor((diff / (1000 * 60 * 60)) % 24);
-                         const minutes = Math.floor((diff / (1000 * 60)) % 60);
-                         return `${days}d ${hours}h ${minutes}m left`;
-                       })()}
+                       {timeLeft}
                      </div>
                    </div>
                  )}
 
-                 {/* Regular Price Deadline - Early Bird 비활성화 시에만 표시 */}
+                 {/* Early Bird 종료 메시지 - Early Bird 비활성화 시에만 표시 */}
                  {!isEarlyBirdActive && (
                    <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-300 rounded-xl p-4 sm:p-6 mb-6 text-center">
                      <div className="flex items-center justify-center space-x-2 mb-2">
-                       <span className="text-2xl">📅</span>
-                       <span className="text-sm sm:text-base font-bold text-blue-800">REGULAR PRICING</span>
+                       <span className="text-2xl">🎉</span>
+                       <span className="text-sm sm:text-base font-bold text-blue-800">EARLY BIRD ENDED</span>
                        <span className="text-2xl">💳</span>
                      </div>
                      <div className="text-lg sm:text-xl font-bold text-blue-900 mb-1">
-                       Regular membership price: {regularPrice} NTD
+                       Regular pricing now applies
                      </div>
                      <div className="text-base sm:text-lg font-bold text-blue-600 bg-blue-100 px-3 py-1 rounded-lg inline-block">
-                       {(() => {
-                         const deadline = data.regularDeadline || "2025-09-12T23:59:59";
-                         const now = new Date();
-                         const deadlineDate = new Date(deadline);
-                         const diff = deadlineDate - now;
-                         if (diff <= 0) return "Registration Closed!";
-                         const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-                         const hours = Math.floor((diff / (1000 * 60 * 60)) % 24);
-                         const minutes = Math.floor((diff / (1000 * 60)) % 60);
-                         return `Deadline: ${days}d ${hours}h ${minutes}m`;
-                       })()}
+                       {timeLeft}
                      </div>
                    </div>
                  )}
+
+                 {/* Capacity Warning - Early Bird 비활성화 시에만 표시 */}
+                 {!isEarlyBirdActive && data.capacityWarningThreshold && spotsLeft <= data.capacityWarningThreshold && (
+                   <div className="bg-gradient-to-r from-red-50 to-pink-50 border-2 border-red-300 rounded-xl p-4 sm:p-6 mb-6 text-center">
+                     <div className="flex items-center justify-center space-x-2 mb-2">
+                       <span className="text-2xl animate-pulse">⏰</span>
+                       <span className="text-sm sm:text-base font-bold text-red-800">HURRY UP!</span>
+                       <span className="text-2xl animate-pulse">⚡</span>
+                     </div>
+                     <div className="text-lg sm:text-xl font-bold text-red-900 mb-1">
+                       Only {spotsLeft} spots left
+                     </div>
+                     <div className="text-base sm:text-lg font-bold text-red-600 bg-red-100 px-3 py-1 rounded-lg inline-block">
+                       {timeLeft}
+                     </div>
+                   </div>
+                 )}
+
+
               </>
             );
           })()}

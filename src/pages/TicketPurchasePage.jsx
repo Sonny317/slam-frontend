@@ -80,8 +80,14 @@ export default function TicketPurchasePage() {
     );
   }
 
+  // Early Bird 데드라인 기준으로 가격 결정
+  const earlyBirdDeadline = event.earlyBirdDeadline;
+  const now = new Date();
+  const deadlineDate = earlyBirdDeadline ? new Date(earlyBirdDeadline) : null;
+  const isEarlyBirdActive = deadlineDate && now < deadlineDate && event.currentMembers < event.earlyBirdCap;
+  
   // 백엔드에서 계산된 currentPrice 사용, 없으면 로컬 계산
-  const currentPrice = event.currentPrice || (event.isEarlyBirdActive ? event.earlyBirdPrice : event.price);
+  const currentPrice = event.currentPrice || (isEarlyBirdActive ? event.earlyBirdPrice : event.price);
 
   return (
     <div className="max-w-2xl mx-auto px-4 py-16">
@@ -185,7 +191,21 @@ export default function TicketPurchasePage() {
           {event.bankAccount && (
             <div className="bg-blue-50 p-4 rounded-lg">
               <h3 className="font-medium text-blue-900 mb-2">💳 결제 계좌 정보</h3>
-              <p className="text-blue-800">계좌번호: {event.bankAccount}</p>
+              {(() => {
+                // 백엔드에서 받은 "Bank - Account - AccountName" 형식을 파싱
+                const bankParts = event.bankAccount.split(' - ');
+                if (bankParts.length >= 3) {
+                  return (
+                    <>
+                      <p className="text-blue-800"><strong>Bank:</strong> {bankParts[0]}</p>
+                      <p className="text-blue-800"><strong>Account:</strong> {bankParts[1]}</p>
+                      <p className="text-blue-800"><strong>Account Name:</strong> {bankParts[2]}</p>
+                    </>
+                  );
+                } else {
+                  return <p className="text-blue-800">계좌번호: {event.bankAccount}</p>;
+                }
+              })()}
               <p className="text-sm text-blue-600 mt-1">
                 티켓 구매 후 위 계좌로 입금해주세요.
               </p>
