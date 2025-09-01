@@ -312,6 +312,8 @@ export default function SignupPage() {
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const googleUser = urlParams.get('googleUser');
+    const requireTerms = urlParams.get('requireTerms');
+    
     if (googleUser) {
       try {
         const userData = JSON.parse(decodeURIComponent(googleUser));
@@ -325,6 +327,11 @@ export default function SignupPage() {
         }));
         setIsVerified(true);
         setEmailAvailable(true);
+        
+        // 약관 동의가 필요한 경우 모달 자동 표시
+        if (requireTerms === 'true') {
+          setShowGoogleTermsModal(true);
+        }
       } catch (error) {
         console.error('Failed to parse Google user data:', error);
       }

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useUser } from '../context/UserContext';
 import axios from '../api/axios';
@@ -9,6 +9,40 @@ export default function LoginPage() {
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const navigate = useNavigate();
   const { login } = useUser();
+
+  // ✅ Google OAuth 콜백 처리
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const code = urlParams.get('code');
+    
+    if (code) {
+      // Google OAuth 콜백 처리
+      handleGoogleCallback(code);
+    }
+  }, []);
+
+  // ✅ Google OAuth 콜백 핸들러
+  const handleGoogleCallback = async (code) => {
+    setIsGoogleLoading(true);
+    try {
+      const response = await axios.post('/api/auth/google/callback', { code });
+      
+      if (response.data.redirectTo) {
+        // 신규 사용자인 경우 SignUpPage로 리다이렉트
+        window.location.href = response.data.redirectTo;
+      } else if (response.data.token) {
+        // 기존 사용자인 경우 바로 로그인 처리
+        await login(response.data.email, response.data.token);
+        alert("Google login successful!");
+        navigate("/");
+      }
+    } catch (error) {
+      console.error("Google callback error:", error);
+      alert("Google login failed. Please try again.");
+    } finally {
+      setIsGoogleLoading(false);
+    }
+  };
 
   // ✅ 구글 로그인 핸들러 - 백엔드 API 호출
   const handleGoogleLogin = async () => {
@@ -67,7 +101,7 @@ export default function LoginPage() {
           {isGoogleLoading ? (
             <div className="flex items-center">
               <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-500 mr-3"></div>
-              로그인 중...
+              Signing in...
             </div>
           ) : (
             <>
