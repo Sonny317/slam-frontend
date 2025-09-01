@@ -16,7 +16,7 @@ const getMembershipDetails = (branch, currentPrice = 800) => {
   const baseBenefits = {
     NCCU: [
       "3 SLAM MEETs including Drinks 🍻 and Dinner 🍽️ (Value: 1,200 NTD)",
-      "Priority for SLAM Outings & Activities (BBQ, Bowling, Running, etc.) ✨ (Value: 200 NTD)",
+      "Priority for SLAM Outings & Activities: BBQ, Bowling, Running, etc. ✨ (Value: 200 NTD)",
       "Discounts at Partner Restaurants & Bars 🥂 (Value: 200 NTD)"
     ],
     NTU: [
