@@ -51,9 +51,16 @@ const EventForm = ({ event, onSave, onCancel }) => {
     }
     data.append('showCapacityWarning', String(Boolean(formData.showCapacityWarning)));
     
-
-    
-
+    // ✅ 계좌 정보 추가 - 빈값이 아닐 때만 전송
+    if (formData.bankAccount) {
+      data.append('bankAccount', formData.bankAccount);
+    }
+    if (formData.bankName) {
+      data.append('bankName', formData.bankName);
+    }
+    if (formData.accountName) {
+      data.append('accountName', formData.accountName);
+    }
     
     if (imageFile) data.append('image', imageFile);
     
@@ -275,6 +282,50 @@ const EventForm = ({ event, onSave, onCancel }) => {
           </div>
         </div>
 
+        {/* ✅ Bank Information Settings */}
+        <div className="bg-green-50 p-4 rounded-lg border border-green-200">
+          <h3 className="text-lg font-semibold mb-3 text-green-800">🏦 Bank Transfer Information <span className="text-sm font-normal text-red-600">(Optional)</span></h3>
+          <p className="text-xs text-green-600 mb-4">
+            💡 If provided, this will override the default branch account info for membership payments
+          </p>
+          
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Bank Name</label>
+              <input 
+                type="text" 
+                name="bankName" 
+                value={formData.bankName || ''} 
+                onChange={handleChange} 
+                className="mt-1 block w-full p-2 border rounded-md" 
+                placeholder="e.g. (822) Cathay United Bank"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Account Number</label>
+              <input 
+                type="text" 
+                name="bankAccount" 
+                value={formData.bankAccount || ''} 
+                onChange={handleChange} 
+                className="mt-1 block w-full p-2 border rounded-md" 
+                placeholder="e.g. 123-456-7890"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Account Name</label>
+              <input 
+                type="text" 
+                name="accountName" 
+                value={formData.accountName || ''} 
+                onChange={handleChange} 
+                className="mt-1 block w-full p-2 border rounded-md" 
+                placeholder="e.g. SLAM NTU"
+              />
+            </div>
+          </div>
+        </div>
+
 
 
 
@@ -326,7 +377,9 @@ export default function AdminEventsPage() {
           registrationDeadline: event.registrationDeadline || null,
           capacityWarningThreshold: event.capacityWarningThreshold || null,
           showCapacityWarning: event.showCapacityWarning || false,
-
+          bankName: event.bankName || '',
+          bankAccount: event.bankAccount || '',
+          accountName: event.accountName || ''
         }));
         
         console.log('Events with defaults:', eventsWithDefaults);
@@ -379,7 +432,8 @@ Can't wait to see you there! 🌟`;
       // ✅ 새로운 필드들 기본값
       earlyBirdPrice: null, earlyBirdEndDate: '', earlyBirdCapacity: null,
       registrationDeadline: '', capacityWarningThreshold: null, showCapacityWarning: false,
-
+      // ✅ 계좌 정보 기본값
+      bankName: '', bankAccount: '', accountName: ''
     });
     setIsEditing(true);
   };
@@ -408,7 +462,10 @@ Can't wait to see you there! 🌟`;
       // ✅ Capacity Warning 필드들 보존
       capacityWarningThreshold: event.capacityWarningThreshold || null,
       showCapacityWarning: event.showCapacityWarning || false,
-
+      // ✅ Bank 정보 필드들 보존
+      bankName: event.bankName || '',
+      bankAccount: event.bankAccount || '',
+      accountName: event.accountName || ''
     };
     
     // 🔍 디버깅: 포맷팅된 이벤트 데이터 확인
