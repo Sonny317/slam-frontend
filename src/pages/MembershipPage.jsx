@@ -15,10 +15,9 @@ const DEFAULT_API_DATA = {
 const getMembershipDetails = (branch, currentPrice = 800) => {
   const baseBenefits = {
     NCCU: [
-      `3 SLAM MEETs (Value: 1200 NTD)`,
-      "Exclusive Newsletter for Taipei Life Hacks (200NTD)",
-      "Discounts at Partner Restaurants & Bars (250NTD)",
-      "Priority for Outings (BBQ, Bowling etc.)"
+      "✓ 3 SLAM MEETs including Drinks 🍻 and Dinner 🍽️ (Value: 1,200 NTD)",
+      "✓ Priority for SLAM Outings & Activities (BBQ, Bowling, Running, etc.) ✨ (Value: 200 NTD)",
+      "✓ Discounts at Partner Restaurants & Bars 🥂 (Value: 200 NTD)"
     ],
     NTU: [
       "3 Exclusive NTU Chapter MEETs",
