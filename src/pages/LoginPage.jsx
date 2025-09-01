@@ -7,6 +7,14 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+  // ✅ 약관 동의 모달 상태 추가
+  const [showTermsModal, setShowTermsModal] = useState(false);
+  const [googleUserData, setGoogleUserData] = useState(null);
+  const [formData, setFormData] = useState({
+    termsOfServiceAgreed: false,
+    privacyPolicyAgreed: false,
+    eventPhotoAgreed: false,
+  });
   const navigate = useNavigate();
   const { login } = useUser();
 
@@ -27,9 +35,10 @@ export default function LoginPage() {
     try {
       const response = await axios.post('/api/auth/google/callback', { code });
       
-      if (response.data.redirectTo) {
-        // 신규 사용자인 경우 SignUpPage로 리다이렉트
-        window.location.href = response.data.redirectTo;
+      if (response.data.isNewUser) {
+        // 신규 사용자인 경우 약관 동의 모달 표시
+        setGoogleUserData(response.data.userData);
+        setShowTermsModal(true);
       } else if (response.data.token) {
         // 기존 사용자인 경우 바로 로그인 처리
         await login(response.data.email, response.data.token);
@@ -79,6 +88,105 @@ export default function LoginPage() {
       console.error("Login error:", error);
     }
   };
+
+  // ✅ 약관 동의 처리 함수
+  const handleTermsAgreement = async () => {
+    if (!formData.termsOfServiceAgreed || !formData.privacyPolicyAgreed || !formData.eventPhotoAgreed) {
+      alert("Please agree to all required terms.");
+      return;
+    }
+
+    try {
+      // 회원가입 API 호출
+      const registerData = {
+        name: googleUserData.name,
+        email: googleUserData.email,
+        password: "", // Google OAuth 사용자는 비밀번호 없음
+        termsOfServiceAgreed: formData.termsOfServiceAgreed,
+        privacyPolicyAgreed: formData.privacyPolicyAgreed,
+        eventPhotoAgreed: formData.eventPhotoAgreed,
+        isGoogleUser: true,
+        googleId: googleUserData.providerId
+      };
+
+      await axios.post('/api/auth/register', registerData);
+      alert("Registration successful! Please log in.");
+      setShowTermsModal(false);
+      navigate("/login");
+    } catch (error) {
+      console.error("Registration error:", error);
+      alert("Registration failed: " + (error.response?.data || error.message));
+    }
+  };
+
+  // ✅ 약관 동의 모달 컴포넌트
+  const TermsModal = () => (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-lg max-w-2xl w-full max-h-[80vh] overflow-y-auto">
+        <div className="p-6">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-xl font-bold">Terms Agreement Required</h2>
+            <button 
+              onClick={() => setShowTermsModal(false)}
+              className="text-gray-400 hover:text-gray-600"
+            >
+              ✕
+            </button>
+          </div>
+          <div className="space-y-4 text-sm text-gray-700 mb-6">
+            <p className="text-red-600 font-medium">⚠️ You must agree to the following terms to complete registration:</p>
+            
+            <div className="space-y-3">
+              <label className="flex items-center">
+                <input 
+                  type="checkbox" 
+                  checked={formData.termsOfServiceAgreed} 
+                  onChange={(e) => setFormData(prev => ({...prev, termsOfServiceAgreed: e.target.checked}))} 
+                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded" 
+                />
+                <span className="ml-2">I agree to the Terms of Service (Required)</span>
+              </label>
+              
+              <label className="flex items-center">
+                <input 
+                  type="checkbox" 
+                  checked={formData.privacyPolicyAgreed} 
+                  onChange={(e) => setFormData(prev => ({...prev, privacyPolicyAgreed: e.target.checked}))} 
+                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded" 
+                />
+                <span className="ml-2">I agree to the Privacy Policy (Required)</span>
+              </label>
+              
+              <label className="flex items-center">
+                <input 
+                  type="checkbox" 
+                  checked={formData.eventPhotoAgreed} 
+                  onChange={(e) => setFormData(prev => ({...prev, eventPhotoAgreed: e.target.checked}))} 
+                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded" 
+                />
+                <span className="ml-2">I agree to the use of event photos/videos (Required)</span>
+              </label>
+            </div>
+          </div>
+          
+          <div className="flex gap-3 justify-end">
+            <button 
+              onClick={() => setShowTermsModal(false)}
+              className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+            >
+              Cancel
+            </button>
+            <button 
+              onClick={handleTermsAgreement}
+              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+            >
+              Complete Registration
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-gray-100">
@@ -150,6 +258,9 @@ export default function LoginPage() {
           </Link>
         </div>
       </form>
+      
+      {/* ✅ 약관 동의 모달 */}
+      {showTermsModal && <TermsModal />}
     </div>
   );
 }
