@@ -34,8 +34,12 @@ export default function GoogleCallbackPage() {
         
         console.log('Google callback response:', response.data);
         
-        if (response.data && response.data.token) {
-          // JWT 토큰을 저장하고 로그인 처리
+        if (response.data && response.data.isNewUser) {
+          // 신규 사용자인 경우 약관 동의를 위해 LoginPage로 리다이렉트
+          console.log('New user detected, redirecting to login page for terms agreement');
+          navigate('/login?code=' + code);
+        } else if (response.data && response.data.token) {
+          // 기존 사용자인 경우 바로 로그인 처리
           localStorage.setItem('jwtToken', response.data.token);
           
           // Google OAuth 사용자 정보를 localStorage에 저장
