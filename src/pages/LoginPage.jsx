@@ -109,10 +109,28 @@ export default function LoginPage() {
         googleId: googleUserData.providerId
       };
 
-      await axios.post('/api/auth/register', registerData);
-      alert("Registration successful! Please log in.");
-      setShowTermsModal(false);
-      navigate("/login");
+      const registerResponse = await axios.post('/api/auth/register', registerData);
+      
+      // 회원가입 성공 후 바로 로그인 처리
+      if (registerResponse.data && registerResponse.data.token) {
+        await login(googleUserData.email, registerResponse.data.token);
+        alert("Registration and login successful!");
+        setShowTermsModal(false);
+        navigate("/");
+      } else {
+        // 토큰이 없는 경우 일반 로그인 시도
+        try {
+          await login(googleUserData.email, "");
+          alert("Registration successful! Please log in.");
+          setShowTermsModal(false);
+          navigate("/login");
+        } catch (loginError) {
+          console.error("Auto-login failed:", loginError);
+          alert("Registration successful! Please log in manually.");
+          setShowTermsModal(false);
+          navigate("/login");
+        }
+      }
     } catch (error) {
       console.error("Registration error:", error);
       alert("Registration failed: " + (error.response?.data || error.message));
