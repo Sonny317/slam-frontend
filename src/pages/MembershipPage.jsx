@@ -922,9 +922,7 @@ export default function MembershipPage() {
                     </div>
                     <div className="space-y-2 text-sm bg-white p-4 rounded-lg border border-blue-100">
                         <p><strong>Amount:</strong> {price} NTD</p>
-                        <p><strong>Bank:</strong> {eventBankInfo?.bank || "(822) Cathay United Bank"}</p>
                         <p><strong>Account:</strong> {eventBankInfo?.account || "123-456-7890"}</p>
-                        <p><strong>Account Name:</strong> {eventBankInfo?.accountName || "SLAM"}</p>
                     </div>
                     <div className="mt-4">
                         <label className="block text-sm font-medium text-blue-800 mb-2">
