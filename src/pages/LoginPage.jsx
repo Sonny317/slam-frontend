@@ -109,7 +109,7 @@ export default function LoginPage() {
         googleId: googleUserData.providerId
       };
 
-      const registerResponse = await axios.post('/api/auth/register', registerData);
+      const registerResponse = await axios.post('/auth/register', registerData);
       
       // 회원가입 성공 후 바로 로그인 처리
       if (registerResponse.data && registerResponse.data.token) {
