@@ -24,52 +24,52 @@ export default function GoogleCallbackPage() {
         const error = searchParams.get('error');
 
         if (error) {
-          setError('Google 로그인 중 오류가 발생했습니다.');
+          setError('Google 로그??�??�류가 발생?�습?�다.');
           setIsProcessing(false);
           return;
         }
 
         if (!code) {
-          setError('인증 코드를 받지 못했습니다.');
+          setError('?�증 코드�?받�? 못했?�니??');
           setIsProcessing(false);
           return;
         }
 
-        // 백엔드로 인증 코드 전송
+        // 백엔?�로 ?�증 코드 ?�송
         console.log('Sending code to backend:', code);
         const response = await axios.post('/api/auth/google/callback', { code });
         
         console.log('Google callback response:', response.data);
         
         if (response.data && response.data.isNewUser) {
-          // 신규 사용자인 경우 약관 동의 모달 표시
+          // ?�규 ?�용?�인 경우 ?��? ?�의 모달 ?�시
           console.log('New user detected, showing terms agreement modal');
           setGoogleUserData(response.data.userData);
           setShowTermsModal(true);
           setIsProcessing(false);
         } else if (response.data && response.data.token) {
-          // 기존 사용자인 경우 바로 로그인 처리
+          // 기존 ?�용?�인 경우 바로 로그??처리
           localStorage.setItem('jwtToken', response.data.token);
           
-          // Google OAuth 사용자 정보를 localStorage에 저장
+          // Google OAuth ?�용???�보�?localStorage???�??
           localStorage.setItem('userEmail', response.data.email);
           localStorage.setItem('userName', response.data.name);
           localStorage.setItem('userRole', response.data.role);
           localStorage.setItem('profileImage', response.data.profileImage || '');
           
-          // UserContext의 login 함수를 사용하여 상태 업데이트
+          // UserContext??login ?�수�??�용?�여 ?�태 ?�데?�트
           await login(response.data.email, response.data.token);
           
-          // 메인 페이지로 이동
+          // 메인 ?�이지�??�동
           navigate('/');
         } else {
           console.error('No token in response:', response.data);
-          setError('로그인 처리 중 오류가 발생했습니다. 토큰을 받지 못했습니다.');
+          setError('로그??처리 �??�류가 발생?�습?�다. ?�큰??받�? 못했?�니??');
           setIsProcessing(false);
         }
       } catch (error) {
         console.error('Google callback error:', error);
-        setError('Google 로그인 처리 중 오류가 발생했습니다.');
+        setError('Google 로그??처리 �??�류가 발생?�습?�다.');
         setIsProcessing(false);
       }
     };
@@ -77,7 +77,7 @@ export default function GoogleCallbackPage() {
     handleGoogleCallback();
   }, [searchParams, navigate, login]);
 
-  // 약관 동의 처리 함수
+  // ?��? ?�의 처리 ?�수
   const handleTermsAgreement = async () => {
     if (!formData.termsOfServiceAgreed || !formData.privacyPolicyAgreed || !formData.eventPhotoAgreed) {
       alert("Please agree to all required terms.");
@@ -85,11 +85,11 @@ export default function GoogleCallbackPage() {
     }
 
     try {
-      // 회원가입 API 호출
+      // ?�원가??API ?�출
       const registerData = {
         name: googleUserData.name,
         email: googleUserData.email,
-        password: "", // Google OAuth 사용자는 비밀번호 없음
+        password: "", // Google OAuth ?�용?�는 비�?번호 ?�음
         termsOfServiceAgreed: formData.termsOfServiceAgreed,
         privacyPolicyAgreed: formData.privacyPolicyAgreed,
         eventPhotoAgreed: formData.eventPhotoAgreed,
@@ -101,7 +101,7 @@ export default function GoogleCallbackPage() {
 
       const registerResponse = await axios.post('/auth/register', registerData);
       
-      // 회원가입 성공 후 바로 로그인 처리
+      // ?�원가???�공 ??바로 로그??처리
       if (registerResponse.data && registerResponse.data.token) {
         await login(googleUserData.email, registerResponse.data.token);
         alert("Registration and login successful!");
@@ -118,7 +118,7 @@ export default function GoogleCallbackPage() {
     }
   };
 
-  // 약관 동의 모달 컴포넌트
+  // ?��? ?�의 모달 컴포?�트
   const TermsModal = () => (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-lg max-w-2xl w-full max-h-[80vh] overflow-y-auto">
@@ -129,11 +129,11 @@ export default function GoogleCallbackPage() {
               onClick={() => setShowTermsModal(false)}
               className="text-gray-400 hover:text-gray-600"
             >
-              ✕
+              ??
             </button>
           </div>
           <div className="space-y-4 text-sm text-gray-700 mb-6">
-            <p className="text-red-600 font-medium">⚠️ You must agree to the following terms to complete registration:</p>
+            <p className="text-red-600 font-medium">?�️ You must agree to the following terms to complete registration:</p>
             
             <div className="space-y-3">
               <label className="flex items-center">
@@ -192,8 +192,8 @@ export default function GoogleCallbackPage() {
       <div className="min-h-screen flex flex-col items-center justify-center bg-gray-100">
         <div className="bg-white p-8 rounded shadow-md w-full max-w-md text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
-          <h2 className="text-xl font-semibold mb-2">Google 로그인 처리 중...</h2>
-          <p className="text-gray-600">잠시만 기다려주세요.</p>
+          <h2 className="text-xl font-semibold mb-2">Google 로그??처리 �?..</h2>
+          <p className="text-gray-600">?�시�?기다?�주?�요.</p>
         </div>
       </div>
     );
@@ -203,14 +203,14 @@ export default function GoogleCallbackPage() {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-gray-100">
         <div className="bg-white p-8 rounded shadow-md w-full max-w-md text-center">
-          <div className="text-red-500 text-6xl mb-4">⚠️</div>
-          <h2 className="text-xl font-semibold mb-2 text-red-600">로그인 실패</h2>
+          <div className="text-red-500 text-6xl mb-4">?�️</div>
+          <h2 className="text-xl font-semibold mb-2 text-red-600">로그???�패</h2>
           <p className="text-gray-600 mb-4">{error}</p>
           <button
             onClick={() => navigate('/login')}
             className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
           >
-            로그인 페이지로 돌아가기
+            로그???�이지�??�아가�?
           </button>
         </div>
       </div>
@@ -219,7 +219,7 @@ export default function GoogleCallbackPage() {
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-gray-100">
-      {/* 약관 동의 모달 */}
+      {/* ?��? ?�의 모달 */}
       {showTermsModal && <TermsModal />}
     </div>
   );
