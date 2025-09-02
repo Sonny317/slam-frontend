@@ -15,7 +15,7 @@ import LoginPage from "./pages/LoginPage";
 import SignupPage from "./pages/SignupPage";
 import MyPage from "./pages/MyPage";
 import ForgotPasswordPage from './pages/ForgotPasswordPage';
-import ResetPasswordPage from './pages/ResetPasswordPage'; // ✅ 새 페이지 임포트
+import ResetPasswordPage from './pages/ResetPasswordPage'; // ?????�이지 ?�포??
 import ChangePasswordPage from './pages/ChangePasswordPage';
 import UserProfilePage from './pages/UserProfilePage';
 
@@ -33,13 +33,13 @@ import AdminGamesPage from './pages/AdminGamesPage';
 import GameAnalyticsPage from './pages/GameAnalyticsPage';
 
 //Feedbackform
-import FeedbackFormPage from './pages/FeedbackFormPage'; // ✅ 피드백 폼 페이지 import
-import StaffFeedbackFormPage from './pages/StaffFeedbackFormPage'; // ✅ 스태프 피드백 폼 페이지 import
-import CommunityPage from './pages/CommunityPage'; // ✅ 커뮤니티 페이지 import
-import NewPostPage from './pages/NewPostPage'; // ✅ 새 게시글 작성 페이지 import
-import PostDetailPage from './pages/PostDetailPage'; // ✅ 게시글 상세 페이지 import
-import StaffOnboardingPage from './pages/StaffOnboardingPage'; // ✅ 스태프 온보딩 페이지 import
-import GoogleCallbackPage from './pages/GoogleCallbackPage'; // ✅ Google OAuth 콜백 페이지 import
+import FeedbackFormPage from './pages/FeedbackFormPage'; // ???�드�????�이지 import
+import StaffFeedbackFormPage from './pages/StaffFeedbackFormPage'; // ???�태???�드�????�이지 import
+import CommunityPage from './pages/CommunityPage'; // ??커�??�티 ?�이지 import
+import NewPostPage from './pages/NewPostPage'; // ????게시글 ?�성 ?�이지 import
+import PostDetailPage from './pages/PostDetailPage'; // ??게시글 ?�세 ?�이지 import
+import StaffOnboardingPage from './pages/StaffOnboardingPage'; // ???�태???�보???�이지 import
+import GoogleCallbackPage from './pages/GoogleCallbackPage'; // ??Google OAuth 콜백 ?�이지 import
 
 
 // --- Public Layout Component ---
@@ -52,7 +52,7 @@ const PublicLayout = ({ children }) => (
 
 export default function App() {
   return (
-    // ❌ UserProvider는 index.js로 옮겼으므로 여기서는 사용하지 않습니다.
+    // ??UserProvider??index.js�???��?��?�??�기?�는 ?�용?��? ?�습?�다.
     <Router>
       <Routes>
         {/* Public Routes */}
@@ -72,10 +72,10 @@ export default function App() {
         <Route path="/change-password" element={<PublicLayout><ChangePasswordPage /></PublicLayout>} />
         <Route path="/users/:userId" element={<PublicLayout><UserProfilePage /></PublicLayout>} />
         <Route path="/users/profile" element={<PublicLayout><UserProfilePage /></PublicLayout>} />
-        <Route path="/reset-password" element={<ResetPasswordPage />} /> {/* ✅ 새 경로 추가 */}
+        <Route path="/reset-password" element={<ResetPasswordPage />} /> {/* ????경로 추�? */}
         <Route path="/forgot-password" element={<PublicLayout><ForgotPasswordPage /></PublicLayout>} />
-        <Route path="/staff-onboarding" element={<StaffOnboardingPage />} /> {/* ✅ 스태프 온보딩 페이지 추가 */}
-        <Route path="/auth/google/callback" element={<GoogleCallbackPage />} /> {/* ✅ Google OAuth 콜백 경로 수정 */}
+        <Route path="/staff-onboarding" element={<StaffOnboardingPage />} /> {/* ???�태???�보???�이지 추�? */}
+        <Route path="/google-callback" element={<GoogleCallbackPage />} /> {/* ??Google OAuth 콜백 경로 ?�정 */}
 
         {/* Standalone Feedback Form Page */}
         <Route path="/feedback/event/:eventId" element={<FeedbackFormPage />} />
