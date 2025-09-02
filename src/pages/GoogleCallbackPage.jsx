@@ -97,6 +97,8 @@ export default function GoogleCallbackPage() {
         googleId: googleUserData.providerId
       };
 
+      console.log("Sending register data:", registerData);
+
       const registerResponse = await axios.post('/auth/register', registerData);
       
       // 회원가입 성공 후 바로 로그인 처리
