@@ -75,7 +75,7 @@ export default function App() {
         <Route path="/reset-password" element={<ResetPasswordPage />} /> {/* ????경로 추�? */}
         <Route path="/forgot-password" element={<PublicLayout><ForgotPasswordPage /></PublicLayout>} />
         <Route path="/staff-onboarding" element={<StaffOnboardingPage />} /> {/* ???�태???�보???�이지 추�? */}
-        <Route path="/google-callback" element={<GoogleCallbackPage />} /> {/* ??Google OAuth 콜백 경로 ?�정 */}
+        <Route path="/auth/google/callback" element={<GoogleCallbackPage />} /> {/* ??Google OAuth 콜백 경로 ?�정 */}
 
         {/* Standalone Feedback Form Page */}
         <Route path="/feedback/event/:eventId" element={<FeedbackFormPage />} />
