@@ -994,7 +994,7 @@ export default function MembershipPage() {
         {step === 1 && (
           <div>
             <SlamPromotionCard
-              data={{...apiData, selectedBranch, registrationCloseDate: branchCloseDate || apiData.registrationCloseDate}}
+              data={{...apiData, selectedBranch, registrationCloseDate: apiData.registrationCloseDate || branchCloseDate}}
               onRegisterClick={() => setStep(2)}
             />
 
