@@ -9,6 +9,9 @@ const DEFAULT_API_DATA = {
   earlyBirdCap: 20,
   currentMembers: 0,
   registrationCloseDate: '2025-09-12T23:59:59', // 마감 날짜
+  earlyBirdDeadline: '2025-03-15T23:59:59',
+  registrationDeadline: '2025-09-12T23:59:59',
+  eventDateTime: '2025-09-12T23:59:59',
 };
 // --------------------------------------------------------------------
 
@@ -129,13 +132,24 @@ const SlamPromotionCard = ({ data, onRegisterClick }) => {
 
   const spotsLeft = totalCapacity - currentMembers;
 
-    // 남은 시간 계산 - Early Bird 또는 Registration 데드라인에 따라
+    // 남은 시간 계산 - 3단계 로직 적용
   const [timeLeft, setTimeLeft] = useState("");
   useEffect(() => {
     const interval = setInterval(() => {
       const now = new Date();
-      const earlyBirdDeadline = data.earlyBirdDeadline || "2025-03-15T23:59:59";
-      const deadline = isEarlyBirdActive ? new Date(earlyBirdDeadline) : new Date(registrationCloseDate);
+      
+      // 3단계 로직:
+      // 1) Early Bird 진행 중: earlyBirdEndDate 사용
+      // 2) Early Bird 종료 후: registrationDeadline 사용 (이벤트의 등록 마감일)
+      // 3) registrationDeadline이 없으면: eventDateTime 사용 (이벤트 시작 시간)
+      let deadline;
+      if (isEarlyBirdActive) {
+        deadline = new Date(data.earlyBirdDeadline);
+      } else {
+        // Early Bird 종료 후: registrationDeadline 우선, 없으면 eventDateTime
+        deadline = new Date(data.registrationDeadline || data.eventDateTime);
+      }
+      
       const diff = deadline - now;
       if (diff <= 0) {
         setTimeLeft(isEarlyBirdActive ? "Early Bird Ended!" : "Registration Closed!");
@@ -148,7 +162,7 @@ const SlamPromotionCard = ({ data, onRegisterClick }) => {
       setTimeLeft(`${days}d ${hours}h ${minutes}m ${seconds}s left`);
     }, 1000);
     return () => clearInterval(interval);
-  }, [registrationCloseDate, data.earlyBirdDeadline, isEarlyBirdActive]);
+  }, [data.earlyBirdDeadline, data.registrationDeadline, data.eventDateTime, isEarlyBirdActive]);
 
   let urgencyMessage;
   if (spotsLeft <= 0) {
