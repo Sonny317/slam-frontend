@@ -46,12 +46,10 @@ export default function EventDetailPage() {
     fetchEventAndRsvp();
   }, [eventId, user.isLoggedIn]);
 
-  // ✅ 등록 데드라인까지의 카운트다운 (데드라인이 있으면 데드라인 기준, 없으면 이벤트 시작 시간 기준)
+  // ✅ 카운트다운을 이벤트 시작 시간 기준으로 계산
   useEffect(() => {
     if (!eventData?.eventDateTime) return;
-    const targetMs = eventData.registrationDeadline 
-      ? new Date(eventData.registrationDeadline).getTime()
-      : new Date(eventData.eventDateTime).getTime();
+    const targetMs = new Date(eventData.eventDateTime).getTime();
 
     const tick = () => {
       const now = Date.now();
@@ -73,7 +71,7 @@ export default function EventDetailPage() {
     tick();
     const id = setInterval(tick, 1000);
     return () => clearInterval(id);
-  }, [eventData?.eventDateTime, eventData?.registrationDeadline]);
+  }, [eventData?.eventDateTime]);
 
   const handleRsvpClick = (attendingStatus) => {
     if (!user.isLoggedIn) {
