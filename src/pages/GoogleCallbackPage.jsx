@@ -118,7 +118,7 @@ export default function GoogleCallbackPage() {
       const registerData = {
         name: googleUserData.name,
         email: googleUserData.email,
-        password: "", // Google OAuth users don't have password
+        password: null, // Google OAuth users don't have password (null instead of empty string)
         code: null, // Google OAuth users don't need verification code
         termsOfServiceAgreed: formData.termsOfServiceAgreed,
         privacyPolicyAgreed: formData.privacyPolicyAgreed,
