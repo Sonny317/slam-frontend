@@ -24,52 +24,52 @@ export default function GoogleCallbackPage() {
         const error = searchParams.get('error');
 
         if (error) {
-          setError('Google ë¡œê·¸??ì¤??¤ë¥˜ê°€ ë°œìƒ?ˆìŠµ?ˆë‹¤.');
+          setError('Google login error occurred.');
           setIsProcessing(false);
           return;
         }
 
         if (!code) {
-          setError('?¸ì¦ ì½”ë“œë¥?ë°›ì? ëª»í–ˆ?µë‹ˆ??');
+          setError('Authorization code not received.');
           setIsProcessing(false);
           return;
         }
 
-        // ë°±ì—”?œë¡œ ?¸ì¦ ì½”ë“œ ?„ì†¡
+        // Send authorization code to backend
         console.log('Sending code to backend:', code);
         const response = await axios.post('/api/auth/google/callback', { code });
         
         console.log('Google callback response:', response.data);
         
         if (response.data && response.data.isNewUser) {
-          // ? ê·œ ?¬ìš©?ì¸ ê²½ìš° ?½ê? ?™ì˜ ëª¨ë‹¬ ?œì‹œ
+          // For new users, show terms agreement modal
           console.log('New user detected, showing terms agreement modal');
           setGoogleUserData(response.data.userData);
           setShowTermsModal(true);
           setIsProcessing(false);
         } else if (response.data && response.data.token) {
-          // ê¸°ì¡´ ?¬ìš©?ì¸ ê²½ìš° ë°”ë¡œ ë¡œê·¸??ì²˜ë¦¬
+          // For existing users, login immediately
           localStorage.setItem('jwtToken', response.data.token);
           
-          // Google OAuth ?¬ìš©???•ë³´ë¥?localStorage???€??
+          // Store Google OAuth user info in localStorage
           localStorage.setItem('userEmail', response.data.email);
           localStorage.setItem('userName', response.data.name);
           localStorage.setItem('userRole', response.data.role);
           localStorage.setItem('profileImage', response.data.profileImage || '');
           
-          // UserContext??login ?¨ìˆ˜ë¥??¬ìš©?˜ì—¬ ?íƒœ ?…ë°?´íŠ¸
+          // Use UserContext login function to update state
           await login(response.data.email, response.data.token);
           
-          // ë©”ì¸ ?˜ì´ì§€ë¡??´ë™
+          // Navigate to main page
           navigate('/');
         } else {
           console.error('No token in response:', response.data);
-          setError('ë¡œê·¸??ì²˜ë¦¬ ì¤??¤ë¥˜ê°€ ë°œìƒ?ˆìŠµ?ˆë‹¤. ? í°??ë°›ì? ëª»í–ˆ?µë‹ˆ??');
+          setError('Login processing error occurred. Token not received.');
           setIsProcessing(false);
         }
       } catch (error) {
         console.error('Google callback error:', error);
-        setError('Google ë¡œê·¸??ì²˜ë¦¬ ì¤??¤ë¥˜ê°€ ë°œìƒ?ˆìŠµ?ˆë‹¤.');
+        setError('Google login processing error occurred.');
         setIsProcessing(false);
       }
     };
@@ -77,7 +77,7 @@ export default function GoogleCallbackPage() {
     handleGoogleCallback();
   }, [searchParams, navigate, login]);
 
-  // ?½ê? ?™ì˜ ì²˜ë¦¬ ?¨ìˆ˜
+  // Terms agreement handling function
   const handleTermsAgreement = async () => {
     if (!formData.termsOfServiceAgreed || !formData.privacyPolicyAgreed || !formData.eventPhotoAgreed) {
       alert("Please agree to all required terms.");
@@ -85,40 +85,66 @@ export default function GoogleCallbackPage() {
     }
 
     try {
-      // ?Œì›ê°€??API ?¸ì¶œ
+      // Call registration API
       const registerData = {
         name: googleUserData.name,
         email: googleUserData.email,
-        password: "", // Google OAuth ?¬ìš©?ëŠ” ë¹„ë?ë²ˆí˜¸ ?†ìŒ
+        password: "", // Google OAuth users don't have password
         termsOfServiceAgreed: formData.termsOfServiceAgreed,
         privacyPolicyAgreed: formData.privacyPolicyAgreed,
         eventPhotoAgreed: formData.eventPhotoAgreed,
         isGoogleUser: true,
-        googleId: googleUserData.providerId
+        googleId: googleUserData.providerId || "google_" + googleUserData.email // Fallback if providerId is null
       };
 
       console.log("Sending register data:", registerData);
 
-      const registerResponse = await axios.post('/auth/register', registerData);
+      const registerResponse = await axios.post('/api/auth/register', registerData);
       
-      // ?Œì›ê°€???±ê³µ ??ë°”ë¡œ ë¡œê·¸??ì²˜ë¦¬
+      // After successful registration, login immediately
       if (registerResponse.data && registerResponse.data.token) {
+        // Store token in localStorage
+        localStorage.setItem('jwtToken', registerResponse.data.token);
+        localStorage.setItem('userEmail', registerResponse.data.email);
+        localStorage.setItem('userName', registerResponse.data.name);
+        localStorage.setItem('userRole', registerResponse.data.role);
+        localStorage.setItem('profileImage', registerResponse.data.profileImage || '');
+        
+        // Update user context
         await login(googleUserData.email, registerResponse.data.token);
         alert("Registration and login successful!");
         setShowTermsModal(false);
         navigate("/");
       } else {
-        alert("Registration successful! Please log in manually.");
+        // If no token in response, handle appropriately for Google users
+        console.warn("No token in registration response");
+        alert("Registration successful! Please contact support for login assistance.");
         setShowTermsModal(false);
         navigate("/login");
       }
     } catch (error) {
       console.error("Registration error:", error);
-      alert("Registration failed: " + (error.response?.data || error.message));
+      console.error("Error response:", error.response?.data);
+      
+      // Handle specific error cases
+      if (error.response?.status === 400) {
+        const errorMessage = error.response.data;
+        if (typeof errorMessage === 'string' && errorMessage.includes('already exists')) {
+          alert("This email is already registered. Please try logging in instead.");
+          setShowTermsModal(false);
+          navigate("/login");
+        } else {
+          alert("Registration failed: " + errorMessage);
+        }
+      } else if (error.response?.status === 500) {
+        alert("Server error occurred. Please try again later.");
+      } else {
+        alert("Registration failed: " + (error.response?.data || error.message));
+      }
     }
   };
 
-  // ?½ê? ?™ì˜ ëª¨ë‹¬ ì»´í¬?ŒíŠ¸
+  // Terms agreement modal component
   const TermsModal = () => (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-lg max-w-2xl w-full max-h-[80vh] overflow-y-auto">
@@ -129,11 +155,11 @@ export default function GoogleCallbackPage() {
               onClick={() => setShowTermsModal(false)}
               className="text-gray-400 hover:text-gray-600"
             >
-              ??
+              âœ•
             </button>
           </div>
           <div className="space-y-4 text-sm text-gray-700 mb-6">
-            <p className="text-red-600 font-medium">? ï¸ You must agree to the following terms to complete registration:</p>
+            <p className="text-red-600 font-medium">âš ï¸ You must agree to the following terms to complete registration:</p>
             
             <div className="space-y-3">
               <label className="flex items-center">
@@ -192,8 +218,8 @@ export default function GoogleCallbackPage() {
       <div className="min-h-screen flex flex-col items-center justify-center bg-gray-100">
         <div className="bg-white p-8 rounded shadow-md w-full max-w-md text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
-          <h2 className="text-xl font-semibold mb-2">Google ë¡œê·¸??ì²˜ë¦¬ ì¤?..</h2>
-          <p className="text-gray-600">? ì‹œë§?ê¸°ë‹¤?¤ì£¼?¸ìš”.</p>
+          <h2 className="text-xl font-semibold mb-2">Processing Google login...</h2>
+          <p className="text-gray-600">Please wait a moment.</p>
         </div>
       </div>
     );
@@ -203,14 +229,14 @@ export default function GoogleCallbackPage() {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-gray-100">
         <div className="bg-white p-8 rounded shadow-md w-full max-w-md text-center">
-          <div className="text-red-500 text-6xl mb-4">? ï¸</div>
-          <h2 className="text-xl font-semibold mb-2 text-red-600">ë¡œê·¸???¤íŒ¨</h2>
+          <div className="text-red-500 text-6xl mb-4">âŒ</div>
+          <h2 className="text-xl font-semibold mb-2 text-red-600">Login Failed</h2>
           <p className="text-gray-600 mb-4">{error}</p>
           <button
             onClick={() => navigate('/login')}
             className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
           >
-            ë¡œê·¸???˜ì´ì§€ë¡??Œì•„ê°€ê¸?
+            Go to Login Page
           </button>
         </div>
       </div>
@@ -219,7 +245,7 @@ export default function GoogleCallbackPage() {
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-gray-100">
-      {/* ?½ê? ?™ì˜ ëª¨ë‹¬ */}
+      {/* Terms agreement modal */}
       {showTermsModal && <TermsModal />}
     </div>
   );
