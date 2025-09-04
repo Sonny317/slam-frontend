@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useUser } from '../context/UserContext';
 import axios from '../api/axios';
@@ -16,8 +16,17 @@ export default function GoogleCallbackPage() {
     privacyPolicyAgreed: false,
     eventPhotoAgreed: false,
   });
+  
+  // Prevent duplicate execution in React Strict Mode
+  const hasRun = useRef(false);
 
   useEffect(() => {
+    // Prevent duplicate execution in React Strict Mode
+    if (hasRun.current) {
+      return;
+    }
+    hasRun.current = true;
+    
     const handleGoogleCallback = async () => {
       try {
         const code = searchParams.get('code');

@@ -13,6 +13,17 @@ export const UserProvider = ({ children }) => {
     
   const defaultProfileImage = "/default_profile.jpg";
 
+  // Helper function to construct profile image URL
+  const getProfileImageUrl = (imagePath) => {
+    if (!imagePath) return defaultProfileImage;
+    // If imagePath is already a complete URL (starts with http:// or https://), use it as-is
+    if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
+      return imagePath;
+    }
+    // Otherwise, prepend backend URL for relative paths
+    return `${backendUrl}${imagePath}`;
+  };
+
   // ✅ 1. 앱이 시작될 때 localStorage에서 모든 정보를 즉시 읽어와 초기 상태를 완벽하게 설정합니다.
   const [user, setUser] = useState(() => {
     const token = localStorage.getItem('jwtToken');
@@ -27,7 +38,7 @@ export const UserProvider = ({ children }) => {
         email: email,
         name: name || '',
         bio: '',
-        profileImage: imagePath ? `${backendUrl}${imagePath}` : defaultProfileImage,
+        profileImage: getProfileImageUrl(imagePath),
         role: role,
         memberships: [],
       };
@@ -52,7 +63,7 @@ export const UserProvider = ({ children }) => {
             name: userData.name || prevUser.name,
             bio: userData.bio || prevUser.bio,
             role: userData.role || prevUser.role, // 서버의 최신 role이 있으면 사용, 없으면 기존 role 유지
-            profileImage: userData.profileImage ? `${backendUrl}${userData.profileImage}` : prevUser.profileImage,
+            profileImage: getProfileImageUrl(userData.profileImage) || prevUser.profileImage,
             memberships: userData.memberships || [],
           }));
         } catch (error) {
@@ -88,7 +99,7 @@ export const UserProvider = ({ children }) => {
         email: email,
         name: name || '',
         bio: '',
-        profileImage: profileImage ? `${backendUrl}${profileImage}` : defaultProfileImage,
+        profileImage: getProfileImageUrl(profileImage),
         role: role,
         memberships: [],
       });
@@ -105,7 +116,7 @@ export const UserProvider = ({ children }) => {
           email: userData.email,
           name: name || userData.name || '',
           bio: userData.bio || '',
-          profileImage: userData.profileImage && userData.profileImage !== 'null' ? `${backendUrl}${userData.profileImage}` : defaultProfileImage,
+          profileImage: userData.profileImage && userData.profileImage !== 'null' ? getProfileImageUrl(userData.profileImage) : defaultProfileImage,
           role: role,
           memberships: userData.memberships || [],
         });
@@ -126,7 +137,7 @@ export const UserProvider = ({ children }) => {
   const updateUserImage = (newImagePath) => {
       if(user.isLoggedIn && newImagePath) {
           localStorage.setItem("profileImage", newImagePath);
-          setUser(prevUser => ({ ...prevUser, profileImage: `${backendUrl}${newImagePath}`}));
+          setUser(prevUser => ({ ...prevUser, profileImage: getProfileImageUrl(newImagePath)}));
       }
   }
 
