@@ -88,10 +88,17 @@ export default function GoogleCallbackPage() {
           
           await login(error.response.data.email, error.response.data.token);
           navigate('/');
-        } else {
-          setError('Google login processing error occurred.');
-          setIsProcessing(false);
-        }
+                 } else {
+           // Google OAuth 오류 메시지 확인
+           const errorMessage = error.response?.data?.error || error.message;
+           
+           if (errorMessage.includes('Authorization code expired') || errorMessage.includes('invalid_grant')) {
+             setError('Your Google login session has expired. Please try logging in again.');
+           } else {
+             setError('Google login processing error occurred.');
+           }
+           setIsProcessing(false);
+         }
       }
     };
 
@@ -249,23 +256,33 @@ export default function GoogleCallbackPage() {
     );
   }
 
-  if (error) {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-gray-100">
-        <div className="bg-white p-8 rounded shadow-md w-full max-w-md text-center">
-          <div className="text-red-500 text-6xl mb-4">❌</div>
-          <h2 className="text-xl font-semibold mb-2 text-red-600">Login Failed</h2>
-          <p className="text-gray-600 mb-4">{error}</p>
-          <button
-            onClick={() => navigate('/login')}
-            className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
-          >
-            Go to Login Page
-          </button>
-        </div>
-      </div>
-    );
-  }
+     if (error) {
+     return (
+       <div className="min-h-screen flex flex-col items-center justify-center bg-gray-100">
+         <div className="bg-white p-8 rounded shadow-md w-full max-w-md text-center">
+           <div className="text-red-500 text-6xl mb-4">❌</div>
+           <h2 className="text-xl font-semibold mb-2 text-red-600">Login Failed</h2>
+           <p className="text-gray-600 mb-4">{error}</p>
+           <div className="flex gap-3 justify-center">
+             <button
+               onClick={() => window.location.href = '/login'}
+               className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+             >
+               Go to Login Page
+             </button>
+             {error.includes('expired') && (
+               <button
+                 onClick={() => window.location.reload()}
+                 className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600"
+               >
+                 Try Again
+               </button>
+             )}
+           </div>
+         </div>
+       </div>
+     );
+   }
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-gray-100">
