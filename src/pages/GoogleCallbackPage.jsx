@@ -69,8 +69,17 @@ export default function GoogleCallbackPage() {
         }
       } catch (error) {
         console.error('Google callback error:', error);
-        setError('Google login processing error occurred.');
-        setIsProcessing(false);
+        
+        // 백엔드에서 400 에러를 반환하지만 실제로는 성공적인 데이터가 있는 경우
+        if (error.response && error.response.data && error.response.data.isNewUser) {
+          console.log('New user detected from error response, showing terms agreement modal');
+          setGoogleUserData(error.response.data.userData);
+          setShowTermsModal(true);
+          setIsProcessing(false);
+        } else {
+          setError('Google login processing error occurred.');
+          setIsProcessing(false);
+        }
       }
     };
 
