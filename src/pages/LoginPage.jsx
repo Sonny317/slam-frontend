@@ -7,7 +7,7 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
-  // ✅ 약관 동의 모달 상태 추가
+  // Terms agreement modal state
   const [showTermsModal, setShowTermsModal] = useState(false);
   const [googleUserData, setGoogleUserData] = useState(null);
   const [formData, setFormData] = useState({
@@ -18,29 +18,29 @@ export default function LoginPage() {
   const navigate = useNavigate();
   const { login } = useUser();
 
-  // ✅ Google OAuth 콜백 처리
+  // Google OAuth callback handling
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const code = urlParams.get('code');
     
     if (code) {
-      // Google OAuth 콜백 처리
+      // Handle Google OAuth callback
       handleGoogleCallback(code);
     }
   }, []);
 
-  // ✅ Google OAuth 콜백 핸들러
+  // Google OAuth callback handler
   const handleGoogleCallback = async (code) => {
     setIsGoogleLoading(true);
     try {
       const response = await axios.post('/api/auth/google/callback', { code });
       
       if (response.data.isNewUser) {
-        // 신규 사용자인 경우 약관 동의 모달 표시
+        // For new users, show terms agreement modal
         setGoogleUserData(response.data.userData);
         setShowTermsModal(true);
       } else if (response.data.token) {
-        // 기존 사용자인 경우 바로 로그인 처리
+        // For existing users, login immediately
         await login(response.data.email, response.data.token);
         alert("Google login successful!");
         navigate("/");
@@ -53,24 +53,24 @@ export default function LoginPage() {
     }
   };
 
-  // ✅ 구글 로그인 핸들러 - 백엔드 API 호출
+  // Google login handler - backend API call
   const handleGoogleLogin = async () => {
     setIsGoogleLoading(true);
     try {
       const response = await axios.get('/api/auth/google/login');
       
       if (response.data && response.data.authUrl) {
-        // Google OAuth 페이지로 리다이렉트
+        // Redirect to Google OAuth page
         window.location.href = response.data.authUrl;
       } else {
-        alert("Google 로그인 기능이 아직 준비 중입니다. 일반 로그인을 사용해주세요.");
+        alert("Google login feature is not ready yet. Please use regular login.");
       }
     } catch (error) {
       console.error("Google login error:", error);
       if (error.response?.status === 404) {
-        alert("Google 로그인 기능이 아직 준비 중입니다. 일반 로그인을 사용해주세요.");
+        alert("Google login feature is not ready yet. Please use regular login.");
       } else {
-        alert("Google 로그인 중 오류가 발생했습니다. 다시 시도해주세요.");
+        alert("An error occurred during Google login. Please try again.");
       }
     } finally {
       setIsGoogleLoading(false);
@@ -82,14 +82,14 @@ export default function LoginPage() {
     try {
       await login(email, password);
       alert("Login successful!");
-      navigate("/"); // ✅ 상태 업데이트 후 자연스럽게 메인 페이지로 이동합니다.
+      navigate("/"); // Navigate to main page after state update
     } catch (error) {
       alert("Login failed: " + (error?.message || "Please check your email and password."));
       console.error("Login error:", error);
     }
   };
 
-  // ✅ 약관 동의 처리 함수
+  // Terms agreement handling function
   const handleTermsAgreement = async () => {
     if (!formData.termsOfServiceAgreed || !formData.privacyPolicyAgreed || !formData.eventPhotoAgreed) {
       alert("Please agree to all required terms.");
@@ -97,28 +97,31 @@ export default function LoginPage() {
     }
 
     try {
-      // 회원가입 API 호출
+      // Call registration API
       const registerData = {
         name: googleUserData.name,
         email: googleUserData.email,
-        password: "", // Google OAuth 사용자는 비밀번호 없음
+        password: "", // Google OAuth users don't have password
         termsOfServiceAgreed: formData.termsOfServiceAgreed,
         privacyPolicyAgreed: formData.privacyPolicyAgreed,
         eventPhotoAgreed: formData.eventPhotoAgreed,
         isGoogleUser: true,
-        googleId: googleUserData.providerId
+        googleId: googleUserData.providerId || "google_" + googleUserData.email // Fallback if providerId is null
       };
+
+      console.log("Sending registration data:", registerData);
+      console.log("Google user data:", googleUserData);
 
       const registerResponse = await axios.post('/auth/register', registerData);
       
-      // 회원가입 성공 후 바로 로그인 처리
+      // After successful registration, login immediately
       if (registerResponse.data && registerResponse.data.token) {
         await login(googleUserData.email, registerResponse.data.token);
         alert("Registration and login successful!");
         setShowTermsModal(false);
         navigate("/");
       } else {
-        // 토큰이 없는 경우 일반 로그인 시도
+        // If no token, try regular login
         try {
           await login(googleUserData.email, "");
           alert("Registration successful! Please log in.");
@@ -133,11 +136,12 @@ export default function LoginPage() {
       }
     } catch (error) {
       console.error("Registration error:", error);
+      console.error("Error response:", error.response?.data);
       alert("Registration failed: " + (error.response?.data || error.message));
     }
   };
 
-  // ✅ 약관 동의 모달 컴포넌트
+  // Terms agreement modal component
   const TermsModal = () => (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-lg max-w-2xl w-full max-h-[80vh] overflow-y-auto">
@@ -215,7 +219,7 @@ export default function LoginPage() {
       <form onSubmit={handleLogin} className="bg-white p-8 rounded shadow-md w-full max-w-md">
         <h2 className="text-2xl font-semibold mb-6 text-center">Log In</h2>
         
-        {/* ✅ 구글 로그인 버튼 - 로딩 상태 추가 */}
+        {/* Google login button with loading state */}
         <button
           type="button"
           onClick={handleGoogleLogin}
@@ -277,7 +281,7 @@ export default function LoginPage() {
         </div>
       </form>
       
-      {/* ✅ 약관 동의 모달 */}
+      {/* Terms agreement modal */}
       {showTermsModal && <TermsModal />}
     </div>
   );
