@@ -56,8 +56,17 @@ export const UserProvider = ({ children }) => {
             memberships: userData.memberships || [],
           }));
         } catch (error) {
-          console.error("Failed to fetch user on load, logging out.", error);
-          logout(); // 토큰이 유효하지 않으면 로그아웃 처리
+          console.error("Failed to fetch user on load, but not logging out for Google OAuth users", error);
+          // Google OAuth 사용자의 경우 로그아웃하지 않고 기존 정보 유지
+          const token = localStorage.getItem('jwtToken');
+          if (token && token.startsWith('eyJ')) {
+            // Google OAuth 토큰인 경우 로그아웃하지 않음
+            console.log("Google OAuth user - keeping existing session");
+            return; // 이 줄 추가
+          } else {
+            // 일반 사용자의 경우에만 로그아웃 처리
+            logout();
+          }
         }
       }
       setLoading(false); // 정보 로딩(또는 확인) 완료

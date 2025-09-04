@@ -57,11 +57,11 @@ export default function GoogleCallbackPage() {
           localStorage.setItem('userRole', response.data.role);
           localStorage.setItem('profileImage', response.data.profileImage || '');
           
-          // Use UserContext login function to update state
-          await login(response.data.email, response.data.token);
-          
-          // Navigate to main page
-          navigate('/');
+          // Use UserContext login function to update state with delay to prevent timing issues
+          setTimeout(async () => {
+            await login(response.data.email, response.data.token);
+            navigate('/');
+          }, 100);
         } else {
           console.error('No token in response:', response.data);
           setError('Login processing error occurred. Token not received.');
@@ -99,7 +99,7 @@ export default function GoogleCallbackPage() {
 
       console.log("Sending register data:", registerData);
 
-      const registerResponse = await axios.post('/api/auth/register', registerData);
+      const registerResponse = await axios.post('/auth/register', registerData);
       
       // After successful registration, login immediately
       if (registerResponse.data && registerResponse.data.token) {
@@ -110,11 +110,13 @@ export default function GoogleCallbackPage() {
         localStorage.setItem('userRole', registerResponse.data.role);
         localStorage.setItem('profileImage', registerResponse.data.profileImage || '');
         
-        // Update user context
-        await login(googleUserData.email, registerResponse.data.token);
-        alert("Registration and login successful!");
-        setShowTermsModal(false);
-        navigate("/");
+        // Update user context with delay to prevent timing issues
+        setTimeout(async () => {
+          await login(googleUserData.email, registerResponse.data.token);
+          alert("Registration and login successful!");
+          setShowTermsModal(false);
+          navigate("/");
+        }, 100);
       } else {
         // If no token in response, handle appropriately for Google users
         console.warn("No token in registration response");
