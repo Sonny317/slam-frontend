@@ -111,6 +111,7 @@ export default function GoogleCallbackPage() {
         name: googleUserData.name,
         email: googleUserData.email,
         password: "", // Google OAuth users don't have password
+        code: null, // Google OAuth users don't need verification code
         termsOfServiceAgreed: formData.termsOfServiceAgreed,
         privacyPolicyAgreed: formData.privacyPolicyAgreed,
         eventPhotoAgreed: formData.eventPhotoAgreed,
