@@ -57,11 +57,9 @@ export default function GoogleCallbackPage() {
           localStorage.setItem('userRole', response.data.role);
           localStorage.setItem('profileImage', response.data.profileImage || '');
           
-          // Use UserContext login function to update state with delay to prevent timing issues
-          setTimeout(async () => {
-            await login(response.data.email, response.data.token);
-            navigate('/');
-          }, 100);
+2          // Update user context immediately without delay
+          await login(response.data.email, response.data.token);
+          navigate('/');
         } else {
           console.error('No token in response:', response.data);
           setError('Login processing error occurred. Token not received.');
@@ -76,6 +74,17 @@ export default function GoogleCallbackPage() {
           setGoogleUserData(error.response.data.userData);
           setShowTermsModal(true);
           setIsProcessing(false);
+        } else if (error.response && error.response.data && error.response.data.token) {
+          // 토큰이 있는 경우 성공으로 처리
+          console.log('Token found in error response, processing as success');
+          localStorage.setItem('jwtToken', error.response.data.token);
+          localStorage.setItem('userEmail', error.response.data.email);
+          localStorage.setItem('userName', error.response.data.name);
+          localStorage.setItem('userRole', error.response.data.role);
+          localStorage.setItem('profileImage', error.response.data.profileImage || '');
+          
+          await login(error.response.data.email, error.response.data.token);
+          navigate('/');
         } else {
           setError('Google login processing error occurred.');
           setIsProcessing(false);
@@ -119,13 +128,11 @@ export default function GoogleCallbackPage() {
         localStorage.setItem('userRole', registerResponse.data.role);
         localStorage.setItem('profileImage', registerResponse.data.profileImage || '');
         
-        // Update user context with delay to prevent timing issues
-        setTimeout(async () => {
-          await login(googleUserData.email, registerResponse.data.token);
-          alert("Registration and login successful!");
-          setShowTermsModal(false);
-          navigate("/");
-        }, 100);
+        // Update user context immediately without delay
+        await login(googleUserData.email, registerResponse.data.token);
+        alert("Registration and login successful!");
+        setShowTermsModal(false);
+        navigate("/");
       } else {
         // If no token in response, handle appropriately for Google users
         console.warn("No token in registration response");
@@ -136,6 +143,8 @@ export default function GoogleCallbackPage() {
     } catch (error) {
       console.error("Registration error:", error);
       console.error("Error response:", error.response?.data);
+      console.error("Error status:", error.response?.status);
+      console.error("Error message:", error.message);
       
       // Handle specific error cases
       if (error.response?.status === 400) {

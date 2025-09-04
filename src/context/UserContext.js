@@ -78,7 +78,7 @@ export const UserProvider = ({ children }) => {
   const login = async (email, password) => {
     // Google OAuth 사용자의 경우 password가 JWT 토큰일 수 있음
     if (password && password.startsWith('eyJ')) {
-      // JWT 토큰인 경우 (Google OAuth)
+      // JWT 토큰인 경우 (Google OAuth) - 즉시 상태 업데이트
       const role = localStorage.getItem('userRole');
       const name = localStorage.getItem('userName');
       const profileImage = localStorage.getItem('profileImage');
@@ -95,20 +95,25 @@ export const UserProvider = ({ children }) => {
       return { email, name, role };
     } else {
       // 일반 로그인의 경우
-      const userData = await apiLogin(email, password); // auth.js에서 localStorage에 저장
-      // 로그인 성공 후, localStorage에서 다시 읽어와 상태를 설정하여 일관성을 유지합니다.
-      const role = localStorage.getItem('userRole');
-      const name = localStorage.getItem('userName');
-      setUser({
-        isLoggedIn: true,
-        email: userData.email,
-        name: name || userData.name || '',
-        bio: userData.bio || '',
-        profileImage: userData.profileImage && userData.profileImage !== 'null' ? `${backendUrl}${userData.profileImage}` : defaultProfileImage,
-        role: role,
-        memberships: userData.memberships || [],
-      });
-      return userData;
+      try {
+        const userData = await apiLogin(email, password); // auth.js에서 localStorage에 저장
+        // 로그인 성공 후, localStorage에서 다시 읽어와 상태를 설정하여 일관성을 유지합니다.
+        const role = localStorage.getItem('userRole');
+        const name = localStorage.getItem('userName');
+        setUser({
+          isLoggedIn: true,
+          email: userData.email,
+          name: name || userData.name || '',
+          bio: userData.bio || '',
+          profileImage: userData.profileImage && userData.profileImage !== 'null' ? `${backendUrl}${userData.profileImage}` : defaultProfileImage,
+          role: role,
+          memberships: userData.memberships || [],
+        });
+        return userData;
+      } catch (error) {
+        console.error('Login failed:', error);
+        throw error;
+      }
     }
   };
 
