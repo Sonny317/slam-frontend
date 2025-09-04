@@ -71,28 +71,29 @@ export default function GoogleCallbackPage() {
         console.error('Error response status:', error.response?.status);
         console.error('Error response headers:', error.response?.headers);
         
-        // 백엔드에서 400 에러를 반환하지만 실제로는 성공적인 데이터가 있는 경우
-        if (error.response && error.response.data && error.response.data.isNewUser) {
-          console.log('New user detected from error response, showing terms agreement modal');
-          setGoogleUserData(error.response.data.userData);
-          setShowTermsModal(true);
-          setIsProcessing(false);
-        } else if (error.response && error.response.data && error.response.data.token) {
-          // 토큰이 있는 경우 성공으로 처리
-          console.log('Token found in error response, processing as success');
-          localStorage.setItem('jwtToken', error.response.data.token);
-          localStorage.setItem('userEmail', error.response.data.email);
-          localStorage.setItem('userName', error.response.data.name);
-          localStorage.setItem('userRole', error.response.data.role);
-          localStorage.setItem('profileImage', error.response.data.profileImage || '');
-          
-          await login(error.response.data.email, error.response.data.token);
-          navigate('/');
-                 } else {
+                 // 백엔드에서 400 에러를 반환하지만 실제로는 성공적인 데이터가 있는 경우
+         if (error.response && error.response.data && error.response.data.isNewUser) {
+           console.log('New user detected from error response, showing terms agreement modal');
+           setGoogleUserData(error.response.data.userData);
+           setShowTermsModal(true);
+           setIsProcessing(false);
+         } else if (error.response && error.response.data && error.response.data.token) {
+           // 토큰이 있는 경우 성공으로 처리
+           console.log('Token found in error response, processing as success');
+           localStorage.setItem('jwtToken', error.response.data.token);
+           localStorage.setItem('userEmail', error.response.data.email);
+           localStorage.setItem('userName', error.response.data.name);
+           localStorage.setItem('userRole', error.response.data.role);
+           localStorage.setItem('profileImage', error.response.data.profileImage || '');
+           
+           await login(error.response.data.email, error.response.data.token);
+           navigate('/');
+         } else {
            // Google OAuth 오류 메시지 확인
            const errorMessage = error.response?.data?.error || error.message;
+           const requiresRetry = error.response?.data?.requiresRetry || false;
            
-           if (errorMessage.includes('Authorization code expired') || errorMessage.includes('invalid_grant')) {
+           if (errorMessage.includes('Authorization code expired') || errorMessage.includes('invalid_grant') || requiresRetry) {
              setError('Your Google login session has expired. Please try logging in again.');
            } else {
              setError('Google login processing error occurred.');
@@ -270,7 +271,7 @@ export default function GoogleCallbackPage() {
              >
                Go to Login Page
              </button>
-             {error.includes('expired') && (
+             {(error.includes('expired') || error.includes('try logging in again')) && (
                <button
                  onClick={() => window.location.reload()}
                  className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600"
