@@ -68,6 +68,11 @@ export const UserProvider = ({ children }) => {
           }));
         } catch (error) {
           console.error("Failed to fetch user on load, but not logging out for Google OAuth users", error);
+
+          if (error.response?.status === 500) {
+            logout();
+            return;
+          }
           // Google OAuth 사용자의 경우 로그아웃하지 않고 기존 정보 유지
           const token = localStorage.getItem('jwtToken');
           if (token && token.startsWith('eyJ')) {

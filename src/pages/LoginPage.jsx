@@ -106,7 +106,8 @@ export default function LoginPage() {
         privacyPolicyAgreed: formData.privacyPolicyAgreed,
         eventPhotoAgreed: formData.eventPhotoAgreed,
         isGoogleUser: true,
-        googleId: googleUserData.providerId || "google_" + googleUserData.email // Fallback if providerId is null
+        googleId: googleUserData.providerId || "google_" + googleUserData.email, // Fallback if providerId is null
+        profileImage: googleUserData.picture || null
       };
 
       console.log("Sending registration data:", registerData);

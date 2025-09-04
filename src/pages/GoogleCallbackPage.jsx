@@ -123,46 +123,62 @@ export default function GoogleCallbackPage() {
     }
 
     try {
-      // Update user terms agreement status
-      const updateData = {
-        userId: googleUserData.userId,
+      // Create new user with terms agreement (same as LoginPage logic)
+      const registerData = {
+        name: googleUserData.name,
+        email: googleUserData.email,
+        password: "", // Google OAuth users don't have password
         termsOfServiceAgreed: formData.termsOfServiceAgreed,
         privacyPolicyAgreed: formData.privacyPolicyAgreed,
-        eventPhotoAgreed: formData.eventPhotoAgreed
+        eventPhotoAgreed: formData.eventPhotoAgreed,
+        isGoogleUser: true,
+        googleId: googleUserData.providerId || googleUserData.googleId || "google_" + googleUserData.email,
+        profileImage: googleUserData.picture || null
       };
 
-      console.log("Updating terms agreement:", updateData);
+      console.log("Creating new user with terms agreement:", registerData);
 
-      const updateResponse = await axios.post('/auth/update-terms', updateData);
+      const registerResponse = await axios.post('/auth/register', registerData);
       
-      // After successful terms agreement, login immediately
-      if (updateResponse.data && updateResponse.data.token) {
+      console.log("Register response:", registerResponse.data);
+      console.log("Register response token:", registerResponse.data?.token);
+      console.log("Register response type:", typeof registerResponse.data);
+      
+      // After successful registration, login immediately
+      if (registerResponse.data && registerResponse.data.token) {
         // Store token in localStorage
-        localStorage.setItem('jwtToken', updateResponse.data.token);
-        localStorage.setItem('userEmail', updateResponse.data.email);
-        localStorage.setItem('userName', updateResponse.data.name);
-        localStorage.setItem('userRole', updateResponse.data.role);
-        localStorage.setItem('profileImage', updateResponse.data.profileImage || '');
+        localStorage.setItem('jwtToken', registerResponse.data.token);
+        localStorage.setItem('userEmail', registerResponse.data.email);
+        localStorage.setItem('userName', registerResponse.data.name);
+        localStorage.setItem('userRole', registerResponse.data.role);
+        localStorage.setItem('profileImage', registerResponse.data.profileImage || '');
         
         // Update user context immediately without delay
-        await login(googleUserData.email, updateResponse.data.token);
-        alert("Terms agreement and login successful!");
+        await login(googleUserData.email, registerResponse.data.token);
+        alert("Registration and login successful!");
         setShowTermsModal(false);
         navigate("/");
       } else {
-        // If no token in response, handle appropriately
-        console.warn("No token in terms update response");
-        alert("Terms agreement successful! Please contact support for login assistance.");
-        setShowTermsModal(false);
-        navigate("/login");
+        // If no token, try regular login approach
+        try {
+          await login(googleUserData.email, "");
+          alert("Registration successful! You are now logged in.");
+          setShowTermsModal(false);
+          navigate("/");
+        } catch (loginError) {
+          console.error("Auto-login failed:", loginError);
+          alert("Registration successful! Please log in manually.");
+          setShowTermsModal(false);
+          navigate("/login");
+        }
       }
     } catch (error) {
-      console.error("Terms agreement error:", error);
+      console.error("Registration error:", error);
       console.error("Error response:", error.response?.data);
       console.error("Error status:", error.response?.status);
       console.error("Error message:", error.message);
       
-      alert("Terms agreement failed: " + (error.response?.data || error.message));
+      alert("Registration failed: " + (error.response?.data || error.message));
     }
   };
 
