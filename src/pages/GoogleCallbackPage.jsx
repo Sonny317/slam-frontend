@@ -262,24 +262,24 @@ export default function GoogleCallbackPage() {
        <div className="min-h-screen flex flex-col items-center justify-center bg-gray-100">
          <div className="bg-white p-8 rounded shadow-md w-full max-w-md text-center">
            <div className="text-red-500 text-6xl mb-4">❌</div>
-           <h2 className="text-xl font-semibold mb-2 text-red-600">Login Failed</h2>
+                       <h2 className="text-xl font-semibold mb-2 text-red-600">Google Login Failed</h2>
            <p className="text-gray-600 mb-4">{error}</p>
-           <div className="flex gap-3 justify-center">
-             <button
-               onClick={() => window.location.href = '/login'}
-               className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
-             >
-               Go to Login Page
-             </button>
-             {(error.includes('expired') || error.includes('try logging in again')) && (
-               <button
-                 onClick={() => window.location.reload()}
-                 className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600"
-               >
-                 Try Again
-               </button>
-             )}
-           </div>
+                       <div className="flex gap-3 justify-center">
+              <button
+                onClick={() => window.location.href = '/register'}
+                className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+              >
+                Go to Register Page
+              </button>
+              {(error.includes('expired') || error.includes('try logging in again')) && (
+                <button
+                  onClick={() => window.location.reload()}
+                  className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600"
+                >
+                  Try Again
+                </button>
+              )}
+            </div>
          </div>
        </div>
      );
