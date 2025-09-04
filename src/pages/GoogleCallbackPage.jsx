@@ -114,66 +114,56 @@ export default function GoogleCallbackPage() {
     }
 
     try {
-      // Call registration API
-      const registerData = {
-        name: googleUserData.name,
-        email: googleUserData.email,
-        password: null, // Google OAuth users don't have password (null instead of empty string)
-        code: null, // Google OAuth users don't need verification code
+      // Update user terms agreement status
+      const updateData = {
+        userId: googleUserData.userId,
         termsOfServiceAgreed: formData.termsOfServiceAgreed,
         privacyPolicyAgreed: formData.privacyPolicyAgreed,
-        eventPhotoAgreed: formData.eventPhotoAgreed,
-        isGoogleUser: true,
-        googleId: googleUserData.providerId || "google_" + googleUserData.email // Fallback if providerId is null
+        eventPhotoAgreed: formData.eventPhotoAgreed
       };
 
-      console.log("Sending register data:", registerData);
+      console.log("Updating terms agreement:", updateData);
 
-      const registerResponse = await axios.post('/auth/register', registerData);
+      const updateResponse = await axios.post('/auth/update-terms', updateData);
       
-      // After successful registration, login immediately
-      if (registerResponse.data && registerResponse.data.token) {
+      // After successful terms agreement, login immediately
+      if (updateResponse.data && updateResponse.data.token) {
         // Store token in localStorage
-        localStorage.setItem('jwtToken', registerResponse.data.token);
-        localStorage.setItem('userEmail', registerResponse.data.email);
-        localStorage.setItem('userName', registerResponse.data.name);
-        localStorage.setItem('userRole', registerResponse.data.role);
-        localStorage.setItem('profileImage', registerResponse.data.profileImage || '');
+        localStorage.setItem('jwtToken', updateResponse.data.token);
+        localStorage.setItem('userEmail', updateResponse.data.email);
+        localStorage.setItem('userName', updateResponse.data.name);
+        localStorage.setItem('userRole', updateResponse.data.role);
+        localStorage.setItem('profileImage', updateResponse.data.profileImage || '');
         
         // Update user context immediately without delay
-        await login(googleUserData.email, registerResponse.data.token);
-        alert("Registration and login successful!");
+        await login(googleUserData.email, updateResponse.data.token);
+        alert("Terms agreement and login successful!");
         setShowTermsModal(false);
         navigate("/");
       } else {
-        // If no token in response, handle appropriately for Google users
-        console.warn("No token in registration response");
-        alert("Registration successful! Please contact support for login assistance.");
+        // If no token in response, handle appropriately
+        console.warn("No token in terms update response");
+        alert("Terms agreement successful! Please contact support for login assistance.");
         setShowTermsModal(false);
         navigate("/login");
       }
     } catch (error) {
-      console.error("Registration error:", error);
+      console.error("Terms agreement error:", error);
       console.error("Error response:", error.response?.data);
       console.error("Error status:", error.response?.status);
       console.error("Error message:", error.message);
       
-      // Handle specific error cases
-      if (error.response?.status === 400) {
-        const errorMessage = error.response.data;
-        if (typeof errorMessage === 'string' && errorMessage.includes('already exists')) {
-          alert("This email is already registered. Please try logging in instead.");
-          setShowTermsModal(false);
-          navigate("/login");
-        } else {
-          alert("Registration failed: " + errorMessage);
-        }
-      } else if (error.response?.status === 500) {
-        alert("Server error occurred. Please try again later.");
-      } else {
-        alert("Registration failed: " + (error.response?.data || error.message));
-      }
+      alert("Terms agreement failed: " + (error.response?.data || error.message));
     }
+  };
+
+  // Handle all terms agreement at once
+  const handleAllTermsAgreement = () => {
+    setFormData({
+      termsOfServiceAgreed: true,
+      privacyPolicyAgreed: true,
+      eventPhotoAgreed: true,
+    });
   };
 
   // Terms agreement modal component
@@ -190,56 +180,56 @@ export default function GoogleCallbackPage() {
               ✕
             </button>
           </div>
-          <div className="space-y-4 text-sm text-gray-700 mb-6">
-            <p className="text-red-600 font-medium">⚠️ You must agree to the following terms to complete registration:</p>
-            
-            <div className="space-y-3">
-              <label className="flex items-center">
-                <input 
-                  type="checkbox" 
-                  checked={formData.termsOfServiceAgreed} 
-                  onChange={(e) => setFormData(prev => ({...prev, termsOfServiceAgreed: e.target.checked}))} 
-                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded" 
-                />
-                <span className="ml-2">I agree to the Terms of Service (Required)</span>
-              </label>
-              
-              <label className="flex items-center">
-                <input 
-                  type="checkbox" 
-                  checked={formData.privacyPolicyAgreed} 
-                  onChange={(e) => setFormData(prev => ({...prev, privacyPolicyAgreed: e.target.checked}))} 
-                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded" 
-                />
-                <span className="ml-2">I agree to the Privacy Policy (Required)</span>
-              </label>
-              
-              <label className="flex items-center">
-                <input 
-                  type="checkbox" 
-                  checked={formData.eventPhotoAgreed} 
-                  onChange={(e) => setFormData(prev => ({...prev, eventPhotoAgreed: e.target.checked}))} 
-                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded" 
-                />
-                <span className="ml-2">I agree to the use of event photos/videos (Required)</span>
-              </label>
-            </div>
-          </div>
-          
-          <div className="flex gap-3 justify-end">
-            <button 
-              onClick={() => setShowTermsModal(false)}
-              className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
-            >
-              Cancel
-            </button>
-            <button 
-              onClick={handleTermsAgreement}
-              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
-            >
-              Complete Registration
-            </button>
-          </div>
+                     <div className="space-y-4 text-sm text-gray-700 mb-6">
+             <p className="text-red-600 font-medium">⚠️ You must agree to the following terms to complete your account:</p>
+             
+             <div className="space-y-3">
+               <label className="flex items-center">
+                 <input 
+                   type="checkbox" 
+                   checked={formData.termsOfServiceAgreed} 
+                   onChange={(e) => setFormData(prev => ({...prev, termsOfServiceAgreed: e.target.checked}))} 
+                   className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded" 
+                 />
+                 <span className="ml-2">I agree to the Terms of Service (Required)</span>
+               </label>
+               
+               <label className="flex items-center">
+                 <input 
+                   type="checkbox" 
+                   checked={formData.privacyPolicyAgreed} 
+                   onChange={(e) => setFormData(prev => ({...prev, privacyPolicyAgreed: e.target.checked}))} 
+                   className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded" 
+                 />
+                 <span className="ml-2">I agree to the Privacy Policy (Required)</span>
+               </label>
+               
+               <label className="flex items-center">
+                 <input 
+                   type="checkbox" 
+                   checked={formData.eventPhotoAgreed} 
+                   onChange={(e) => setFormData(prev => ({...prev, eventPhotoAgreed: e.target.checked}))} 
+                   className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded" 
+                 />
+                 <span className="ml-2">I agree to the use of event photos/videos (Required)</span>
+               </label>
+             </div>
+           </div>
+           
+           <div className="flex gap-3 justify-end">
+             <button 
+               onClick={handleAllTermsAgreement}
+               className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
+             >
+               Agree to All
+             </button>
+             <button 
+               onClick={handleTermsAgreement}
+               className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+             >
+               Complete
+             </button>
+           </div>
         </div>
       </div>
     </div>
@@ -266,10 +256,10 @@ export default function GoogleCallbackPage() {
            <p className="text-gray-600 mb-4">{error}</p>
                        <div className="flex gap-3 justify-center">
               <button
-                onClick={() => window.location.href = '/register'}
+                onClick={() => window.location.href = '/signup'}
                 className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
               >
-                Go to Register Page
+                Go to Sign Up Page
               </button>
               {(error.includes('expired') || error.includes('try logging in again')) && (
                 <button
