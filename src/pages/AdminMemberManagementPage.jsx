@@ -1,5 +1,5 @@
 // src/pages/AdminMemberManagementPage.jsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import axios from '../api/axios';
 
 // --- 가짜 데이터 (나중에 이 모든 데이터를 백엔드 API로부터 받아옵니다) ---
@@ -34,7 +34,8 @@ const DetailModal = ({ user, onClose, onDeleteMembership }) => (
                 {user?.major && <p><strong>Major:</strong> {user.major}</p>}
                 {user?.professionalStatus && <p><strong>Status:</strong> {user.professionalStatus}</p>}
                 {user?.country && <p><strong>Country:</strong> {user.country}</p>}
-                {user?.paymentMethod && <p><strong>Payment:</strong> {user.paymentMethod === 'transfer' ? `Transfer (${user.bankLast5})` : 'Cash'} - {user.amount} NTD</p>}
+                {user?.paymentMethod && <p><strong>Payment:</strong> {user.paymentMethod === 'transfer' ? `Transfer (${user.bankLast5})` : 'Cash'} - {user.amount || membershipFeeNTD} NTD</p>}
+                {!user?.paymentMethod && user?.membership && <p><strong>Payment:</strong> Cash - {membershipFeeNTD} NTD</p>}
             </div>
             <div className="mt-6 space-y-2">
                 <button onClick={onClose} className="w-full py-2 bg-gray-200 rounded hover:bg-gray-300">Close</button>
@@ -63,6 +64,14 @@ export default function AdminMemberManagementPage() {
   const [members, setMembers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isMobile, setIsMobile] = useState(false);
+  
+  // All Members 탭 필터링 상태 추가
+  const [memberSearch, setMemberSearch] = useState('');
+  const [memberNationalityFilter, setMemberNationalityFilter] = useState('ALL');
+  const [memberSortKey, setMemberSortKey] = useState('name');
+  const [memberCurrentPage, setMemberCurrentPage] = useState(1);
+  const [memberPageSize, setMemberPageSize] = useState(20);
+  
   // 회계 트랜잭션 상태 (지부별)
   const [transactionsByBranch, setTransactionsByBranch] = useState(initialTransactionsByBranch);
   // 신규 트랜잭션 입력값 상태
@@ -95,7 +104,38 @@ export default function AdminMemberManagementPage() {
           console.log('Fetching members for branch:', branchFilter);
           const response = await axios.get(`/api/admin/users/branch?branchName=${branchFilter}&sort=name`);
           console.log('Members API response:', response.data);
-          setMembers(response.data);
+          
+          // 최근 승인된 멤버 정보가 있다면 해당 멤버 정보를 보강
+          const recentlyApproved = localStorage.getItem('recentlyApprovedMember');
+          if (recentlyApproved) {
+            try {
+              const approvedInfo = JSON.parse(recentlyApproved);
+              const enhancedMembers = response.data.map(member => {
+                if (member.email === approvedInfo.email) {
+                  return {
+                    ...member,
+                    studentId: approvedInfo.studentId,
+                    major: approvedInfo.major,
+                    country: approvedInfo.country,
+                    paymentMethod: approvedInfo.paymentMethod,
+                    amount: approvedInfo.amount,
+                    bankLast5: approvedInfo.bankLast5,
+                    phone: approvedInfo.phone,
+                    professionalStatus: approvedInfo.professionalStatus
+                  };
+                }
+                return member;
+              });
+              setMembers(enhancedMembers);
+              // 정보 사용 후 삭제
+              localStorage.removeItem('recentlyApprovedMember');
+            } catch (parseError) {
+              console.error('Failed to parse recently approved member:', parseError);
+              setMembers(response.data);
+            }
+          } else {
+            setMembers(response.data);
+          }
         } else if (activeTab === 'accounting') {
           // Load persisted finance transactions
           const res = await axios.get(`/api/admin/finance?branch=${branchFilter}`);
@@ -115,7 +155,78 @@ export default function AdminMemberManagementPage() {
   const filteredApplications = applications.filter(app => 
     app.selectedBranch === branchFilter && app.status === 'payment_pending'
   );
-  const filteredMembers = Array.isArray(members) ? members : [];
+  
+  // All Members 탭용 필터링 로직
+  const baseMembers = Array.isArray(members) ? members : [];
+  
+  // 국적 목록 추출 (필터링용)
+  const memberNationalities = useMemo(() => {
+    const set = new Set();
+    for (const member of baseMembers) {
+      if (member?.country && member.country.trim()) {
+        set.add(member.country.trim());
+      }
+    }
+    return ['ALL', ...Array.from(set).sort()];
+  }, [baseMembers]);
+  
+  // 멤버 필터링 및 정렬
+  const filteredMembers = useMemo(() => {
+    const searchQuery = memberSearch.trim().toLowerCase();
+    let list = [...baseMembers];
+    
+    // 검색 필터
+    if (searchQuery) {
+      list = list.filter(member =>
+        (member.name || '').toLowerCase().includes(searchQuery) ||
+        (member.email || '').toLowerCase().includes(searchQuery) ||
+        (member.studentId || '').toLowerCase().includes(searchQuery)
+      );
+    }
+    
+    // 국적 필터
+    if (memberNationalityFilter !== 'ALL') {
+      list = list.filter(member => member.country === memberNationalityFilter);
+    }
+    
+    // 정렬
+    const sortBy = (value) => (value == null ? '' : String(value));
+    if (memberSortKey === 'name') {
+      list.sort((a, b) => sortBy(a.name).localeCompare(sortBy(b.name)));
+    } else if (memberSortKey === 'email') {
+      list.sort((a, b) => sortBy(a.email).localeCompare(sortBy(b.email)));
+    } else if (memberSortKey === 'joinedCount') {
+      list.sort((a, b) => (b.joinedCount || 0) - (a.joinedCount || 0));
+    } else if (memberSortKey === 'country') {
+      list.sort((a, b) => sortBy(a.country).localeCompare(sortBy(b.country)));
+    }
+    
+    return list;
+  }, [baseMembers, memberSearch, memberNationalityFilter, memberSortKey]);
+  
+  // 페이지네이션
+  const memberTotalPages = Math.ceil(filteredMembers.length / memberPageSize);
+  const memberStartIndex = (memberCurrentPage - 1) * memberPageSize;
+  const memberEndIndex = memberStartIndex + memberPageSize;
+  const paginatedMembers = filteredMembers.slice(memberStartIndex, memberEndIndex);
+  
+  // 국적별 통계 계산
+  const nationalityStats = useMemo(() => {
+    const stats = { local: 0, international: 0, total: filteredMembers.length };
+    const taiwanKeywords = ['taiwan', 'tw', '대만', '타이완', 'republic of china'];
+    
+    filteredMembers.forEach(member => {
+      const country = (member.country || '').toLowerCase();
+      const isLocal = taiwanKeywords.some(keyword => country.includes(keyword));
+      if (isLocal) {
+        stats.local++;
+      } else {
+        stats.international++;
+      }
+    });
+    
+    return stats;
+  }, [filteredMembers]);
   const filteredTransactions = transactionsByBranch[branchFilter] || [];
 
   const totalRevenue = filteredTransactions
@@ -222,11 +333,72 @@ export default function AdminMemberManagementPage() {
 
   const membershipFeeNTD = 900; // 멤버십 회비 기준 금액
 
+  // ✅ CSV 내보내기 함수
+  const handleExportCSV = (members, branch) => {
+    const headers = [
+      'Name',
+      'Email', 
+      'Student ID',
+      'Major',
+      'Country',
+      'Phone',
+      'Payment Method',
+      'Payment Amount',
+      'Branch',
+      'Events Joined',
+      'Professional Status'
+    ];
+    
+    const csvContent = [
+      headers.join(','),
+      ...members.map(member => [
+        `"${member.name || ''}"`,
+        `"${member.email || ''}"`,
+        `"${member.studentId || ''}"`,
+        `"${member.major || ''}"`,
+        `"${member.country || ''}"`,
+        `"${member.phone || ''}"`,
+        `"${member.paymentMethod ? (member.paymentMethod === 'transfer' ? `Transfer (${member.bankLast5})` : 'Cash') : 'N/A'}"`,
+        `"${member.amount || membershipFeeNTD}"`,
+        `"${member.membership || member.branch || branch}"`,
+        `"${member.joinedCount || 0}"`,
+        `"${member.professionalStatus || ''}"`
+      ].join(','))
+    ].join('\n');
+    
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `SLAM_${branch}_Members_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   // ✅ 신청서 승인 함수 (Reject 제거) + 회계 수입 반영
   const handleApproveApplication = async (application) => {
     try {
       await axios.post(`/api/admin/applications/approve?applicationId=${application.id}`);
       alert('Application approved successfully');
+      
+      // 승인된 멤버 정보를 localStorage에 임시 저장 (상세 정보 전달용)
+      const approvedMemberInfo = {
+        email: application.userEmail || application.email,
+        studentId: application.studentId,
+        major: application.major,
+        country: application.country,
+        paymentMethod: application.paymentMethod,
+        amount: application.amount,
+        bankLast5: application.bankLast5,
+        selectedBranch: application.selectedBranch,
+        userName: application.userName,
+        phone: application.phone,
+        professionalStatus: application.professionalStatus
+      };
+      localStorage.setItem('recentlyApprovedMember', JSON.stringify(approvedMemberInfo));
+      
       // 목록 새로고침
       const response = await axios.get('/api/admin/membership-applications');
       setApplications(response.data);
@@ -241,12 +413,15 @@ export default function AdminMemberManagementPage() {
           type: 'revenue',
           date: new Date().toISOString().slice(0,10),
           item: 'Membership Fee',
-          amount: membershipFeeNTD,
+          amount: application.amount || membershipFeeNTD,
           submittedBy: application.userName || 'System',
         });
         updated[branch] = list;
         return updated;
       });
+      
+      // All Members 탭으로 자동 전환
+      setActiveTab('all_members');
     } catch (error) {
       console.error('Failed to approve application:', error);
       alert('Failed to approve application: ' + (error.response?.data || error.message));
@@ -359,13 +534,91 @@ export default function AdminMemberManagementPage() {
           <div className="bg-white p-4 sm:p-6 rounded-lg shadow-md">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-xl font-semibold">All Active Members in {branchFilter} ({filteredMembers.length})</h2>
+              <button 
+                onClick={() => handleExportCSV(filteredMembers, branchFilter)}
+                className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 font-medium"
+              >
+                Export CSV
+              </button>
+            </div>
+            
+            {/* 필터링 및 통계 섹션 */}
+            <div className="mb-6 space-y-4">
+              {/* 통계 카드 */}
+              <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+                <div className="bg-blue-50 p-3 rounded-lg">
+                  <h3 className="text-sm font-medium text-blue-800">Total Members</h3>
+                  <p className="text-xl font-bold text-blue-900">{nationalityStats.total}</p>
+                </div>
+                <div className="bg-green-50 p-3 rounded-lg">
+                  <h3 className="text-sm font-medium text-green-800">Local (Taiwan)</h3>
+                  <p className="text-xl font-bold text-green-900">{nationalityStats.local}</p>
+                </div>
+                <div className="bg-purple-50 p-3 rounded-lg">
+                  <h3 className="text-sm font-medium text-purple-800">International</h3>
+                  <p className="text-xl font-bold text-purple-900">{nationalityStats.international}</p>
+                </div>
+                <div className="bg-orange-50 p-3 rounded-lg">
+                  <h3 className="text-sm font-medium text-orange-800">Local:Int Ratio</h3>
+                  <p className="text-xl font-bold text-orange-900">
+                    {nationalityStats.total > 0 
+                      ? `${Math.round((nationalityStats.local / nationalityStats.total) * 100)}:${Math.round((nationalityStats.international / nationalityStats.total) * 100)}`
+                      : '0:0'
+                    }
+                  </p>
+                </div>
+              </div>
+              
+              {/* 필터 컨트롤 */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 p-4 bg-gray-50 rounded-lg">
+                <input
+                  value={memberSearch}
+                  onChange={e => setMemberSearch(e.target.value)}
+                  placeholder="Search: Name, Email, Student ID"
+                  className="border rounded px-3 py-2"
+                />
+                <select 
+                  value={memberNationalityFilter} 
+                  onChange={e => setMemberNationalityFilter(e.target.value)} 
+                  className="border rounded px-3 py-2"
+                >
+                  {memberNationalities.map(nationality => (
+                    <option key={nationality} value={nationality}>
+                      {nationality === 'ALL' ? 'All Nationalities' : nationality}
+                    </option>
+                  ))}
+                </select>
+                <select 
+                  value={memberSortKey} 
+                  onChange={e => setMemberSortKey(e.target.value)} 
+                  className="border rounded px-3 py-2"
+                >
+                  <option value="name">Sort: Name</option>
+                  <option value="email">Sort: Email</option>
+                  <option value="country">Sort: Country</option>
+                  <option value="joinedCount">Sort: Events Joined</option>
+                </select>
+                <select 
+                  value={memberPageSize} 
+                  onChange={e => {
+                    setMemberPageSize(Number(e.target.value));
+                    setMemberCurrentPage(1);
+                  }} 
+                  className="border rounded px-3 py-2"
+                >
+                  <option value={10}>10 per page</option>
+                  <option value={20}>20 per page</option>
+                  <option value={50}>50 per page</option>
+                  <option value={100}>100 per page</option>
+                </select>
+              </div>
             </div>
             {loading ? (
               <p className="text-center text-gray-500">Loading members...</p>
             ) : isMobile ? (
               // Mobile Card View for Members
               <div className="space-y-4">
-                {filteredMembers.map(member => (
+                {paginatedMembers.map(member => (
                   <div key={member.id} onClick={() => setSelectedUser(member)} className="bg-gray-50 p-4 rounded-lg border cursor-pointer hover:bg-gray-100">
                     <div className="flex justify-between items-start mb-3">
                       <div className="flex-1">
@@ -395,16 +648,18 @@ export default function AdminMemberManagementPage() {
                       <tr>
                         <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Name</th>
                         <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Email</th>
+                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Country</th>
                         <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Membership</th>
-                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Joined</th>
+                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Events Joined</th>
                         <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Action</th>
                       </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
-                        {filteredMembers.map(member => (
+                        {paginatedMembers.map(member => (
                             <tr key={member.id} onClick={() => setSelectedUser(member)} className="cursor-pointer hover:bg-gray-50">
                                 <td className="px-4 py-2">{member.name}</td>
                                 <td className="px-4 py-2">{member.email}</td>
+                                <td className="px-4 py-2">{member.country || 'N/A'}</td>
                                 <td className="px-4 py-2">{member.membership || member.branch || 'No membership'}</td>
                                 <td className="px-4 py-2 text-xs text-gray-500">{member.joinedCount ?? 0}</td>
                                 <td className="px-4 py-2">
@@ -414,6 +669,31 @@ export default function AdminMemberManagementPage() {
                         ))}
                     </tbody>
                 </table>
+              </div>
+            )}
+            
+            {/* 페이지네이션 */}
+            {memberTotalPages > 1 && (
+              <div className="mt-6 flex justify-center items-center space-x-2">
+                <button
+                  onClick={() => setMemberCurrentPage(prev => Math.max(1, prev - 1))}
+                  disabled={memberCurrentPage === 1}
+                  className="px-3 py-1 border rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100"
+                >
+                  Previous
+                </button>
+                
+                <span className="text-sm text-gray-600">
+                  Page {memberCurrentPage} of {memberTotalPages} ({filteredMembers.length} total members)
+                </span>
+                
+                <button
+                  onClick={() => setMemberCurrentPage(prev => Math.min(memberTotalPages, prev + 1))}
+                  disabled={memberCurrentPage === memberTotalPages}
+                  className="px-3 py-1 border rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100"
+                >
+                  Next
+                </button>
               </div>
             )}
           </div>
