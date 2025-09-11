@@ -30,13 +30,12 @@ const DetailModal = ({ user, onClose, onDeleteMembership, membershipPricing }) =
             <div className="space-y-2 text-sm">
                 <p><strong>Email:</strong> {user?.email || user?.userEmail || 'N/A'}</p>
                 <p><strong>Branch:</strong> {user?.branch || user?.membership || user?.selectedBranch || 'N/A'}</p>
-                {user?.studentId && <p><strong>Student ID:</strong> {user.studentId}</p>}
-                {user?.phone && <p><strong>Phone:</strong> {user.phone}</p>}
-                {user?.major && <p><strong>Major:</strong> {user.major}</p>}
+                <p><strong>Student ID:</strong> {user?.studentId || 'N/A'}</p>
+                <p><strong>Phone:</strong> {user?.phone || 'N/A'}</p>
+                <p><strong>Major:</strong> {user?.major || 'N/A'}</p>
                 {user?.professionalStatus && <p><strong>Status:</strong> {user.professionalStatus}</p>}
-                {user?.country && <p><strong>Country:</strong> {user.country}</p>}
-                {user?.paymentMethod && <p><strong>Payment:</strong> {user.paymentMethod === 'transfer' ? `Transfer (${user.bankLast5})` : 'Cash'} - {user.amount || membershipPricing?.currentPrice || 900} NTD</p>}
-                {!user?.paymentMethod && user?.membership && <p><strong>Payment:</strong> Cash - {membershipPricing?.currentPrice || 900} NTD</p>}
+                <p><strong>Country:</strong> {user?.country || (user?.email && (user.email.includes('.tw') || user.email.includes('nccu') || user.email.includes('ntu')) ? 'Taiwan' : 'N/A')}</p>
+                <p><strong>Payment:</strong> {user?.paymentMethod === 'transfer' ? `Transfer (${user.bankLast5 || 'N/A'})` : 'Cash'} - {user?.amount || 1000} NTD</p>
             </div>
             <div className="mt-6 space-y-2">
                 <button onClick={onClose} className="w-full py-2 bg-gray-200 rounded hover:bg-gray-300">Close</button>
@@ -224,7 +223,13 @@ export default function AdminMemberManagementPage() {
     
     filteredApplications.forEach(app => {
       const country = (app.country || '').toLowerCase();
-      const isLocal = taiwanKeywords.some(keyword => country.includes(keyword));
+      const email = (app.userEmail || app.email || '').toLowerCase();
+      
+      // Country 정보가 있으면 우선 사용, 없으면 이메일로 판단
+      const isLocal = country 
+        ? taiwanKeywords.some(keyword => country.includes(keyword))
+        : (email.includes('.tw') || email.includes('nccu') || email.includes('ntu'));
+        
       if (isLocal) {
         stats.local++;
       } else {
@@ -296,7 +301,13 @@ export default function AdminMemberManagementPage() {
     
     filteredMembers.forEach(member => {
       const country = (member.country || '').toLowerCase();
-      const isLocal = taiwanKeywords.some(keyword => country.includes(keyword));
+      const email = (member.email || '').toLowerCase();
+      
+      // Country 정보가 있으면 우선 사용, 없으면 이메일로 판단
+      const isLocal = country 
+        ? taiwanKeywords.some(keyword => country.includes(keyword))
+        : (email.includes('.tw') || email.includes('nccu') || email.includes('ntu'));
+        
       if (isLocal) {
         stats.local++;
       } else {
@@ -449,15 +460,15 @@ export default function AdminMemberManagementPage() {
     const csvContent = [
       headers.join(','),
       ...members.map(member => [
-        `"${member.name || ''}"`,
-        `"${member.email || ''}"`,
+        `"${member.name || member.userName || ''}"`,
+        `"${member.email || member.userEmail || ''}"`,
         `"${member.studentId || ''}"`,
         `"${member.major || ''}"`,
-        `"${member.country || ''}"`,
+        `"${member.country || (member.email && (member.email.includes('.tw') || member.email.includes('nccu') || member.email.includes('ntu')) ? 'Taiwan' : '')}"`,
         `"${member.phone || ''}"`,
         `"${member.paymentMethod ? (member.paymentMethod === 'transfer' ? `Transfer (${member.bankLast5})` : 'Cash') : 'N/A'}"`,
-        `"${member.amount || membershipPricing.currentPrice}"`,
-        `"${member.membership || member.branch || branch}"`,
+        `"${member.amount || 1000}"`,
+        `"${member.selectedBranch || member.membership || member.branch || branch}"`,
         `"${member.joinedCount || 0}"`,
         `"${member.professionalStatus || ''}"`
       ].join(','))
@@ -863,7 +874,7 @@ export default function AdminMemberManagementPage() {
                             <tr key={member.id} onClick={() => setSelectedUser(member)} className="cursor-pointer hover:bg-gray-50">
                                 <td className="px-4 py-2">{member.name}</td>
                                 <td className="px-4 py-2">{member.email}</td>
-                                <td className="px-4 py-2">{member.country || 'N/A'}</td>
+                                <td className="px-4 py-2">{member.country || (member.email && (member.email.includes('.tw') || member.email.includes('nccu') || member.email.includes('ntu')) ? 'Taiwan' : 'N/A')}</td>
                                 <td className="px-4 py-2">{member.membership || member.branch || 'No membership'}</td>
                                 <td className="px-4 py-2 text-xs text-gray-500">{member.joinedCount ?? 0}</td>
                                 <td className="px-4 py-2">
