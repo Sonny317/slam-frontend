@@ -22,7 +22,8 @@ const initialTransactionsByBranch = {
 // --------------------------------------------------------------------
 
 // --- 상세 정보 팝업(Modal) 컴포넌트 ---
-const DetailModal = ({ user, onClose, onDeleteMembership }) => (
+const DetailModal = ({ user, onClose, onDeleteMembership, membershipPricing }) => {
+  return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50 p-4">
         <div className="bg-white p-6 sm:p-8 rounded-lg shadow-2xl w-full max-w-md">
             <h2 className="text-xl sm:text-2xl font-bold mb-4">{user?.name || user?.userName || 'Unknown User'}</h2>
@@ -34,8 +35,8 @@ const DetailModal = ({ user, onClose, onDeleteMembership }) => (
                 {user?.major && <p><strong>Major:</strong> {user.major}</p>}
                 {user?.professionalStatus && <p><strong>Status:</strong> {user.professionalStatus}</p>}
                 {user?.country && <p><strong>Country:</strong> {user.country}</p>}
-                {user?.paymentMethod && <p><strong>Payment:</strong> {user.paymentMethod === 'transfer' ? `Transfer (${user.bankLast5})` : 'Cash'} - {user.amount || membershipFeeNTD} NTD</p>}
-                {!user?.paymentMethod && user?.membership && <p><strong>Payment:</strong> Cash - {membershipFeeNTD} NTD</p>}
+                {user?.paymentMethod && <p><strong>Payment:</strong> {user.paymentMethod === 'transfer' ? `Transfer (${user.bankLast5})` : 'Cash'} - {user.amount || membershipPricing?.currentPrice || 900} NTD</p>}
+                {!user?.paymentMethod && user?.membership && <p><strong>Payment:</strong> Cash - {membershipPricing?.currentPrice || 900} NTD</p>}
             </div>
             <div className="mt-6 space-y-2">
                 <button onClick={onClose} className="w-full py-2 bg-gray-200 rounded hover:bg-gray-300">Close</button>
@@ -54,7 +55,8 @@ const DetailModal = ({ user, onClose, onDeleteMembership }) => (
             </div>
         </div>
     </div>
-);
+  );
+};
 
 export default function AdminMemberManagementPage() {
   const [activeTab, setActiveTab] = useState('approvals');
@@ -71,6 +73,13 @@ export default function AdminMemberManagementPage() {
   const [memberSortKey, setMemberSortKey] = useState('name');
   const [memberCurrentPage, setMemberCurrentPage] = useState(1);
   const [memberPageSize, setMemberPageSize] = useState(20);
+  
+  // Pending Approval 탭 필터링 상태 추가
+  const [approvalSearch, setApprovalSearch] = useState('');
+  const [approvalNationalityFilter, setApprovalNationalityFilter] = useState('ALL');
+  const [approvalSortKey, setApprovalSortKey] = useState('userName');
+  const [approvalCurrentPage, setApprovalCurrentPage] = useState(1);
+  const [approvalPageSize, setApprovalPageSize] = useState(20);
   
   // 회계 트랜잭션 상태 (지부별)
   const [transactionsByBranch, setTransactionsByBranch] = useState(initialTransactionsByBranch);
@@ -134,7 +143,7 @@ export default function AdminMemberManagementPage() {
               setMembers(response.data);
             }
           } else {
-            setMembers(response.data);
+          setMembers(response.data);
           }
         } else if (activeTab === 'accounting') {
           // Load persisted finance transactions
@@ -152,9 +161,79 @@ export default function AdminMemberManagementPage() {
     fetchData();
   }, [activeTab, branchFilter]);
 
-  const filteredApplications = applications.filter(app => 
+  // Pending Approval 탭용 필터링 로직
+  const baseApplications = applications.filter(app => 
     app.selectedBranch === branchFilter && app.status === 'payment_pending'
   );
+  
+  // 신청 국적 목록 추출 (필터링용)
+  const approvalNationalities = useMemo(() => {
+    const set = new Set();
+    for (const app of baseApplications) {
+      if (app?.country && app.country.trim()) {
+        set.add(app.country.trim());
+      }
+    }
+    return ['ALL', ...Array.from(set).sort()];
+  }, [baseApplications]);
+  
+  // 신청 필터링 및 정렬
+  const filteredApplications = useMemo(() => {
+    const searchQuery = approvalSearch.trim().toLowerCase();
+    let list = [...baseApplications];
+    
+    // 검색 필터
+    if (searchQuery) {
+      list = list.filter(app =>
+        (app.userName || '').toLowerCase().includes(searchQuery) ||
+        (app.userEmail || app.email || '').toLowerCase().includes(searchQuery) ||
+        (app.studentId || '').toLowerCase().includes(searchQuery)
+      );
+    }
+    
+    // 국적 필터
+    if (approvalNationalityFilter !== 'ALL') {
+      list = list.filter(app => app.country === approvalNationalityFilter);
+    }
+    
+    // 정렬
+    const sortBy = (value) => (value == null ? '' : String(value));
+    if (approvalSortKey === 'userName') {
+      list.sort((a, b) => sortBy(a.userName).localeCompare(sortBy(b.userName)));
+    } else if (approvalSortKey === 'email') {
+      list.sort((a, b) => sortBy(a.userEmail || a.email).localeCompare(sortBy(b.userEmail || b.email)));
+    } else if (approvalSortKey === 'country') {
+      list.sort((a, b) => sortBy(a.country).localeCompare(sortBy(b.country)));
+    } else if (approvalSortKey === 'paymentMethod') {
+      list.sort((a, b) => sortBy(a.paymentMethod).localeCompare(sortBy(b.paymentMethod)));
+    }
+    
+    return list;
+  }, [baseApplications, approvalSearch, approvalNationalityFilter, approvalSortKey]);
+  
+  // 신청 페이지네이션
+  const approvalTotalPages = Math.ceil(filteredApplications.length / approvalPageSize);
+  const approvalStartIndex = (approvalCurrentPage - 1) * approvalPageSize;
+  const approvalEndIndex = approvalStartIndex + approvalPageSize;
+  const paginatedApplications = filteredApplications.slice(approvalStartIndex, approvalEndIndex);
+  
+  // 신청 국적별 통계 계산
+  const approvalNationalityStats = useMemo(() => {
+    const stats = { local: 0, international: 0, total: filteredApplications.length };
+    const taiwanKeywords = ['taiwan', 'tw', '대만', '타이완', 'republic of china'];
+    
+    filteredApplications.forEach(app => {
+      const country = (app.country || '').toLowerCase();
+      const isLocal = taiwanKeywords.some(keyword => country.includes(keyword));
+      if (isLocal) {
+        stats.local++;
+      } else {
+        stats.international++;
+      }
+    });
+    
+    return stats;
+  }, [filteredApplications]);
   
   // All Members 탭용 필터링 로직
   const baseMembers = Array.isArray(members) ? members : [];
@@ -331,7 +410,25 @@ export default function AdminMemberManagementPage() {
     }
   };
 
-  const membershipFeeNTD = 900; // 멤버십 회비 기준 금액
+  // 동적 멤버십 가격 상태
+  const [membershipPricing, setMembershipPricing] = useState({ currentPrice: 900, earlyBirdPrice: 800, regularPrice: 900 });
+  const membershipFeeNTD = membershipPricing.currentPrice; // 멤버십 회비 기준 금액
+  
+  // 멤버십 가격 정보 가져오기
+  useEffect(() => {
+    const fetchMembershipPricing = async () => {
+      try {
+        const response = await axios.get(`/api/membership/pricing?branch=${branchFilter}`);
+        setMembershipPricing(response.data);
+        console.log('Membership pricing for', branchFilter, ':', response.data);
+      } catch (error) {
+        console.error('Failed to fetch membership pricing:', error);
+        // 기본값 유지
+      }
+    };
+    
+    fetchMembershipPricing();
+  }, [branchFilter]);
 
   // ✅ CSV 내보내기 함수
   const handleExportCSV = (members, branch) => {
@@ -359,7 +456,7 @@ export default function AdminMemberManagementPage() {
         `"${member.country || ''}"`,
         `"${member.phone || ''}"`,
         `"${member.paymentMethod ? (member.paymentMethod === 'transfer' ? `Transfer (${member.bankLast5})` : 'Cash') : 'N/A'}"`,
-        `"${member.amount || membershipFeeNTD}"`,
+        `"${member.amount || membershipPricing.currentPrice}"`,
         `"${member.membership || member.branch || branch}"`,
         `"${member.joinedCount || 0}"`,
         `"${member.professionalStatus || ''}"`
@@ -431,7 +528,7 @@ export default function AdminMemberManagementPage() {
   return (
     <div className="min-h-screen bg-gray-100 p-4 sm:p-8">
       <div className="max-w-7xl mx-auto">
-        {selectedUser && <DetailModal user={selectedUser} onClose={() => setSelectedUser(null)} onDeleteMembership={handleDeleteMembership} />}
+        {selectedUser && <DetailModal user={selectedUser} onClose={() => setSelectedUser(null)} onDeleteMembership={handleDeleteMembership} membershipPricing={membershipPricing} />}
         {viewReceiptUrl && (
           <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4" onClick={() => setViewReceiptUrl('')}>
             <div className="bg-white p-4 rounded-lg shadow-2xl max-w-3xl w-full" onClick={(e) => e.stopPropagation()}>
@@ -481,13 +578,93 @@ export default function AdminMemberManagementPage() {
       <div className="mt-8">
         {activeTab === 'approvals' && (
           <div className="bg-white p-4 sm:p-6 rounded-lg shadow-md">
-            <h2 className="text-xl font-semibold mb-4">Pending Approvals for {branchFilter} ({filteredApplications.length})</h2>
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-semibold">Pending Approvals for {branchFilter} ({filteredApplications.length})</h2>
+              <button 
+                onClick={() => handleExportCSV(filteredApplications, `${branchFilter}_Pending`)}
+                className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 font-medium"
+              >
+                Export Pending CSV
+              </button>
+            </div>
+            
+            {/* 필터링 및 통계 섹션 */}
+            <div className="mb-6 space-y-4">
+              {/* 통계 카드 */}
+              <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+                <div className="bg-yellow-50 p-3 rounded-lg">
+                  <h3 className="text-sm font-medium text-yellow-800">Total Pending</h3>
+                  <p className="text-xl font-bold text-yellow-900">{approvalNationalityStats.total}</p>
+                </div>
+                <div className="bg-green-50 p-3 rounded-lg">
+                  <h3 className="text-sm font-medium text-green-800">Local Applications</h3>
+                  <p className="text-xl font-bold text-green-900">{approvalNationalityStats.local}</p>
+                </div>
+                <div className="bg-purple-50 p-3 rounded-lg">
+                  <h3 className="text-sm font-medium text-purple-800">International Apps</h3>
+                  <p className="text-xl font-bold text-purple-900">{approvalNationalityStats.international}</p>
+                </div>
+                <div className="bg-orange-50 p-3 rounded-lg">
+                  <h3 className="text-sm font-medium text-orange-800">Local:Int Ratio</h3>
+                  <p className="text-xl font-bold text-orange-900">
+                    {approvalNationalityStats.total > 0 
+                      ? `${Math.round((approvalNationalityStats.local / approvalNationalityStats.total) * 100)}:${Math.round((approvalNationalityStats.international / approvalNationalityStats.total) * 100)}`
+                      : '0:0'
+                    }
+                  </p>
+                </div>
+              </div>
+              
+              {/* 필터 컨트롤 */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 p-4 bg-gray-50 rounded-lg">
+                <input
+                  value={approvalSearch}
+                  onChange={e => setApprovalSearch(e.target.value)}
+                  placeholder="Search: Name, Email, Student ID"
+                  className="border rounded px-3 py-2"
+                />
+                <select 
+                  value={approvalNationalityFilter} 
+                  onChange={e => setApprovalNationalityFilter(e.target.value)} 
+                  className="border rounded px-3 py-2"
+                >
+                  {approvalNationalities.map(nationality => (
+                    <option key={nationality} value={nationality}>
+                      {nationality === 'ALL' ? 'All Nationalities' : nationality}
+                    </option>
+                  ))}
+                </select>
+                <select 
+                  value={approvalSortKey} 
+                  onChange={e => setApprovalSortKey(e.target.value)} 
+                  className="border rounded px-3 py-2"
+                >
+                  <option value="userName">Sort: Name</option>
+                  <option value="email">Sort: Email</option>
+                  <option value="country">Sort: Country</option>
+                  <option value="paymentMethod">Sort: Payment Method</option>
+                </select>
+                <select 
+                  value={approvalPageSize} 
+                  onChange={e => {
+                    setApprovalPageSize(Number(e.target.value));
+                    setApprovalCurrentPage(1);
+                  }} 
+                  className="border rounded px-3 py-2"
+                >
+                  <option value={10}>10 per page</option>
+                  <option value={20}>20 per page</option>
+                  <option value={50}>50 per page</option>
+                  <option value={100}>100 per page</option>
+                </select>
+              </div>
+            </div>
             {loading ? (
               <p className="text-center text-gray-500">Loading applications...</p>
             ) : isMobile ? (
               // Mobile Card View for Approvals
               <div className="space-y-4">
-                {filteredApplications.map(app => (
+                {paginatedApplications.map(app => (
                   <div key={app.id} onClick={() => setSelectedUser(app)} className="bg-gray-50 p-4 rounded-lg border cursor-pointer hover:bg-gray-100">
                     <div className="flex justify-between items-start mb-3">
                       <div className="flex-1">
@@ -512,11 +689,13 @@ export default function AdminMemberManagementPage() {
               // Desktop Table View for Approvals
               <div className="overflow-x-auto">
                 <table className="min-w-full divide-y divide-gray-200">
-                    <thead className="bg-gray-50"><tr><th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Name</th><th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Status</th><th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Payment</th><th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Action</th></tr></thead>
+                    <thead className="bg-gray-50"><tr><th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Name</th><th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Email</th><th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Country</th><th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Status</th><th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Payment</th><th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Action</th></tr></thead>
                     <tbody className="bg-white divide-y divide-gray-200">
-                        {filteredApplications.map(app => (
+                        {paginatedApplications.map(app => (
                             <tr key={app.id} onClick={() => setSelectedUser(app)} className="cursor-pointer hover:bg-gray-50">
                                 <td className="px-4 py-2">{app.userName || 'Unknown'}</td>
+                                <td className="px-4 py-2">{app.userEmail || app.email || 'N/A'}</td>
+                                <td className="px-4 py-2">{app.country || 'N/A'}</td>
                                 <td className="px-4 py-2"><span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-800">{app.status}</span></td>
                                 <td className="px-4 py-2">{app.paymentMethod === 'transfer' ? `Transfer (${app.bankLast5})` : 'Cash'}</td>
                                 <td className="px-4 py-2">
@@ -526,6 +705,31 @@ export default function AdminMemberManagementPage() {
                         ))}
                     </tbody>
                 </table>
+              </div>
+            )}
+            
+            {/* 페이지네이션 */}
+            {approvalTotalPages > 1 && (
+              <div className="mt-6 flex justify-center items-center space-x-2">
+                <button
+                  onClick={() => setApprovalCurrentPage(prev => Math.max(1, prev - 1))}
+                  disabled={approvalCurrentPage === 1}
+                  className="px-3 py-1 border rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100"
+                >
+                  Previous
+                </button>
+                
+                <span className="text-sm text-gray-600">
+                  Page {approvalCurrentPage} of {approvalTotalPages} ({filteredApplications.length} pending applications)
+                </span>
+                
+                <button
+                  onClick={() => setApprovalCurrentPage(prev => Math.min(approvalTotalPages, prev + 1))}
+                  disabled={approvalCurrentPage === approvalTotalPages}
+                  className="px-3 py-1 border rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100"
+                >
+                  Next
+                </button>
               </div>
             )}
           </div>
