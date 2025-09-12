@@ -23,20 +23,88 @@ const initialTransactionsByBranch = {
 
 // --- 상세 정보 팝업(Modal) 컴포넌트 ---
 const DetailModal = ({ user, onClose, onDeleteMembership, membershipPricing }) => {
+  // Helper function to get branches (same as Staff Info)
+  const getActiveBranches = (member) => {
+    if (member?.role === 'ADMIN' || member?.role === 'PRESIDENT') {
+      return ['NCCU', 'NTU', 'TAIPEI'];
+    }
+    
+    const set = new Set();
+    const str = (member?.membership || member?.branch || member?.selectedBranch || '').trim();
+    if (str) set.add(str);
+    if (Array.isArray(member?.memberships)) {
+      for (const um of member.memberships) {
+        const b = (um?.branchName || '').trim();
+        const status = (um?.status || '').toUpperCase();
+        if (b && (status === 'ACTIVE' || status === '')) set.add(b);
+      }
+    }
+    return Array.from(set);
+  };
+  
+  const branches = getActiveBranches(user);
+  
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50 p-4">
-        <div className="bg-white p-6 sm:p-8 rounded-lg shadow-2xl w-full max-w-md">
-            <h2 className="text-xl sm:text-2xl font-bold mb-4">{user?.name || user?.userName || 'Unknown User'}</h2>
-            <div className="space-y-2 text-sm">
-                <p><strong>Email:</strong> {user?.email || user?.userEmail || 'N/A'}</p>
-                <p><strong>Branch:</strong> {user?.branch || user?.membership || user?.selectedBranch || 'N/A'}</p>
-                <p><strong>Student ID:</strong> {user?.studentId || 'N/A'}</p>
-                <p><strong>Phone:</strong> {user?.phone || 'N/A'}</p>
-                <p><strong>Major:</strong> {user?.major || 'N/A'}</p>
-                {user?.professionalStatus && <p><strong>Status:</strong> {user.professionalStatus}</p>}
-                <p><strong>Country:</strong> {user?.country || (user?.email && (user.email.includes('.tw') || user.email.includes('nccu') || user.email.includes('ntu')) ? 'Taiwan' : 'N/A')}</p>
-                <p><strong>Payment:</strong> {user?.paymentMethod === 'transfer' ? `Transfer (${user.bankLast5 || 'N/A'})` : 'Cash'} - {user?.amount || 1000} NTD</p>
+        <div className="bg-white p-6 sm:p-8 rounded-lg shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-4">
+                <h2 className="text-xl sm:text-2xl font-bold">{user?.name || user?.userName || 'Unknown User'}</h2>
+                <button 
+                    onClick={onClose}
+                    className="text-gray-400 hover:text-gray-600 text-2xl font-bold"
+                >
+                    ×
+                </button>
             </div>
+            
+            <div className="space-y-3 text-sm">
+                <div className="grid grid-cols-1 gap-3">
+                    {/* Email */}
+                    <div className="p-3 bg-gray-50 rounded">
+                        <p><strong>Email:</strong> {user?.email || user?.userEmail || 'N/A'}</p>
+                    </div>
+                    
+                    {/* Role */}
+                    <div className="p-3 bg-gray-50 rounded">
+                        <p><strong>Role:</strong> {user?.role || 'MEMBER'}</p>
+                    </div>
+                    
+                    {/* Branch */}
+                    <div className="p-3 bg-gray-50 rounded">
+                        <p><strong>Branch:</strong> {branches.join(', ') || 'N/A'}</p>
+                    </div>
+                    
+                    {/* Student ID */}
+                    <div className="p-3 bg-gray-50 rounded">
+                        <p><strong>Student ID:</strong> {user?.studentId || 'N/A'}</p>
+                    </div>
+                    
+                    {/* Phone */}
+                    <div className="p-3 bg-gray-50 rounded">
+                        <p><strong>Phone:</strong> {user?.phone || 'N/A'}</p>
+                    </div>
+                    
+                    {/* Major */}
+                    <div className="p-3 bg-gray-50 rounded">
+                        <p><strong>Major:</strong> {user?.major || 'N/A'}</p>
+                    </div>
+                    
+                    {/* Nationality - N/A means Taiwan */}
+                    <div className="p-3 bg-gray-50 rounded">
+                        <p><strong>Nationality:</strong> {(() => {
+                            // Pending Approval users have country field, All Members have nationality field
+                            const nationalityValue = user?.nationality || user?.country;
+                            return nationalityValue === 'N/A' || !nationalityValue ? 'Taiwan' : nationalityValue;
+                        })()}</p>
+                    </div>
+                    
+                    {/* Payment */}
+                    <div className="p-3 bg-gray-50 rounded">
+                        <p><strong>Payment:</strong> {user?.paymentMethod ? `${user.paymentMethod === 'transfer' ? `Transfer (${user.bankLast5 || 'N/A'})` : 'Cash'} - ${user?.amount || 1000} NTD` : 'N/A'}</p>
+                    </div>
+                </div>
+            </div>
+            
             <div className="mt-6 space-y-2">
                 <button onClick={onClose} className="w-full py-2 bg-gray-200 rounded hover:bg-gray-300">Close</button>
                 {onDeleteMembership && (
@@ -110,7 +178,7 @@ export default function AdminMemberManagementPage() {
           setApplications(response.data);
         } else if (activeTab === 'all_members') {
           console.log('Fetching members for branch:', branchFilter);
-          const response = await axios.get(`/api/admin/users/branch?branchName=${branchFilter}&sort=name`);
+          const response = await axios.get('/api/admin/users?sort=name');
           console.log('Members API response:', response.data);
           
           // 최근 승인된 멤버 정보가 있다면 해당 멤버 정보를 보강
@@ -173,7 +241,13 @@ export default function AdminMemberManagementPage() {
         set.add(app.country.trim());
       }
     }
-    return ['ALL', ...Array.from(set).sort()];
+    const sortedList = Array.from(set).sort();
+    // Add Taiwan if not already present (for N/A cases)
+    if (!sortedList.includes('Taiwan')) {
+      sortedList.push('Taiwan');
+      sortedList.sort();
+    }
+    return ['ALL', ...sortedList];
   }, [baseApplications]);
   
   // 신청 필터링 및 정렬
@@ -192,7 +266,10 @@ export default function AdminMemberManagementPage() {
     
     // 국적 필터
     if (approvalNationalityFilter !== 'ALL') {
-      list = list.filter(app => app.country === approvalNationalityFilter);
+      list = list.filter(app => {
+        const displayCountry = app.country === 'N/A' || !app.country ? 'Taiwan' : app.country;
+        return displayCountry === approvalNationalityFilter;
+      });
     }
     
     // 정렬
@@ -223,12 +300,11 @@ export default function AdminMemberManagementPage() {
     
     filteredApplications.forEach(app => {
       const country = (app.country || '').toLowerCase();
-      const email = (app.userEmail || app.email || '').toLowerCase();
       
-      // Country 정보가 있으면 우선 사용, 없으면 이메일로 판단
-      const isLocal = country 
-        ? taiwanKeywords.some(keyword => country.includes(keyword))
-        : (email.includes('.tw') || email.includes('nccu') || email.includes('ntu'));
+      // N/A means Taiwan (LOCAL STUDENT choice during signup)
+      const isLocal = (!app.country || app.country === 'N/A') 
+        ? true // N/A means Taiwan (local)
+        : taiwanKeywords.some(keyword => country.includes(keyword));
         
       if (isLocal) {
         stats.local++;
@@ -241,17 +317,48 @@ export default function AdminMemberManagementPage() {
   }, [filteredApplications]);
   
   // All Members 탭용 필터링 로직
-  const baseMembers = Array.isArray(members) ? members : [];
+  const allMembers = Array.isArray(members) ? members : [];
   
-  // 국적 목록 추출 (필터링용)
+  // Staff Info처럼 지부별 필터링 추가 (클라이언트 사이드)
+  const getActiveBranches = (member) => {
+    if (member?.role === 'ADMIN' || member?.role === 'PRESIDENT') {
+      return ['NCCU', 'NTU', 'TAIPEI'];
+    }
+    
+    const set = new Set();
+    const str = (member?.membership || '').trim();
+    if (str) set.add(str);
+    if (Array.isArray(member?.memberships)) {
+      for (const um of member.memberships) {
+        const b = (um?.branchName || '').trim();
+        const status = (um?.status || '').toUpperCase();
+        if (b && (status === 'ACTIVE' || status === '')) set.add(b);
+      }
+    }
+    return Array.from(set);
+  };
+  
+  // 지부별 필터링된 멤버 (Staff Info와 동일한 로직)
+  const baseMembers = allMembers.filter(member => {
+    const branches = getActiveBranches(member);
+    return branches.includes(branchFilter);
+  });
+  
+  // 국적 목록 추출 (필터링용) - Staff Info처럼 nationality 필드 사용
   const memberNationalities = useMemo(() => {
     const set = new Set();
     for (const member of baseMembers) {
-      if (member?.country && member.country.trim()) {
-        set.add(member.country.trim());
+      if (member?.nationality && member.nationality.trim()) {
+        set.add(member.nationality.trim());
       }
     }
-    return ['ALL', ...Array.from(set).sort()];
+    const sortedList = Array.from(set).sort();
+    // Add Taiwan if not already present (for N/A cases)
+    if (!sortedList.includes('Taiwan')) {
+      sortedList.push('Taiwan');
+      sortedList.sort();
+    }
+    return ['ALL', ...sortedList];
   }, [baseMembers]);
   
   // 멤버 필터링 및 정렬
@@ -268,9 +375,12 @@ export default function AdminMemberManagementPage() {
       );
     }
     
-    // 국적 필터
+    // 국적 필터 - Staff Info처럼 nationality 필드 사용
     if (memberNationalityFilter !== 'ALL') {
-      list = list.filter(member => member.country === memberNationalityFilter);
+      list = list.filter(member => {
+        const displayNationality = member.nationality === 'N/A' || !member.nationality ? 'Taiwan' : member.nationality;
+        return displayNationality === memberNationalityFilter;
+      });
     }
     
     // 정렬
@@ -282,7 +392,19 @@ export default function AdminMemberManagementPage() {
     } else if (memberSortKey === 'joinedCount') {
       list.sort((a, b) => (b.joinedCount || 0) - (a.joinedCount || 0));
     } else if (memberSortKey === 'country') {
-      list.sort((a, b) => sortBy(a.country).localeCompare(sortBy(b.country)));
+      list.sort((a, b) => sortBy(a.nationality).localeCompare(sortBy(b.nationality)));
+    } else if (memberSortKey === 'joinDate') {
+      list.sort((a, b) => {
+        const dateA = new Date(a.createdAt || 0);
+        const dateB = new Date(b.createdAt || 0);
+        return dateB - dateA; // 최신순 (내림차순)
+      });
+    } else if (memberSortKey === 'joinDateOldest') {
+      list.sort((a, b) => {
+        const dateA = new Date(a.createdAt || 0);
+        const dateB = new Date(b.createdAt || 0);
+        return dateA - dateB; // 오래된순 (오름차순)
+      });
     }
     
     return list;
@@ -300,13 +422,12 @@ export default function AdminMemberManagementPage() {
     const taiwanKeywords = ['taiwan', 'tw', '대만', '타이완', 'republic of china'];
     
     filteredMembers.forEach(member => {
-      const country = (member.country || '').toLowerCase();
-      const email = (member.email || '').toLowerCase();
+      const nationality = (member.nationality || '').toLowerCase();
       
-      // Country 정보가 있으면 우선 사용, 없으면 이메일로 판단
-      const isLocal = country 
-        ? taiwanKeywords.some(keyword => country.includes(keyword))
-        : (email.includes('.tw') || email.includes('nccu') || email.includes('ntu'));
+      // N/A means Taiwan (LOCAL STUDENT choice during signup)
+      const isLocal = (!member.nationality || member.nationality === 'N/A') 
+        ? true // N/A means Taiwan (local)
+        : taiwanKeywords.some(keyword => nationality.includes(keyword));
         
       if (isLocal) {
         stats.local++;
@@ -444,11 +565,12 @@ export default function AdminMemberManagementPage() {
   // ✅ CSV 내보내기 함수
   const handleExportCSV = (members, branch) => {
     const headers = [
+      'Timeline',
       'Name',
       'Email', 
       'Student ID',
       'Major',
-      'Country',
+      'Nationality',
       'Phone',
       'Payment Method',
       'Payment Amount',
@@ -460,11 +582,12 @@ export default function AdminMemberManagementPage() {
     const csvContent = [
       headers.join(','),
       ...members.map(member => [
+        `"${member.createdAt ? new Date(member.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) : 'Unknown'}"`,
         `"${member.name || member.userName || ''}"`,
         `"${member.email || member.userEmail || ''}"`,
         `"${member.studentId || ''}"`,
         `"${member.major || ''}"`,
-        `"${member.country || (member.email && (member.email.includes('.tw') || member.email.includes('nccu') || member.email.includes('ntu')) ? 'Taiwan' : '')}"`,
+        `"${member.nationality === 'N/A' || !member.nationality ? 'Taiwan' : (member.nationality || '')}"`,
         `"${member.phone || ''}"`,
         `"${member.paymentMethod ? (member.paymentMethod === 'transfer' ? `Transfer (${member.bankLast5})` : 'Cash') : 'N/A'}"`,
         `"${member.amount || 1000}"`,
@@ -652,7 +775,7 @@ export default function AdminMemberManagementPage() {
                 >
                   <option value="userName">Sort: Name</option>
                   <option value="email">Sort: Email</option>
-                  <option value="country">Sort: Country</option>
+                  <option value="country">Sort: Nationality</option>
                   <option value="paymentMethod">Sort: Payment Method</option>
                 </select>
                 <select 
@@ -700,13 +823,13 @@ export default function AdminMemberManagementPage() {
               // Desktop Table View for Approvals
               <div className="overflow-x-auto">
                 <table className="min-w-full divide-y divide-gray-200">
-                    <thead className="bg-gray-50"><tr><th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Name</th><th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Email</th><th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Country</th><th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Status</th><th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Payment</th><th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Action</th></tr></thead>
+                    <thead className="bg-gray-50"><tr><th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Name</th><th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Email</th><th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Nationality</th><th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Status</th><th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Payment</th><th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Action</th></tr></thead>
                     <tbody className="bg-white divide-y divide-gray-200">
                         {paginatedApplications.map(app => (
                             <tr key={app.id} onClick={() => setSelectedUser(app)} className="cursor-pointer hover:bg-gray-50">
                                 <td className="px-4 py-2">{app.userName || 'Unknown'}</td>
                                 <td className="px-4 py-2">{app.userEmail || app.email || 'N/A'}</td>
-                                <td className="px-4 py-2">{app.country || 'N/A'}</td>
+                                <td className="px-4 py-2">{app.country === 'N/A' || !app.country ? 'Taiwan' : app.country}</td>
                                 <td className="px-4 py-2"><span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-800">{app.status}</span></td>
                                 <td className="px-4 py-2">{app.paymentMethod === 'transfer' ? `Transfer (${app.bankLast5})` : 'Cash'}</td>
                                 <td className="px-4 py-2">
@@ -810,8 +933,10 @@ export default function AdminMemberManagementPage() {
                 >
                   <option value="name">Sort: Name</option>
                   <option value="email">Sort: Email</option>
-                  <option value="country">Sort: Country</option>
+                  <option value="country">Sort: Nationality</option>
                   <option value="joinedCount">Sort: Events Joined</option>
+                  <option value="joinDate">Sort: Join Date (Newest)</option>
+                  <option value="joinDateOldest">Sort: Join Date (Oldest)</option>
                 </select>
                 <select 
                   value={memberPageSize} 
@@ -839,7 +964,22 @@ export default function AdminMemberManagementPage() {
                       <div className="flex-1">
                         <h3 className="font-semibold text-gray-900">{member.name}</h3>
                         <p className="text-sm text-gray-600">{member.email}</p>
-                        <p className="text-sm text-gray-500">{member.membership || member.branch || 'No membership'}</p>
+                        <p className="text-sm text-gray-500">{(() => {
+                            if (member?.role === 'ADMIN' || member?.role === 'PRESIDENT') {
+                              return ['NCCU', 'NTU', 'TAIPEI'].join(', ');
+                            }
+                            const set = new Set();
+                            const str = (member?.membership || member?.branch || '').trim();
+                            if (str) set.add(str);
+                            if (Array.isArray(member?.memberships)) {
+                              for (const um of member.memberships) {
+                                const b = (um?.branchName || '').trim();
+                                const status = (um?.status || '').toUpperCase();
+                                if (b && (status === 'ACTIVE' || status === '')) set.add(b);
+                              }
+                            }
+                            return Array.from(set).join(', ') || 'No membership';
+                          })()}</p>
                         <p className="text-xs text-gray-500">Joined: {member.joinedCount ?? 0}</p>
                       </div>
                     </div>
@@ -863,7 +1003,7 @@ export default function AdminMemberManagementPage() {
                       <tr>
                         <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Name</th>
                         <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Email</th>
-                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Country</th>
+                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Nationality</th>
                         <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Membership</th>
                         <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Events Joined</th>
                         <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Action</th>
@@ -874,8 +1014,23 @@ export default function AdminMemberManagementPage() {
                             <tr key={member.id} onClick={() => setSelectedUser(member)} className="cursor-pointer hover:bg-gray-50">
                                 <td className="px-4 py-2">{member.name}</td>
                                 <td className="px-4 py-2">{member.email}</td>
-                                <td className="px-4 py-2">{member.country || (member.email && (member.email.includes('.tw') || member.email.includes('nccu') || member.email.includes('ntu')) ? 'Taiwan' : 'N/A')}</td>
-                                <td className="px-4 py-2">{member.membership || member.branch || 'No membership'}</td>
+                                <td className="px-4 py-2">{member.nationality === 'N/A' || !member.nationality ? 'Taiwan' : member.nationality}</td>
+                                <td className="px-4 py-2">{(() => {
+                                  if (member?.role === 'ADMIN' || member?.role === 'PRESIDENT') {
+                                    return ['NCCU', 'NTU', 'TAIPEI'].join(', ');
+                                  }
+                                  const set = new Set();
+                                  const str = (member?.membership || member?.branch || '').trim();
+                                  if (str) set.add(str);
+                                  if (Array.isArray(member?.memberships)) {
+                                    for (const um of member.memberships) {
+                                      const b = (um?.branchName || '').trim();
+                                      const status = (um?.status || '').toUpperCase();
+                                      if (b && (status === 'ACTIVE' || status === '')) set.add(b);
+                                    }
+                                  }
+                                  return Array.from(set).join(', ') || 'No membership';
+                                })()}</td>
                                 <td className="px-4 py-2 text-xs text-gray-500">{member.joinedCount ?? 0}</td>
                                 <td className="px-4 py-2">
                                   <button onClick={(e) => { e.stopPropagation(); handleDeleteMembership(member.id, branchFilter); }} className="bg-red-500 text-white text-xs font-bold py-1 px-3 rounded-full hover:bg-red-600">Delete Membership</button>

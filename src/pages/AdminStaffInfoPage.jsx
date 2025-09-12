@@ -61,32 +61,29 @@ const UserDetailModal = ({ user, onClose, onDeleteMembership }) => {
             </div>
             
             {/* Student ID */}
-            {user?.studentId && (
-              <div className="p-3 bg-gray-50 rounded">
-                <p><strong>Student ID:</strong> {user.studentId}</p>
-              </div>
-            )}
+            <div className="p-3 bg-gray-50 rounded">
+              <p><strong>Student ID:</strong> {user?.studentId || 'N/A'}</p>
+            </div>
             
             {/* Phone */}
-            {user?.phone && (
-              <div className="p-3 bg-gray-50 rounded">
-                <p><strong>Phone:</strong> {user.phone}</p>
-              </div>
-            )}
+            <div className="p-3 bg-gray-50 rounded">
+              <p><strong>Phone:</strong> {user?.phone || 'N/A'}</p>
+            </div>
             
             {/* Major */}
-            {user?.major && (
-              <div className="p-3 bg-gray-50 rounded">
-                <p><strong>Major:</strong> {user.major}</p>
-              </div>
-            )}
+            <div className="p-3 bg-gray-50 rounded">
+              <p><strong>Major:</strong> {user?.major || 'N/A'}</p>
+            </div>
+            
+            {/* Nationality */}
+            <div className="p-3 bg-gray-50 rounded">
+              <p><strong>Nationality:</strong> {user?.nationality === 'N/A' || !user?.nationality ? 'Taiwan' : user.nationality}</p>
+            </div>
             
             {/* Payment */}
-            {user?.paymentMethod && (
-              <div className="p-3 bg-gray-50 rounded">
-                <p><strong>Payment:</strong> {user.paymentMethod === 'transfer' ? `Transfer (${user.bankLast5 || 'N/A'})` : 'Cash'} - {user.amount || 'N/A'} NTD</p>
-              </div>
-            )}
+            <div className="p-3 bg-gray-50 rounded">
+              <p><strong>Payment:</strong> {user?.paymentMethod ? `${user.paymentMethod === 'transfer' ? `Transfer (${user.bankLast5 || 'N/A'})` : 'Cash'} - ${user.amount || 1000} NTD` : 'N/A'}</p>
+            </div>
             
             {/* Additional Info */}
             {user?.affiliation && (
@@ -237,7 +234,13 @@ export default function AdminStaffInfoPage() {
         set.add(m.nationality.trim());
       }
     }
-    return ['ALL', ...Array.from(set).sort((a, b) => a.localeCompare(b))];
+    const sortedList = Array.from(set).sort((a, b) => a.localeCompare(b));
+    // Add Taiwan if not already present (for N/A cases)
+    if (!sortedList.includes('Taiwan')) {
+      sortedList.push('Taiwan');
+      sortedList.sort((a, b) => a.localeCompare(b));
+    }
+    return ['ALL', ...sortedList];
   }, [members]);
 
   // Role options
@@ -264,7 +267,10 @@ export default function AdminStaffInfoPage() {
     }
 
     if (nationalityFilter !== 'ALL') {
-      list = list.filter(m => m.nationality === nationalityFilter);
+      list = list.filter(m => {
+        const displayNationality = m.nationality === 'N/A' || !m.nationality ? 'Taiwan' : m.nationality;
+        return displayNationality === nationalityFilter;
+      });
     }
 
     const by = (v) => (v == null ? '' : String(v));
@@ -335,19 +341,40 @@ export default function AdminStaffInfoPage() {
   }, [members]);
 
   const exportCsv = () => {
-    const header = ['Name', 'Email', 'Role', 'Branch'];
+    const header = [
+      'Timeline',
+      'Name',
+      'Email',
+      'Student ID',
+      'Major',
+      'Nationality',
+      'Phone',
+      'Payment Method',
+      'Payment Amount',
+      'Branch',
+      'Events Joined',
+      'Professional Status'
+    ];
     const rows = filteredMembers.map(m => [
+      m.createdAt ? new Date(m.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) : 'Unknown',
       m.name || '',
       m.email || '',
-      m.role || '',
-      getActiveBranches(m).join(', ')
+      m.studentId || '',
+      m.major || '',
+      m.nationality === 'N/A' || !m.nationality ? 'Taiwan' : (m.nationality || ''),
+      m.phone || '',
+      m.paymentMethod ? (m.paymentMethod === 'transfer' ? `Transfer (${m.bankLast5 || 'N/A'})` : 'Cash') : 'N/A',
+      m.amount || 1000,
+      getActiveBranches(m).join(', '),
+      '0', // Events Joined - Staff Info doesn't track this
+      m.professionalStatus || ''
     ]);
     const csv = [header, ...rows].map(r => r.map(x => `"${String(x).replace(/"/g, '""')}"`).join(',')).join('\n');
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'members.csv';
+    a.download = 'staff_members.csv';
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -552,7 +579,7 @@ export default function AdminStaffInfoPage() {
                 </div>
                 <div className="text-sm text-gray-600 mb-3 space-y-1">
                   <div><span className="font-medium">Branch:</span> {getActiveBranches(member).join(', ') || '-'}</div>
-                  <div><span className="font-medium">Nationality:</span> {member.nationality || '-'}</div>
+                  <div><span className="font-medium">Nationality:</span> {member.nationality === 'N/A' || !member.nationality ? 'Taiwan' : member.nationality}</div>
                   <div><span className="font-medium">Joined:</span> {member.createdAt ? new Date(member.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) : 'Unknown'}</div>
                 </div>
                 {(() => {
@@ -621,7 +648,7 @@ export default function AdminStaffInfoPage() {
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">{getActiveBranches(member).join(', ') || '-'}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{member.nationality || '-'}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{member.nationality === 'N/A' || !member.nationality ? 'Taiwan' : member.nationality}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
                     {member.createdAt ? new Date(member.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) : 'Unknown'}
                   </td>
