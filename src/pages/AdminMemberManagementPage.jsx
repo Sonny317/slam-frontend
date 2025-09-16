@@ -22,7 +22,7 @@ const initialTransactionsByBranch = {
 // --------------------------------------------------------------------
 
 // --- 상세 정보 팝업(Modal) 컴포넌트 ---
-const DetailModal = ({ user, onClose, onDeleteMembership, membershipPricing }) => {
+const DetailModal = ({ user, onClose, onDeleteMembership, onDeleteApplication, membershipPricing, branchFilter, isApplication = false }) => {
   // Helper function to get branches (same as Staff Info)
   const getActiveBranches = (member) => {
     if (member?.role === 'ADMIN' || member?.role === 'PRESIDENT') {
@@ -61,8 +61,8 @@ const DetailModal = ({ user, onClose, onDeleteMembership, membershipPricing }) =
                 <div className="grid grid-cols-1 gap-3">
                     {/* Email */}
                     <div className="p-3 bg-gray-50 rounded">
-                        <p><strong>Email:</strong> {user?.email || user?.userEmail || 'N/A'}</p>
-                    </div>
+                <p><strong>Email:</strong> {user?.email || user?.userEmail || 'N/A'}</p>
+            </div>
                     
                     {/* Role */}
                     <div className="p-3 bg-gray-50 rounded">
@@ -107,22 +107,37 @@ const DetailModal = ({ user, onClose, onDeleteMembership, membershipPricing }) =
             
             <div className="mt-6 space-y-2">
                 <button onClick={onClose} className="w-full py-2 bg-gray-200 rounded hover:bg-gray-300">Close</button>
-                {onDeleteMembership && (
+                {isApplication ? (
+                    onDeleteApplication && (
+                        <button 
+                            onClick={() => {
+                                if (window.confirm(`Are you sure you want to delete ${user?.userName || 'this application'}?`)) {
+                                    onDeleteApplication(user.id);
+                                }
+                            }} 
+                            className="w-full py-2 bg-red-500 text-white rounded hover:bg-red-600"
+                        >
+                            Delete Application
+                        </button>
+                    )
+                ) : (
+                    onDeleteMembership && (
                     <button 
                         onClick={() => {
                             if (window.confirm(`Are you sure you want to delete ${user?.name || user?.userName || 'this user'}'s membership?`)) {
-                                onDeleteMembership(user.id, user?.branch || user?.selectedBranch);
+                                    onDeleteMembership(user.id, branchFilter);
                             }
                         }} 
                         className="w-full py-2 bg-red-500 text-white rounded hover:bg-red-600"
                     >
                         Delete Membership
                     </button>
+                    )
                 )}
             </div>
         </div>
     </div>
-  );
+);
 };
 
 export default function AdminMemberManagementPage() {
@@ -207,7 +222,7 @@ export default function AdminMemberManagementPage() {
               localStorage.removeItem('recentlyApprovedMember');
             } catch (parseError) {
               console.error('Failed to parse recently approved member:', parseError);
-              setMembers(response.data);
+          setMembers(response.data);
             }
           } else {
           setMembers(response.data);
@@ -462,8 +477,8 @@ export default function AdminMemberManagementPage() {
     try {
       await axios.delete(`/api/admin/users/memberships?userId=${userId}&branchName=${branchName}`);
       alert('Membership deleted successfully');
-      // 목록 새로고침
-      const response = await axios.get(`/api/admin/users/branch?branchName=${branchFilter}`);
+      // 목록 새로고침 - All Members는 /api/admin/users 사용
+      const response = await axios.get('/api/admin/users?sort=name');
       setMembers(response.data);
       setSelectedUser(null);
     } catch (error) {
@@ -472,25 +487,132 @@ export default function AdminMemberManagementPage() {
     }
   };
 
-  // ✅ 모든 멤버십 초기화 함수 (테스트용)
-  const handleResetAllMemberships = async () => {
-    if (!window.confirm('Are you sure you want to reset ALL user memberships? This will clear all membership data.')) {
+  // ✅ 체크박스 관련 함수들
+  const handleSelectMember = (memberId) => {
+    const newSelected = new Set(selectedMembers);
+    if (newSelected.has(memberId)) {
+      newSelected.delete(memberId);
+    } else {
+      newSelected.add(memberId);
+    }
+    setSelectedMembers(newSelected);
+    setSelectAll(newSelected.size === filteredMembers.length);
+  };
+  
+  const handleSelectAll = () => {
+    if (selectAll) {
+      setSelectedMembers(new Set());
+    } else {
+      setSelectedMembers(new Set(filteredMembers.map(m => m.id)));
+    }
+    setSelectAll(!selectAll);
+  };
+  
+  const handleBulkDelete = async () => {
+    if (selectedMembers.size === 0) {
+      alert('Please select members to delete.');
+      return;
+    }
+    
+    if (!window.confirm(`Are you sure you want to delete ${selectedMembers.size} membership(s)?`)) {
       return;
     }
     
     try {
-      const response = await axios.post('/api/admin/reset-memberships');
-      alert(response.data);
+      const deletePromises = Array.from(selectedMembers).map(memberId => {
+        const member = members.find(m => m.id === memberId);
+        if (member) {
+          const branchName = member?.branch || member?.selectedBranch || branchFilter;
+          return axios.delete(`/api/admin/users/memberships?userId=${memberId}&branchName=${branchName}`);
+        }
+        return Promise.resolve();
+      });
+      
+      await Promise.all(deletePromises);
+      alert(`${selectedMembers.size} membership(s) deleted successfully`);
+      
       // 목록 새로고침
-      if (activeTab === 'all_members') {
-        const membersResponse = await axios.get(`/api/admin/users/branch?branchName=${branchFilter}`);
-        setMembers(membersResponse.data);
-      }
+      const response = await axios.get('/api/admin/users?sort=name');
+      setMembers(response.data);
+      setSelectedMembers(new Set());
+      setSelectAll(false);
     } catch (error) {
-      console.error('Failed to reset memberships:', error);
-      alert('Failed to reset memberships');
+      console.error('Failed to delete memberships:', error);
+      alert('Failed to delete some memberships');
     }
   };
+  
+  // ✅ Pending Approvals 체크박스 관련 함수들
+  const handleSelectApplication = (applicationId) => {
+    const newSelected = new Set(selectedApplications);
+    if (newSelected.has(applicationId)) {
+      newSelected.delete(applicationId);
+    } else {
+      newSelected.add(applicationId);
+    }
+    setSelectedApplications(newSelected);
+    setSelectAllApplications(newSelected.size === filteredApplications.length);
+  };
+  
+  const handleSelectAllApplications = () => {
+    if (selectAllApplications) {
+      setSelectedApplications(new Set());
+    } else {
+      setSelectedApplications(new Set(filteredApplications.map(a => a.id)));
+    }
+    setSelectAllApplications(!selectAllApplications);
+  };
+  
+  // ✅ 개별 신청서 삭제 함수 (reject API 사용)
+  const handleDeleteApplication = async (applicationId) => {
+    if (!window.confirm('Are you sure you want to delete this application?')) {
+      return;
+    }
+    
+    try {
+      // reject API를 사용하여 신청서를 거부 (삭제 효과)
+      await axios.post(`/api/admin/applications/reject?applicationId=${applicationId}`);
+      alert('Application deleted successfully');
+      
+      // 목록 새로고침
+      const response = await axios.get('/api/admin/membership-applications');
+      setApplications(response.data);
+      setSelectedUser(null);
+    } catch (error) {
+      console.error('Failed to delete application:', error);
+      alert('Failed to delete application');
+    }
+  };
+  
+  const handleBulkDeleteApplications = async () => {
+    if (selectedApplications.size === 0) {
+      alert('Please select applications to delete.');
+      return;
+    }
+    
+    if (!window.confirm(`Are you sure you want to delete ${selectedApplications.size} application(s)?`)) {
+      return;
+    }
+    
+    try {
+      const deletePromises = Array.from(selectedApplications).map(applicationId => {
+        return axios.post(`/api/admin/applications/reject?applicationId=${applicationId}`);
+      });
+      
+      await Promise.all(deletePromises);
+      alert(`${selectedApplications.size} application(s) deleted successfully`);
+      
+      // 목록 새로고침
+      const response = await axios.get('/api/admin/membership-applications');
+      setApplications(response.data);
+      setSelectedApplications(new Set());
+      setSelectAllApplications(false);
+    } catch (error) {
+      console.error('Failed to delete applications:', error);
+      alert('Failed to delete some applications');
+    }
+  };
+
 
   // 회계: 지출 상태 업데이트 (지급 완료 처리 등)
   const handleMarkExpensePaid = async (expenseId) => {
@@ -545,6 +667,14 @@ export default function AdminMemberManagementPage() {
   // 동적 멤버십 가격 상태
   const [membershipPricing, setMembershipPricing] = useState({ currentPrice: 900, earlyBirdPrice: 800, regularPrice: 900 });
   const membershipFeeNTD = membershipPricing.currentPrice; // 멤버십 회비 기준 금액
+  
+  // 체크박스 상태 관리
+  const [selectedMembers, setSelectedMembers] = useState(new Set());
+  const [selectAll, setSelectAll] = useState(false);
+  
+  // Pending Approvals 체크박스 상태 관리
+  const [selectedApplications, setSelectedApplications] = useState(new Set());
+  const [selectAllApplications, setSelectAllApplications] = useState(false);
   
   // 멤버십 가격 정보 가져오기
   useEffect(() => {
@@ -662,7 +792,15 @@ export default function AdminMemberManagementPage() {
   return (
     <div className="min-h-screen bg-gray-100 p-4 sm:p-8">
       <div className="max-w-7xl mx-auto">
-        {selectedUser && <DetailModal user={selectedUser} onClose={() => setSelectedUser(null)} onDeleteMembership={handleDeleteMembership} membershipPricing={membershipPricing} />}
+        {selectedUser && <DetailModal 
+          user={selectedUser} 
+          onClose={() => setSelectedUser(null)} 
+          onDeleteMembership={handleDeleteMembership}
+          onDeleteApplication={handleDeleteApplication}
+          membershipPricing={membershipPricing} 
+          branchFilter={branchFilter}
+          isApplication={activeTab === 'approvals'}
+        />}
         {viewReceiptUrl && (
           <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4" onClick={() => setViewReceiptUrl('')}>
             <div className="bg-white p-4 rounded-lg shadow-2xl max-w-3xl w-full" onClick={(e) => e.stopPropagation()}>
@@ -688,15 +826,6 @@ export default function AdminMemberManagementPage() {
         </select>
       </div>
 
-      {/* Reset All Memberships Button */}
-      <div className="mb-6">
-        <button 
-          onClick={handleResetAllMemberships}
-          className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600 font-medium"
-        >
-          Reset All Memberships (Test)
-        </button>
-      </div>
 
       <div className="border-b border-gray-200">
         <nav className="-mb-px flex gap-6 overflow-x-auto">
@@ -714,12 +843,22 @@ export default function AdminMemberManagementPage() {
           <div className="bg-white p-4 sm:p-6 rounded-lg shadow-md">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-xl font-semibold">Pending Approvals for {branchFilter} ({filteredApplications.length})</h2>
-              <button 
-                onClick={() => handleExportCSV(filteredApplications, `${branchFilter}_Pending`)}
-                className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 font-medium"
-              >
-                Export Pending CSV
-              </button>
+              <div className="flex gap-2">
+                {selectedApplications.size > 0 && (
+                  <button 
+                    onClick={handleBulkDeleteApplications}
+                    className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600 font-medium"
+                  >
+                    Delete Selected ({selectedApplications.size})
+                  </button>
+                )}
+                <button 
+                  onClick={() => handleExportCSV(filteredApplications, `${branchFilter}_Pending`)}
+                  className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 font-medium"
+                >
+                  Export Pending CSV
+                </button>
+              </div>
             </div>
             
             {/* 필터링 및 통계 섹션 */}
@@ -823,17 +962,31 @@ export default function AdminMemberManagementPage() {
               // Desktop Table View for Approvals
               <div className="overflow-x-auto">
                 <table className="min-w-full divide-y divide-gray-200">
-                    <thead className="bg-gray-50"><tr><th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Name</th><th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Email</th><th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Nationality</th><th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Status</th><th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Payment</th><th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Action</th></tr></thead>
+                    <thead className="bg-gray-50"><tr><th className="px-4 py-2 text-left text-xs font-medium text-gray-500"><input type="checkbox" checked={selectAllApplications} onChange={handleSelectAllApplications} className="rounded border-gray-300 text-blue-600 focus:ring-blue-500" /></th><th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Name</th><th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Email</th><th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Nationality</th><th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Status</th><th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Payment</th><th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Action</th></tr></thead>
                     <tbody className="bg-white divide-y divide-gray-200">
                         {paginatedApplications.map(app => (
-                            <tr key={app.id} onClick={() => setSelectedUser(app)} className="cursor-pointer hover:bg-gray-50">
-                                <td className="px-4 py-2">{app.userName || 'Unknown'}</td>
-                                <td className="px-4 py-2">{app.userEmail || app.email || 'N/A'}</td>
-                                <td className="px-4 py-2">{app.country === 'N/A' || !app.country ? 'Taiwan' : app.country}</td>
-                                <td className="px-4 py-2"><span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-800">{app.status}</span></td>
-                                <td className="px-4 py-2">{app.paymentMethod === 'transfer' ? `Transfer (${app.bankLast5})` : 'Cash'}</td>
+                            <tr key={app.id} className="hover:bg-gray-50">
                                 <td className="px-4 py-2">
+                                  <input 
+                                    type="checkbox" 
+                                    checked={selectedApplications.has(app.id)}
+                                    onChange={(e) => {
+                                      e.stopPropagation();
+                                      handleSelectApplication(app.id);
+                                    }}
+                                    className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                  />
+                                </td>
+                                <td className="px-4 py-2 cursor-pointer" onClick={() => setSelectedUser(app)}>{app.userName || 'Unknown'}</td>
+                                <td className="px-4 py-2 cursor-pointer" onClick={() => setSelectedUser(app)}>{app.userEmail || app.email || 'N/A'}</td>
+                                <td className="px-4 py-2 cursor-pointer" onClick={() => setSelectedUser(app)}>{app.country === 'N/A' || !app.country ? 'Taiwan' : app.country}</td>
+                                <td className="px-4 py-2 cursor-pointer" onClick={() => setSelectedUser(app)}><span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-800">{app.status}</span></td>
+                                <td className="px-4 py-2 cursor-pointer" onClick={() => setSelectedUser(app)}>{app.paymentMethod === 'transfer' ? `Transfer (${app.bankLast5})` : 'Cash'}</td>
+                                <td className="px-4 py-2">
+                                  <div className="flex gap-2">
                                   <button onClick={(e) => { e.stopPropagation(); handleApproveApplication(app); }} className="bg-green-500 text-white text-xs font-bold py-1 px-3 rounded-full hover:bg-green-600">Approve</button>
+                                    <button onClick={(e) => { e.stopPropagation(); handleDeleteApplication(app.id); }} className="bg-red-500 text-white text-xs font-bold py-1 px-3 rounded-full hover:bg-red-600">Delete</button>
+                                  </div>
                                 </td>
                             </tr>
                         ))}
@@ -872,12 +1025,22 @@ export default function AdminMemberManagementPage() {
           <div className="bg-white p-4 sm:p-6 rounded-lg shadow-md">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-xl font-semibold">All Active Members in {branchFilter} ({filteredMembers.length})</h2>
-              <button 
-                onClick={() => handleExportCSV(filteredMembers, branchFilter)}
-                className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 font-medium"
-              >
-                Export CSV
-              </button>
+              <div className="flex gap-2">
+                {selectedMembers.size > 0 && (
+                  <button 
+                    onClick={handleBulkDelete}
+                    className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600 font-medium"
+                  >
+                    Delete Selected ({selectedMembers.size})
+                  </button>
+                )}
+                <button 
+                  onClick={() => handleExportCSV(filteredMembers, branchFilter)}
+                  className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 font-medium"
+                >
+                  Export CSV
+                </button>
+              </div>
             </div>
             
             {/* 필터링 및 통계 섹션 */}
@@ -1001,6 +1164,14 @@ export default function AdminMemberManagementPage() {
                 <table className="min-w-full divide-y divide-gray-200">
                     <thead className="bg-gray-50">
                       <tr>
+                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">
+                          <input 
+                            type="checkbox" 
+                            checked={selectAll}
+                            onChange={handleSelectAll}
+                            className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                          />
+                        </th>
                         <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Name</th>
                         <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Email</th>
                         <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Nationality</th>
@@ -1011,11 +1182,22 @@ export default function AdminMemberManagementPage() {
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
                         {paginatedMembers.map(member => (
-                            <tr key={member.id} onClick={() => setSelectedUser(member)} className="cursor-pointer hover:bg-gray-50">
-                                <td className="px-4 py-2">{member.name}</td>
-                                <td className="px-4 py-2">{member.email}</td>
-                                <td className="px-4 py-2">{member.nationality === 'N/A' || !member.nationality ? 'Taiwan' : member.nationality}</td>
-                                <td className="px-4 py-2">{(() => {
+                            <tr key={member.id} className="hover:bg-gray-50">
+                                <td className="px-4 py-2">
+                                  <input 
+                                    type="checkbox" 
+                                    checked={selectedMembers.has(member.id)}
+                                    onChange={(e) => {
+                                      e.stopPropagation();
+                                      handleSelectMember(member.id);
+                                    }}
+                                    className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                  />
+                                </td>
+                                <td className="px-4 py-2 cursor-pointer" onClick={() => setSelectedUser(member)}>{member.name}</td>
+                                <td className="px-4 py-2 cursor-pointer" onClick={() => setSelectedUser(member)}>{member.email}</td>
+                                <td className="px-4 py-2 cursor-pointer" onClick={() => setSelectedUser(member)}>{member.nationality === 'N/A' || !member.nationality ? 'Taiwan' : member.nationality}</td>
+                                <td className="px-4 py-2 cursor-pointer" onClick={() => setSelectedUser(member)}>{(() => {
                                   if (member?.role === 'ADMIN' || member?.role === 'PRESIDENT') {
                                     return ['NCCU', 'NTU', 'TAIPEI'].join(', ');
                                   }
@@ -1031,7 +1213,7 @@ export default function AdminMemberManagementPage() {
                                   }
                                   return Array.from(set).join(', ') || 'No membership';
                                 })()}</td>
-                                <td className="px-4 py-2 text-xs text-gray-500">{member.joinedCount ?? 0}</td>
+                                <td className="px-4 py-2 text-xs text-gray-500 cursor-pointer" onClick={() => setSelectedUser(member)}>{member.joinedCount ?? 0}</td>
                                 <td className="px-4 py-2">
                                   <button onClick={(e) => { e.stopPropagation(); handleDeleteMembership(member.id, branchFilter); }} className="bg-red-500 text-white text-xs font-bold py-1 px-3 rounded-full hover:bg-red-600">Delete Membership</button>
                                 </td>

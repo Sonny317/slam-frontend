@@ -97,6 +97,9 @@ export default function EventDetailPage() {
     if (!user.isLoggedIn) {
       return alert("Login is required.");
     }
+    
+    // 중복 신청 방지 로직 제거 - 사용자가 RSVP를 수정할 수 있도록 허용
+    
     try {
       console.log("Making API call to /api/events/rsvp");
       const response = await axios.post(`/api/events/rsvp?eventId=${eventId}`, {
@@ -114,7 +117,12 @@ export default function EventDetailPage() {
 
     } catch (error) {
       console.error("RSVP API error:", error);
-      alert("RSVP 처리 중 오류가 발생했습니다: " + (error.response?.data?.message || "다시 시도해주세요."));
+      // 중복 신청 에러 처리
+      if (error.response?.status === 409) {
+        alert("You have already registered for this event.");
+      } else {
+        alert("RSVP 처리 중 오류가 발생했습니다: " + (error.response?.data?.message || "다시 시도해주세요."));
+      }
     }
   };
 
@@ -184,9 +192,6 @@ export default function EventDetailPage() {
   return (
     <div className="bg-gray-50 py-12">
       <div className="max-w-4xl mx-auto bg-white rounded-lg shadow-lg overflow-hidden">
-        
-        <img src={eventData.imageUrl || "/default_event_image.jpg"} alt="Event" className="w-full h-64 object-cover" />
-
         <div className="p-8">
           <div className="flex items-start justify-between mb-4">
             <h1 className="text-3xl font-bold text-gray-900 flex-1">{eventData.title}</h1>
