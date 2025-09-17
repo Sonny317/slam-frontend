@@ -1,10 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import axios from '../api/axios';
 import { useUser } from '../context/UserContext'; // ✅ UserContext를 임포트합니다.
 
 export default function AdminDashboardPage() {
-  const [applications, setApplications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [events, setEvents] = useState([]);
   const [selectedEvent, setSelectedEvent] = useState(null);
@@ -20,6 +19,8 @@ export default function AdminDashboardPage() {
   const [attendeeSortOrder, setAttendeeSortOrder] = useState('asc');
   const [showEventDetailsModal, setShowEventDetailsModal] = useState(false);
   const [eventDetailsData, setEventDetailsData] = useState(null);
+  const [filteredAttendees, setFilteredAttendees] = useState([]);
+  const [showAttendeeModal, setShowAttendeeModal] = useState(false);
   // const { refetchUser } = useUser(); // refetchUser 함수가 UserContext에 없으므로 주석 처리
 
   // 화면 크기 감지
@@ -37,10 +38,6 @@ export default function AdminDashboardPage() {
     const fetchData = async () => {
       setLoading(true);
       try {
-        // 멤버십 신청 목록 가져오기
-        const applicationsResponse = await axios.get('/api/admin/membership-applications');
-        setApplications(applicationsResponse.data.filter(app => app.status === 'payment_pending'));
-        
         // 이벤트 목록 가져오기 (upcoming events only)
         const eventsResponse = await axios.get('/api/admin/events');
         const now = new Date();
@@ -65,45 +62,138 @@ export default function AdminDashboardPage() {
     fetchData();
   }, []);
 
-  const handleApprove = async (applicationId, userName, branch) => {
-    try {
-      await axios.post(`/api/admin/applications/approve?applicationId=${applicationId}`);
-      alert(`${userName}'s application for ${branch} has been approved.`);
-      setApplications(prev => prev.filter(app => app.id !== applicationId));
-      
-      // ✅ 승인 성공 후, 신청 목록을 새로고침합니다.
-      const response = await axios.get('/api/admin/membership-applications');
-      setApplications(response.data.filter(app => app.status === 'payment_pending'));
-
-    } catch (error) {
-      console.error("Failed to approve application:", error);
-      alert("승인 처리 중 오류가 발생했습니다.");
-    }
-  };
-
   // ✅ 이벤트 선택 시 통계 가져오기
-  const handleEventSelect = async (eventId) => {
+  const handleEventSelect = useCallback(async (eventId) => {
     if (!eventId) return;
     
+    console.log("🔍 handleEventSelect called with eventId:", eventId);
     setLoadingStats(true);
     try {
-      const response = await axios.get(`/api/admin/events/attendance-stats?eventId=${eventId}`);
-      setEventStats(response.data);
+      console.log("📡 Fetching stats for eventId:", eventId);
+      
+      // 선택된 이벤트에서 지부 정보 가져오기
+      const selectedEventData = events.find(event => event.id === eventId);
+      const branch = selectedEventData?.branch;
+      const capacity = selectedEventData?.capacity || 0;
+      
+      if (!branch) {
+        console.error("❌ No branch found for event:", selectedEventData);
+        return;
+      }
+      
+      // 병렬로 데이터 가져오기
+      const [attendeesResponse, membersResponse] = await Promise.all([
+        axios.get(`/api/admin/events/attendees?eventId=${eventId}`),
+        axios.get(`/api/admin/users/branch?branchName=${branch}`)
+      ]);
+      
+      console.log("👥 Attendees response:", attendeesResponse.data);
+      console.log("👥 Members response:", membersResponse.data);
+      
+      const attendees = attendeesResponse.data || [];
+      const totalMembers = membersResponse.data?.length || 0; // 해당 지부의 전체 멤버 수
+      
+      // 🔍 디버깅: 실제 데이터 구조 확인
+      console.log("🔍 Sample attendee data:", attendees[0]);
+      console.log("🔍 All attendees attending values:", attendees.map(a => ({ 
+        name: a.name, 
+        attending: a.attending, 
+        attendingType: typeof a.attending,
+        attendingValue: a.attending === true ? 'TRUE' : a.attending === false ? 'FALSE' : 'OTHER'
+      })));
+      
+      // RSVP 통계 계산 - 백엔드 수정 후 정상 작동
+      const attendingCount = attendees.filter(attendee => attendee.attending === true).length; // "Count me in" 누른 사람들
+      const notAttendingCount = attendees.filter(attendee => attendee.attending === false).length; // "Maybe next time" 누른 사람들
+      const afterPartyCount = attendees.filter(attendee => attendee.afterParty === true).length; // After Party 참석자
+      
+      // No RSVP 계산: 전체 멤버 수 - (참석자 + 비참석자)
+      const noRsvpCount = totalMembers - (attendingCount + notAttendingCount);
+      
+      // 국제/로컬 비율 계산 (Will Attend 멤버들만 기준)
+      const attendingMembers = attendees.filter(attendee => attendee.attending === true);
+      const localAttendingCount = attendingMembers.filter(attendee => {
+        // Event management 페이지와 동일한 로직 적용
+        const displayNationality = attendee.nationality === 'N/A' || !attendee.nationality ? 'Taiwan' : attendee.nationality;
+        return displayNationality === 'Taiwan';
+      }).length || 0;
+      
+      const internationalAttendingCount = attendingCount - localAttendingCount;
+      const localIntAttendingRatio = internationalAttendingCount > 0 ? `${localAttendingCount}:${internationalAttendingCount}` : `${localAttendingCount}:0`;
+      
+      const stats = {
+        eventId: eventId,
+        eventTitle: selectedEventData?.title || '',
+        totalRsvps: totalMembers, // 해당 지부의 전체 멤버 수 (Total Registered)
+        attendingCount: attendingCount, // "Count me in" 누른 사람들
+        notAttendingCount: notAttendingCount, // "Maybe next time" 누른 사람들
+        noRsvpCount: noRsvpCount, // RSVP하지 않은 멤버들
+        afterPartyCount: afterPartyCount,
+        capacity: capacity,
+        attendanceRate: capacity > 0 ? (attendingCount / capacity * 100) : 0,
+        localAttendingCount: localAttendingCount,
+        internationalAttendingCount: internationalAttendingCount,
+        localIntAttendingRatio: localIntAttendingRatio
+      };
+      
+      console.log("📊 Calculated stats:", stats);
+      setEventStats(stats);
     } catch (error) {
-      console.error("Failed to fetch event stats:", error);
+      console.error("❌ Failed to fetch event stats:", error);
+      console.error("Error details:", {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status
+      });
     } finally {
       setLoadingStats(false);
     }
-  };
+  }, [events]);
 
-  // ✅ 참석자 목록 가져오기
+  // ✅ 선택된 이벤트가 변경될 때 통계 가져오기
+  useEffect(() => {
+    if (selectedEvent && selectedEvent.id) {
+      handleEventSelect(selectedEvent.id);
+    }
+  }, [selectedEvent, handleEventSelect]);
+
+
+  // ✅ 참석자 목록 가져오기 (전체 멤버 + RSVP 정보)
   const handleViewAttendees = async (eventId) => {
     if (!eventId) return;
     
     setLoadingAttendees(true);
     try {
-      const response = await axios.get(`/api/admin/events/attendees?eventId=${eventId}`);
-      setAttendees(response.data);
+      // 선택된 이벤트에서 지부 정보 가져오기
+      const selectedEventData = events.find(event => event.id === eventId);
+      const branch = selectedEventData?.branch;
+      
+      if (!branch) {
+        console.error("❌ No branch found for event:", selectedEventData);
+        return;
+      }
+      
+      // 병렬로 데이터 가져오기
+      const [attendeesResponse, membersResponse] = await Promise.all([
+        axios.get(`/api/admin/events/attendees?eventId=${eventId}`),
+        axios.get(`/api/admin/users/branch?branchName=${branch}`)
+      ]);
+      
+      const currentAttendees = attendeesResponse.data || [];
+      const allMembers = membersResponse.data || [];
+      
+      // 전체 멤버에 RSVP 정보 추가
+      const allMembersWithRsvp = allMembers.map(member => {
+        const rsvp = currentAttendees.find(a => a.id === member.id);
+        return {
+          ...member,
+          attending: rsvp ? rsvp.attending : null,
+          afterParty: rsvp ? rsvp.afterParty : false,
+          rsvpDate: rsvp ? rsvp.rsvpDate : null
+        };
+      });
+      
+      setAttendees(allMembersWithRsvp);
       setShowAttendees(true);
     } catch (error) {
       console.error("Failed to fetch attendees:", error);
@@ -112,8 +202,6 @@ export default function AdminDashboardPage() {
       setLoadingAttendees(false);
     }
   };
-
-  const totalRevenue = applications.reduce((sum, app) => sum + 900, 0);
 
   // ✅ 참석자 정렬 함수
   const sortAttendees = (attendees, field, order) => {
@@ -127,6 +215,15 @@ export default function AdminDashboardPage() {
       } else if (field === 'rsvpDate') {
         aValue = new Date(a.rsvpDate);
         bValue = new Date(b.rsvpDate);
+      } else if (field === 'attending') {
+        // Type 정렬: Will Attend(1) > Won't Attend(0) > No RSVP(-1)
+        if (aValue === true) aValue = 1;
+        else if (aValue === false) aValue = 0;
+        else aValue = -1;
+        
+        if (bValue === true) bValue = 1;
+        else if (bValue === false) bValue = 0;
+        else bValue = -1;
       } else {
         aValue = aValue ? aValue.toString().toLowerCase() : '';
         bValue = bValue ? bValue.toString().toLowerCase() : '';
@@ -142,14 +239,19 @@ export default function AdminDashboardPage() {
 
   // ✅ CSV 내보내기 함수
   const exportAttendeesToCSV = () => {
+    const dataToExport = filteredAttendees.length > 0 ? filteredAttendees : attendees;
     const csvData = [
-      ['Name', 'Email', 'Membership', 'After Party', 'RSVP Date'],
-      ...attendees.map(attendee => [
+      ['Name', 'Email', 'Membership', 'Nationality', 'After Party', 'RSVP Date', 'Type'],
+      ...dataToExport.map(attendee => [
         attendee.name || 'N/A',
         attendee.email || 'N/A',
         attendee.membership || 'N/A',
+        attendee.nationality === 'N/A' || !attendee.nationality ? 'Taiwan' : attendee.nationality,
         attendee.afterParty ? 'Yes' : 'No',
-        attendee.rsvpDate ? new Date(attendee.rsvpDate).toLocaleDateString() : 'N/A'
+        attendee.rsvpDate ? new Date(attendee.rsvpDate).toLocaleDateString() : 'N/A',
+        attendee.attending === true ? 'Will Attend' : 
+        attendee.attending === false ? 'Won\'t Attend' : 
+        attendee.attending === null || attendee.attending === undefined ? 'No RSVP' : 'Unknown'
       ])
     ];
     
@@ -181,6 +283,99 @@ export default function AdminDashboardPage() {
     const newOrder = attendeeSortField === field && attendeeSortOrder === 'asc' ? 'desc' : 'asc';
     setAttendeeSortField(field);
     setAttendeeSortOrder(newOrder);
+  };
+
+  // ✅ Count 클릭 핸들러 - 해당 타입의 멤버들 필터링
+  const handleCountClick = async (type) => {
+    // 먼저 attendees 데이터가 있는지 확인하고, 없으면 로드
+    if (attendees.length === 0 && selectedEvent) {
+      await handleViewAttendees(selectedEvent.id);
+    }
+    
+    try {
+      setLoadingAttendees(true);
+      
+      // 선택된 이벤트에서 지부 정보 가져오기
+      const selectedEventData = events.find(event => event.id === selectedEvent.id);
+      const branch = selectedEventData?.branch;
+      
+      if (!branch) {
+        console.error("❌ No branch found for event:", selectedEventData);
+        return;
+      }
+      
+      // 병렬로 데이터 가져오기
+      const [attendeesResponse, membersResponse] = await Promise.all([
+        axios.get(`/api/admin/events/attendees?eventId=${selectedEvent.id}`),
+        axios.get(`/api/admin/users/branch?branchName=${branch}`)
+      ]);
+      
+      const currentAttendees = attendeesResponse.data || [];
+      const allMembers = membersResponse.data || [];
+      
+      console.log("🔍 handleCountClick data:", { type, currentAttendees, allMembers });
+      
+      let filteredList = [];
+      
+      switch(type) {
+        case 'total':
+          // 모든 멤버 (RSVP 여부 관계없이) - 전체 멤버 목록
+          // allMembers에 attending 필드 추가
+          filteredList = allMembers.map(member => {
+            const rsvp = currentAttendees.find(a => a.id === member.id);
+            return {
+              ...member,
+              attending: rsvp ? rsvp.attending : null,
+              afterParty: rsvp ? rsvp.afterParty : false,
+              rsvpDate: rsvp ? rsvp.rsvpDate : null
+            };
+          });
+          break;
+        case 'attending':
+          filteredList = currentAttendees.filter(attendee => attendee.attending === true);
+          break;
+        case 'notAttending':
+          filteredList = currentAttendees.filter(attendee => attendee.attending === false);
+          break;
+        case 'noRsvp':
+          // RSVP하지 않은 멤버들 = 전체 멤버 - RSVP한 사람들
+          const rsvpUserIds = new Set(currentAttendees.map(a => a.id));
+          filteredList = allMembers.filter(member => !rsvpUserIds.has(member.id)).map(member => ({
+            ...member,
+            attending: null,
+            afterParty: false,
+            rsvpDate: null
+          }));
+          break;
+        case 'local':
+          // Local (Taiwan) 멤버들 - Will Attend 중에서 Nationality가 Taiwan인 사람들
+          const attendingMembers = currentAttendees.filter(attendee => attendee.attending === true);
+          filteredList = attendingMembers.filter(attendee => {
+            const displayNationality = attendee.nationality === 'N/A' || !attendee.nationality ? 'Taiwan' : attendee.nationality;
+            return displayNationality === 'Taiwan';
+          });
+          break;
+        case 'international':
+          // International 멤버들 - Will Attend 중에서 Nationality가 Taiwan이 아닌 사람들
+          const attendingMembersInt = currentAttendees.filter(attendee => attendee.attending === true);
+          filteredList = attendingMembersInt.filter(attendee => {
+            const displayNationality = attendee.nationality === 'N/A' || !attendee.nationality ? 'Taiwan' : attendee.nationality;
+            return displayNationality !== 'Taiwan';
+          });
+          break;
+        default:
+          filteredList = currentAttendees;
+      }
+      
+      console.log("🔍 handleCountClick result:", { type, filteredList, eventStats });
+      setFilteredAttendees(filteredList);
+      setShowAttendeeModal(true);
+    } catch (error) {
+      console.error("❌ Failed to fetch data for count click:", error);
+      alert(`데이터를 불러오는 데 실패했습니다: ${error.message}`);
+    } finally {
+      setLoadingAttendees(false);
+    }
   };
 
   // ✅ 이벤트 상세 정보 보기 (AdminEventsPage와 동일한 로직)
@@ -235,75 +430,6 @@ export default function AdminDashboardPage() {
           </Link>
         </div>
 
-        <section className="bg-white p-4 sm:p-6 rounded-lg shadow-md mb-8">
-          <h2 className="text-xl sm:text-2xl font-semibold mb-4">Membership Approvals</h2>
-          <div className="mb-4 p-4 bg-blue-50 rounded-lg text-blue-800">
-            <p><span className="font-bold">{applications.length}</span> applications are pending approval.</p>
-            <p>Current Pending Revenue: <span className="font-bold">{totalRevenue} NTD</span></p>
-          </div>
-          {loading ? (
-            <p>Loading applications...</p>
-          ) : isMobile ? (
-            // Mobile Card View for Applications
-            <div className="space-y-4">
-              {applications.map(app => (
-                <div key={app.id} className="bg-gray-50 p-4 rounded-lg border">
-                  <div className="flex justify-between items-start mb-3">
-                    <div className="flex-1">
-                      <h3 className="font-semibold text-gray-900">{app.userName}</h3>
-                      <p className="text-sm text-gray-600">{app.selectedBranch}</p>
-                      <p className="text-sm text-gray-500">
-                        {app.paymentMethod === 'transfer' ? `Transfer (${app.bankLast5})` : 'Cash'}
-                      </p>
-                    </div>
-                  </div>
-                  <button 
-                    onClick={() => handleApprove(app.id, app.userName, app.selectedBranch)}
-                    className="bg-green-500 text-white text-xs font-bold py-1 px-3 rounded-full hover:bg-green-600"
-                  >
-                    Approve
-                  </button>
-                </div>
-              ))}
-            </div>
-          ) : (
-            // Desktop Table View for Applications
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Branch</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Payment</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {applications.map(app => (
-                    <tr key={app.id}>
-                      <td className="px-6 py-4 whitespace-nowrap">{app.userName}</td>
-                      <td className="px-6 py-4 whitespace-nowrap">{app.selectedBranch}</td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        {app.paymentMethod === 'transfer' ? `Transfer (${app.bankLast5})` : 'Cash'}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <button 
-                          onClick={() => handleApprove(app.id, app.userName, app.selectedBranch)}
-                          className="bg-green-500 text-white text-xs font-bold py-1 px-3 rounded-full hover:bg-green-600"
-                        >
-                          Approve
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </section>
-
-
-
         <section className="bg-white p-4 sm:p-6 rounded-lg shadow-md">
           <h2 className="text-xl sm:text-2xl font-semibold mb-4">Event Attendee Status</h2>
           <div className="mb-4">
@@ -334,10 +460,10 @@ export default function AdminDashboardPage() {
                   {/* Enhanced Capacity Table */}
                   <div className="bg-white border rounded-lg p-4 mb-4">
                     <h4 className="text-lg font-semibold mb-3 text-gray-800">Registration & Capacity Overview</h4>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {/* Capacity Table */}
-                      <div>
-                        <table className="min-w-full border border-gray-300 rounded-lg">
+                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                       {/* Capacity Table */}
+                       <div className="flex justify-end">
+                         <table className="w-96 border border-gray-300 rounded-lg">
                           <thead className="bg-gray-50">
                             <tr>
                               <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 border-b">Type</th>
@@ -347,38 +473,49 @@ export default function AdminDashboardPage() {
                           </thead>
                           <tbody className="divide-y divide-gray-200">
                             <tr>
-                              <td className="px-3 py-2 text-sm font-medium text-gray-900">Total Registered</td>
-                              <td className="px-3 py-2 text-sm text-center font-bold text-blue-600">{eventStats.totalRsvps || 0}</td>
-                              <td className="px-3 py-2 text-sm text-center text-gray-500">
-                                {eventStats.capacity > 0 ? Math.round((eventStats.totalRsvps || 0) / eventStats.capacity * 100) : 0}%
-                              </td>
-                            </tr>
-                            <tr>
                               <td className="px-3 py-2 text-sm font-medium text-gray-900">Will Attend</td>
-                              <td className="px-3 py-2 text-sm text-center font-bold text-green-600">{eventStats.attendingCount}</td>
+                              <td className="px-3 py-2 text-sm text-center font-bold text-green-600 cursor-pointer hover:bg-green-50 rounded" onClick={() => handleCountClick('attending')}>
+                                {eventStats.attendingCount}
+                              </td>
                               <td className="px-3 py-2 text-sm text-center text-gray-500">
-                                {eventStats.capacity > 0 ? Math.round(eventStats.attendingCount / eventStats.capacity * 100) : 0}%
+                                {eventStats.totalRsvps > 0 ? Math.round(eventStats.attendingCount / eventStats.totalRsvps * 100) : 0}%
                               </td>
                             </tr>
                             <tr>
                               <td className="px-3 py-2 text-sm font-medium text-gray-900">Won't Attend</td>
-                              <td className="px-3 py-2 text-sm text-center font-bold text-red-500">{eventStats.notAttendingCount || 0}</td>
+                              <td className="px-3 py-2 text-sm text-center font-bold text-red-500 cursor-pointer hover:bg-red-50 rounded" onClick={() => handleCountClick('notAttending')}>
+                                {eventStats.notAttendingCount || 0}
+                              </td>
                               <td className="px-3 py-2 text-sm text-center text-gray-500">
-                                {eventStats.capacity > 0 ? Math.round((eventStats.notAttendingCount || 0) / eventStats.capacity * 100) : 0}%
+                                {eventStats.totalRsvps > 0 ? Math.round((eventStats.notAttendingCount || 0) / eventStats.totalRsvps * 100) : 0}%
+                              </td>
+                            </tr>
+                            <tr>
+                              <td className="px-3 py-2 text-sm font-medium text-gray-900">No RSVP</td>
+                              <td className="px-3 py-2 text-sm text-center font-bold text-yellow-600 cursor-pointer hover:bg-yellow-50 rounded" onClick={() => handleCountClick('noRsvp')}>
+                                {eventStats.noRsvpCount || 0}
+                              </td>
+                              <td className="px-3 py-2 text-sm text-center text-gray-500">
+                                {eventStats.totalRsvps > 0 ? Math.round((eventStats.noRsvpCount || 0) / eventStats.totalRsvps * 100) : 0}%
                               </td>
                             </tr>
                             <tr className="bg-gray-50">
-                              <td className="px-3 py-2 text-sm font-bold text-gray-900">Max Capacity</td>
-                              <td className="px-3 py-2 text-sm text-center font-bold text-gray-800">{eventStats.capacity}</td>
-                              <td className="px-3 py-2 text-sm text-center text-gray-500">100%</td>
+                              <td className="px-3 py-2 text-sm font-bold text-gray-900">Total Registered</td>
+                              <td className="px-3 py-2 text-sm text-center font-bold text-blue-600 cursor-pointer hover:bg-blue-50 rounded" onClick={() => handleCountClick('total')}>
+                                {eventStats.totalRsvps || 0}
+                              </td>
+                              <td className="px-3 py-2 text-sm text-center text-gray-500">
+                                100%
+                              </td>
                             </tr>
                           </tbody>
                         </table>
                       </div>
                       
-                      {/* After Party Stats */}
-                      <div>
-                        <div className="bg-purple-50 p-4 rounded-lg">
+                       {/* After Party Stats */}
+                       <div className="flex justify-start">
+                         <div className="w-96">
+                           <div className="bg-purple-50 p-4 rounded-lg">
                           <div className="text-center">
                             <p className="text-2xl font-bold text-purple-600">{eventStats.afterPartyCount}</p>
                             <p className="text-sm text-purple-700">After Party</p>
@@ -391,6 +528,12 @@ export default function AdminDashboardPage() {
                         
                         {/* Quick Stats */}
                         <div className="mt-4 space-y-2">
+                          <div className="flex justify-between text-sm">
+                            <span className="text-gray-600">Max Capacity:</span>
+                            <span className="font-medium text-gray-800">
+                              {eventStats.capacity}
+                            </span>
+                          </div>
                           <div className="flex justify-between text-sm">
                             <span className="text-gray-600">Availability:</span>
                             <span className={`font-medium ${
@@ -406,9 +549,44 @@ export default function AdminDashboardPage() {
                             </span>
                           </div>
                         </div>
+                         </div>
+                       </div>
+                     </div>
+                  </div>
+                  {/* 국제/로컬 비율 표시 */}
+                  {eventStats && (
+                    <div className="bg-white rounded-lg shadow p-6 mb-6">
+                      <h3 className="text-lg font-semibold text-gray-900 mb-4">📊 Member Demographics</h3>
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-center">
+                        <div 
+                          className="cursor-pointer hover:bg-gray-50 p-2 rounded-lg transition-colors"
+                          onClick={() => handleCountClick('attending')}
+                        >
+                          <div className="text-lg font-bold text-blue-600">{eventStats.attendingCount || 0}</div>
+                          <div className="text-xs text-gray-600">Total Attending</div>
+                        </div>
+                        <div 
+                          className="cursor-pointer hover:bg-gray-50 p-2 rounded-lg transition-colors"
+                          onClick={() => handleCountClick('local')}
+                        >
+                          <div className="text-lg font-bold text-green-600">{eventStats.localAttendingCount || 0}</div>
+                          <div className="text-xs text-gray-600">Local (Taiwan)</div>
+                        </div>
+                        <div 
+                          className="cursor-pointer hover:bg-gray-50 p-2 rounded-lg transition-colors"
+                          onClick={() => handleCountClick('international')}
+                        >
+                          <div className="text-lg font-bold text-purple-600">{eventStats.internationalAttendingCount || 0}</div>
+                          <div className="text-xs text-gray-600">International</div>
+                        </div>
+                        <div>
+                          <div className="text-lg font-bold text-orange-600">{eventStats.localIntAttendingRatio || '0:0'}</div>
+                          <div className="text-xs text-gray-600">Local:Int Ratio</div>
+                        </div>
                       </div>
                     </div>
-                  </div>
+                  )}
+
                   <div className="flex flex-col sm:flex-row justify-center space-y-2 sm:space-y-0 sm:space-x-4 mt-4">
                     <button 
                       onClick={() => handleViewAttendees(selectedEvent.id)}
@@ -433,15 +611,30 @@ export default function AdminDashboardPage() {
         </section>
 
         {/* 참석자 목록 모달 */}
-        {showAttendees && (
+        {(showAttendees || showAttendeeModal) && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50 p-4">
-            <div className="bg-white p-4 sm:p-6 rounded-lg shadow-2xl w-full max-w-4xl max-h-[80vh] overflow-y-auto">
+            <div className="bg-white p-4 sm:p-6 rounded-lg shadow-2xl w-full max-w-7xl max-h-[80vh] overflow-y-auto">
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-4">
                 <div>
-                  <h2 className="text-xl sm:text-2xl font-bold">Attendee List - {selectedEvent?.title}</h2>
-                  <p className="text-sm text-gray-600">{attendees.length} attendees</p>
+                  <h2 className="text-xl sm:text-2xl font-bold">
+                    {filteredAttendees.length > 0 ? 'Filtered Attendee List' : 'Attendee List'} - {selectedEvent?.title}
+                  </h2>
+                  <p className="text-sm text-gray-600">
+                    {filteredAttendees.length > 0 ? filteredAttendees.length : attendees.length} attendees
+                  </p>
                 </div>
                 <div className="flex items-center space-x-3">
+                  {filteredAttendees.length > 0 && (
+                    <button 
+                      onClick={() => {
+                        setFilteredAttendees([]);
+                        // 모달을 닫지 않고 전체 데이터 표시
+                      }}
+                      className="bg-yellow-600 text-white px-4 py-2 rounded-lg hover:bg-yellow-700 transition-colors text-sm"
+                    >
+                      🔄 Clear Filter
+                    </button>
+                  )}
                   <button 
                     onClick={exportAttendeesToCSV}
                     className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors text-sm"
@@ -449,8 +642,12 @@ export default function AdminDashboardPage() {
                     📊 Export CSV
                   </button>
                   <button 
-                    onClick={() => setShowAttendees(false)}
-                    className="text-gray-500 hover:text-gray-700 text-2xl"
+                    onClick={() => {
+                      setShowAttendees(false);
+                      setShowAttendeeModal(false);
+                      setFilteredAttendees([]);
+                    }}
+                    className="text-gray-500 hover:text-gray-700 text-2xl font-bold"
                   >
                     ×
                   </button>
@@ -461,7 +658,7 @@ export default function AdminDashboardPage() {
                 isMobile ? (
                   // Mobile Card View for Attendees
                   <div className="space-y-4">
-                    {sortAttendees(attendees, attendeeSortField, attendeeSortOrder).map((attendee, index) => (
+                    {sortAttendees(filteredAttendees.length > 0 ? filteredAttendees : attendees, attendeeSortField, attendeeSortOrder).map((attendee, index) => (
                       <div key={index} className="bg-gray-50 p-4 rounded-lg border">
                         <div className="space-y-2">
                           <div>
@@ -484,9 +681,26 @@ export default function AdminDashboardPage() {
                               {attendee.afterParty ? 'After Party: Yes' : 'After Party: No'}
                             </span>
                           </div>
-                          <p className="text-xs text-gray-500">
-                            RSVP: {attendee.rsvpDate ? new Date(attendee.rsvpDate).toLocaleDateString() : 'N/A'}
-                          </p>
+                          <div className="flex justify-between items-center">
+                            <span className="text-sm text-gray-500">Nationality: {attendee.nationality === 'N/A' || !attendee.nationality ? 'Taiwan' : attendee.nationality}</span>
+                          </div>
+                          <div className="flex justify-between items-center">
+                            <span 
+                              className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                                attendee.attending === true ? 'bg-green-100 text-green-800' :
+                                attendee.attending === false ? 'bg-red-100 text-red-800' :
+                                attendee.attending === null || attendee.attending === undefined ? 'bg-yellow-100 text-yellow-800' :
+                                'bg-gray-100 text-gray-800'
+                              }`}
+                            >
+                              {attendee.attending === true ? 'Will Attend' : 
+                               attendee.attending === false ? 'Won\'t Attend' : 
+                               attendee.attending === null || attendee.attending === undefined ? 'No RSVP' : 'Unknown'}
+                            </span>
+                            <p className="text-xs text-gray-500">
+                              RSVP: {attendee.rsvpDate ? new Date(attendee.rsvpDate).toLocaleDateString() : 'N/A'}
+                            </p>
+                          </div>
                         </div>
                       </div>
                     ))}
@@ -501,8 +715,10 @@ export default function AdminDashboardPage() {
                         { field: 'name', label: 'Name' },
                         { field: 'email', label: 'Email' },
                         { field: 'membership', label: 'Membership' },
+                        { field: 'nationality', label: 'Nationality' },
                         { field: 'afterParty', label: 'After Party' },
-                        { field: 'rsvpDate', label: 'RSVP Date' }
+                        { field: 'rsvpDate', label: 'RSVP Date' },
+                        { field: 'attending', label: 'Type' }
                       ].map(({ field, label }) => (
                         <button
                           key={field}
@@ -519,7 +735,7 @@ export default function AdminDashboardPage() {
                     </div>
                     
                     <div className="overflow-x-auto">
-                      <table className="min-w-full divide-y divide-gray-200">
+                      <table className="min-w-full divide-y divide-gray-200" style={{ minWidth: '1200px' }}>
                         <thead className="bg-gray-50">
                           <tr>
                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100" onClick={() => handleSort('name')}>
@@ -531,16 +747,22 @@ export default function AdminDashboardPage() {
                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100" onClick={() => handleSort('membership')}>
                               Membership {attendeeSortField === 'membership' && (attendeeSortOrder === 'asc' ? '↑' : '↓')}
                             </th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100" onClick={() => handleSort('nationality')}>
+                              Nationality {attendeeSortField === 'nationality' && (attendeeSortOrder === 'asc' ? '↑' : '↓')}
+                            </th>
                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100" onClick={() => handleSort('afterParty')}>
                               After Party {attendeeSortField === 'afterParty' && (attendeeSortOrder === 'asc' ? '↑' : '↓')}
                             </th>
                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100" onClick={() => handleSort('rsvpDate')}>
                               RSVP Date {attendeeSortField === 'rsvpDate' && (attendeeSortOrder === 'asc' ? '↑' : '↓')}
                             </th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100" onClick={() => handleSort('attending')}>
+                              Type {attendeeSortField === 'attending' && (attendeeSortOrder === 'asc' ? '↑' : '↓')}
+                            </th>
                           </tr>
                         </thead>
                         <tbody className="bg-white divide-y divide-gray-200">
-                          {sortAttendees(attendees, attendeeSortField, attendeeSortOrder).map((attendee, index) => (
+                          {sortAttendees(filteredAttendees.length > 0 ? filteredAttendees : attendees, attendeeSortField, attendeeSortOrder).map((attendee, index) => (
                             <tr key={index} className="hover:bg-gray-50">
                               <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                                 <button 
@@ -556,6 +778,9 @@ export default function AdminDashboardPage() {
                               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                 {attendee.membership || 'N/A'}
                               </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                {attendee.nationality === 'N/A' || !attendee.nationality ? 'Taiwan' : attendee.nationality}
+                              </td>
                               <td className="px-6 py-4 whitespace-nowrap">
                                 <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
                                   attendee.afterParty ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
@@ -566,6 +791,18 @@ export default function AdminDashboardPage() {
                               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                 {attendee.rsvpDate ? new Date(attendee.rsvpDate).toLocaleDateString() : 'N/A'}
                               </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm">
+                                <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                                  attendee.attending === true ? 'bg-green-100 text-green-800' :
+                                  attendee.attending === false ? 'bg-red-100 text-red-800' :
+                                  attendee.attending === null || attendee.attending === undefined ? 'bg-yellow-100 text-yellow-800' :
+                                  'bg-gray-100 text-gray-800'
+                                }`}>
+                                  {attendee.attending === true ? 'Will Attend' : 
+                                   attendee.attending === false ? 'Won\'t Attend' : 
+                                   attendee.attending === null || attendee.attending === undefined ? 'No RSVP' : 'Unknown'}
+                                </span>
+                              </td>
                             </tr>
                           ))}
                         </tbody>
@@ -574,12 +811,28 @@ export default function AdminDashboardPage() {
                   </div>
                 )
               ) : (
-                <p className="text-center text-gray-500 py-8">No attendees found for this event.</p>
+                <div className="text-center text-gray-500 py-8">
+                  <p className="text-lg font-medium mb-2">
+                    {filteredAttendees.length === 0 && attendees.length === 0 ? 'No attendees found for this event.' : 
+                     filteredAttendees.length === 0 ? 'No attendees found for this filter.' : 
+                     'No attendees found for this event.'}
+                  </p>
+                  {filteredAttendees.length === 0 && attendees.length > 0 && (
+                    <p className="text-sm">Try clicking "Clear Filter" to see all attendees.</p>
+                  )}
+                  {filteredAttendees.length === 0 && attendees.length === 0 && (
+                    <p className="text-sm">Click "👥 View Full Attendee List" to load attendee data first.</p>
+                  )}
+                </div>
               )}
               
               <div className="mt-6 text-center">
                 <button 
-                  onClick={() => setShowAttendees(false)}
+                  onClick={() => {
+                    setShowAttendees(false);
+                    setShowAttendeeModal(false);
+                    setFilteredAttendees([]);
+                  }}
                   className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600"
                 >
                   Close
@@ -618,33 +871,46 @@ export default function AdminDashboardPage() {
                 
                 <div className="border-t pt-4 space-y-3">
                   <div className="flex justify-between">
-                    <span className="text-sm font-medium text-gray-700">Member ID:</span>
-                    <span className="text-sm text-gray-900">{selectedMember.id || 'N/A'}</span>
+                    <span className="font-medium text-gray-700">Member ID:</span>
+                    <span className="text-gray-900">{selectedMember.id || 'N/A'}</span>
                   </div>
+                  
                   <div className="flex justify-between">
-                    <span className="text-sm font-medium text-gray-700">Membership:</span>
-                    <span className={`text-sm px-2 py-1 rounded-full ${
-                      selectedMember.membership 
-                        ? 'bg-green-100 text-green-800' 
-                        : 'bg-gray-100 text-gray-800'
-                    }`}>
-                      {selectedMember.membership || 'Non-member'}
-                    </span>
+                    <span className="font-medium text-gray-700">Membership:</span>
+                    <span className="text-gray-900">{selectedMember.membership || 'N/A'}</span>
                   </div>
+                  
                   <div className="flex justify-between">
-                    <span className="text-sm font-medium text-gray-700">After Party:</span>
-                    <span className={`text-sm px-2 py-1 rounded-full ${
-                      selectedMember.afterParty 
-                        ? 'bg-purple-100 text-purple-800' 
-                        : 'bg-gray-100 text-gray-800'
+                    <span className="font-medium text-gray-700">Nationality:</span>
+                    <span className="text-gray-900">{selectedMember.nationality === 'N/A' || !selectedMember.nationality ? 'Taiwan' : selectedMember.nationality}</span>
+                  </div>
+                  
+                  <div className="flex justify-between">
+                    <span className="font-medium text-gray-700">After Party:</span>
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                      selectedMember.afterParty ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
                     }`}>
                       {selectedMember.afterParty ? 'Yes' : 'No'}
                     </span>
                   </div>
+                  
                   <div className="flex justify-between">
-                    <span className="text-sm font-medium text-gray-700">RSVP Date:</span>
-                    <span className="text-sm text-gray-900">
+                    <span className="font-medium text-gray-700">RSVP Date:</span>
+                    <span className="text-gray-900">
                       {selectedMember.rsvpDate ? new Date(selectedMember.rsvpDate).toLocaleDateString() : 'N/A'}
+                    </span>
+                  </div>
+                  
+                  <div className="flex justify-between">
+                    <span className="font-medium text-gray-700">Type:</span>
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                      selectedMember.attending === true ? 'bg-green-100 text-green-800' : 
+                      selectedMember.attending === false ? 'bg-red-100 text-red-800' : 
+                      'bg-gray-100 text-gray-800'
+                    }`}>
+                      {selectedMember.attending === true ? 'Will Attend' : 
+                       selectedMember.attending === false ? 'Won\'t Attend' : 
+                       selectedMember.attending === null || selectedMember.attending === undefined ? 'No RSVP' : 'Unknown'}
                     </span>
                   </div>
                 </div>
@@ -690,20 +956,20 @@ export default function AdminDashboardPage() {
                 {/* Event Overview */}
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                   <div className="bg-blue-50 p-4 rounded-lg text-center">
-                    <div className="text-xl sm:text-2xl font-bold text-blue-600">{eventDetailsData.capacity || 0}</div>
-                    <div className="text-sm text-gray-600">Capacity</div>
+                    <div className="text-xl sm:text-2xl font-bold text-blue-600">{eventStats?.totalRsvps || 0}</div>
+                    <div className="text-sm text-gray-600">Total Registered</div>
                   </div>
                   <div className="bg-green-50 p-4 rounded-lg text-center">
-                    <div className="text-xl sm:text-2xl font-bold text-green-600">{eventDetailsData.rsvpData?.totalAttending || eventStats?.attendingCount || 0}</div>
-                    <div className="text-sm text-gray-600">Registered</div>
+                    <div className="text-xl sm:text-2xl font-bold text-green-600">{eventStats?.attendingCount || 0}</div>
+                    <div className="text-sm text-gray-600">Will Attend</div>
+                  </div>
+                  <div className="bg-red-50 p-4 rounded-lg text-center">
+                    <div className="text-xl sm:text-2xl font-bold text-red-600">{eventStats?.notAttendingCount || 0}</div>
+                    <div className="text-sm text-gray-600">Won't Attend</div>
                   </div>
                   <div className="bg-purple-50 p-4 rounded-lg text-center">
-                    <div className="text-xl sm:text-2xl font-bold text-purple-600">{eventDetailsData.rsvpData?.afterPartyCount || eventStats?.afterPartyCount || 0}</div>
+                    <div className="text-xl sm:text-2xl font-bold text-purple-600">{eventStats?.afterPartyCount || 0}</div>
                     <div className="text-sm text-gray-600">After Party</div>
-                  </div>
-                  <div className="bg-yellow-50 p-4 rounded-lg text-center">
-                    <div className="text-xl sm:text-2xl font-bold text-yellow-600">{eventDetailsData.attendanceRate}%</div>
-                    <div className="text-sm text-gray-600">Show-up Rate</div>
                   </div>
                 </div>
 
@@ -780,13 +1046,7 @@ export default function AdminDashboardPage() {
                 )}
 
                 {/* Action Buttons */}
-                <div className="flex flex-col sm:flex-row justify-center space-y-2 sm:space-y-0 sm:space-x-4 pt-4 border-t">
-                  <button 
-                    onClick={() => handleViewAttendees(selectedEvent.id)}
-                    className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors text-center"
-                  >
-                    👥 View Full Attendee List
-                  </button>
+                <div className="flex justify-center pt-4 border-t">
                   <button 
                     onClick={() => setShowEventDetailsModal(false)}
                     className="bg-gray-500 text-white px-6 py-2 rounded-lg hover:bg-gray-600 transition-colors"
