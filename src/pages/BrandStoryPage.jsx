@@ -162,7 +162,7 @@ It means even in Taiwan, the right environment — meeting new people and using 
   </div>
 
   <img
-    src="/SLAMMEET10.jpg"
+    src="/SLAMMEET10.JPG"
     alt="A large group photo of SLAM members"
     className="w-full h-64 md:h-80 lg:h-96 object-cover rounded-xl md:rounded-2xl shadow-lg"
   />
