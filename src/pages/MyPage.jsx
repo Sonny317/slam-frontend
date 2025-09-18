@@ -102,7 +102,29 @@ export default function MyPage() {
     const [selectedBadgeLevel, setSelectedBadgeLevel] = useState(0);
     // ✅ 화면 크기 감지를 위한 상태
     const [isLargeScreen, setIsLargeScreen] = useState(false);
-    const qrCodeValue = JSON.stringify({ userId: userDetails.userId, name: userDetails.name });
+    // ✅ QR 코드 관련 상태 추가
+    const [availableEvents, setAvailableEvents] = useState([]);
+    const [selectedEventForQr, setSelectedEventForQr] = useState(null);
+    
+    // 선택된 이벤트에 대한 QR 코드 값 생성
+    const qrCodeValue = selectedEventForQr 
+        ? JSON.stringify({ 
+            userId: userDetails.userId, 
+            name: userDetails.name, 
+            eventId: selectedEventForQr.id 
+          })
+        : JSON.stringify({ 
+            userId: userDetails.userId, 
+            name: userDetails.name 
+          });
+
+    // ✅ 디버깅: QR 코드 값 로그
+    console.log('QR Code Debug Info:', {
+        userDetails: userDetails,
+        selectedEventForQr: selectedEventForQr,
+        qrCodeValue: qrCodeValue,
+        parsedQrCode: qrCodeValue ? JSON.parse(qrCodeValue) : null
+    });
 
     // 로그인하지 않은 사용자는 로그인 페이지로 리다이렉트
     if (!user?.isLoggedIn) {
@@ -208,6 +230,29 @@ export default function MyPage() {
         return () => window.removeEventListener('resize', handleResize);
     }, []);
 
+    // ✅ 사용 가능한 이벤트 목록 로드
+    useEffect(() => {
+        const loadAvailableEvents = async () => {
+            try {
+                const response = await axios.get('/api/events');
+                const events = response.data || [];
+                // 현재 날짜 이후의 이벤트만 필터링
+                const now = new Date();
+                const upcomingEvents = events.filter(event => 
+                    new Date(event.eventDateTime) >= now
+                );
+                setAvailableEvents(upcomingEvents);
+            } catch (error) {
+                console.error('Failed to load events:', error);
+                setAvailableEvents([]);
+            }
+        };
+
+        if (user.isLoggedIn) {
+            loadAvailableEvents();
+        }
+    }, [user.isLoggedIn]);
+
     // ✅ user 상태가 변경될 때마다 userDetails를 업데이트합니다.
     useEffect(() => {
         if (user.isLoggedIn) {
@@ -251,6 +296,7 @@ export default function MyPage() {
             // ✅ 멤버십 정보와 사용자 정보를 통합 (Single Source of Truth)
             // 우선순위: 멤버십 신청 정보 > 기존 사용자 정보
             const integratedUserData = {
+                userId: userData.userId, // ✅ userId 추가 (userData.id가 아니라 userData.userId)
                 name: membershipData?.name || userData.name || 'Your Name',
                 phone: membershipData?.phone || userData.phone || '',
                 major: membershipData?.major || userData.major || '',
@@ -583,14 +629,60 @@ export default function MyPage() {
                                 <div className="text-center mt-4">
                                     {showQrCode ? (
                                         <>
-                                            <div className="p-4 bg-white inline-block rounded-lg shadow-inner">
-                                                <QRCodeSVG value={qrCodeValue} size={180} />
+                                            {/* 이벤트 선택 드롭다운 */}
+                                            <div className="mb-4">
+                                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                                    Select Event for Check-in
+                                                </label>
+                                                <select
+                                                    value={selectedEventForQr?.id || ''}
+                                                    onChange={(e) => {
+                                                        const eventId = e.target.value;
+                                                        const event = availableEvents.find(evt => evt.id.toString() === eventId);
+                                                        setSelectedEventForQr(event);
+                                                    }}
+                                                    className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                                >
+                                                    <option value="">Choose an event...</option>
+                                                    {availableEvents.map(event => (
+                                                        <option key={event.id} value={event.id}>
+                                                            {event.title} ({event.branch}) - {new Date(event.eventDateTime).toLocaleDateString()}
+                                                        </option>
+                                                    ))}
+                                                </select>
                                             </div>
-                                            <p className="text-xs text-gray-500 mt-3">Please show this to our staff at the event entrance.</p>
-                                            <button onClick={() => setShowQrCode(false)} className="text-xs text-gray-500 mt-2 hover:underline">Hide QR Code</button>
+
+                                            {/* QR 코드 표시 */}
+                                            {selectedEventForQr ? (
+                                                <>
+                                                    <div className="p-4 bg-white inline-block rounded-lg shadow-inner">
+                                                        <QRCodeSVG value={qrCodeValue} size={180} />
+                                                    </div>
+                                                    <p className="text-xs text-gray-500 mt-3">
+                                                        Please show this QR code to our staff at the event entrance.
+                                                    </p>
+                                                    <p className="text-xs text-gray-400 mt-1">
+                                                        Event: {selectedEventForQr.title}
+                                                    </p>
+                                                </>
+                                            ) : (
+                                                <div className="p-4 bg-gray-100 rounded-lg">
+                                                    <p className="text-gray-500">Please select an event to generate QR code</p>
+                                                </div>
+                                            )}
+
+                                            <button 
+                                                onClick={() => setShowQrCode(false)} 
+                                                className="text-xs text-gray-500 mt-2 hover:underline"
+                                            >
+                                                Hide QR Code
+                                            </button>
                                         </>
                                     ) : (
-                                        <button onClick={() => setShowQrCode(true)} className="w-full bg-gray-800 text-white font-bold py-3 rounded-lg hover:bg-black transition-colors">
+                                        <button 
+                                            onClick={() => setShowQrCode(true)} 
+                                            className="w-full bg-gray-800 text-white font-bold py-3 rounded-lg hover:bg-black transition-colors"
+                                        >
                                             Show Event Check-in Code
                                         </button>
                                     )}

@@ -119,7 +119,9 @@ export default function AdminDashboardPage() {
       }).length || 0;
       
       const internationalAttendingCount = attendingCount - localAttendingCount;
-      const localIntAttendingRatio = internationalAttendingCount > 0 ? `${localAttendingCount}:${internationalAttendingCount}` : `${localAttendingCount}:0`;
+      const localIntAttendingRatio = attendingCount > 0 ? 
+        `${Math.round((localAttendingCount / attendingCount) * 100)}:${Math.round((internationalAttendingCount / attendingCount) * 100)}` : 
+        '0:0';
       
       const stats = {
         eventId: eventId,
@@ -460,8 +462,8 @@ export default function AdminDashboardPage() {
                   {/* Enhanced Capacity Table */}
                   <div className="bg-white border rounded-lg p-4 mb-4">
                     <h4 className="text-lg font-semibold mb-3 text-gray-800">Registration & Capacity Overview</h4>
-                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                       {/* Capacity Table */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {/* Capacity Table */}
                        <div className="flex justify-end">
                          <table className="w-96 border border-gray-300 rounded-lg">
                           <thead className="bg-gray-50">
@@ -512,10 +514,10 @@ export default function AdminDashboardPage() {
                         </table>
                       </div>
                       
-                       {/* After Party Stats */}
+                      {/* After Party Stats */}
                        <div className="flex justify-start">
                          <div className="w-96">
-                           <div className="bg-purple-50 p-4 rounded-lg">
+                        <div className="bg-purple-50 p-4 rounded-lg">
                           <div className="text-center">
                             <p className="text-2xl font-bold text-purple-600">{eventStats.afterPartyCount}</p>
                             <p className="text-sm text-purple-700">After Party</p>
@@ -549,9 +551,9 @@ export default function AdminDashboardPage() {
                             </span>
                           </div>
                         </div>
-                         </div>
-                       </div>
-                     </div>
+                      </div>
+                    </div>
+                  </div>
                   </div>
                   {/* 국제/로컬 비율 표시 */}
                   {eventStats && (
@@ -697,9 +699,9 @@ export default function AdminDashboardPage() {
                                attendee.attending === false ? 'Won\'t Attend' : 
                                attendee.attending === null || attendee.attending === undefined ? 'No RSVP' : 'Unknown'}
                             </span>
-                            <p className="text-xs text-gray-500">
-                              RSVP: {attendee.rsvpDate ? new Date(attendee.rsvpDate).toLocaleDateString() : 'N/A'}
-                            </p>
+                          <p className="text-xs text-gray-500">
+                            RSVP: {attendee.rsvpDate ? new Date(attendee.rsvpDate).toLocaleDateString() : 'N/A'}
+                          </p>
                           </div>
                         </div>
                       </div>
