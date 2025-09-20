@@ -37,6 +37,8 @@ const fetchEventDetails = async (eventId, branch, role) => {
     // 이벤트에 할당된 게임 목록 가져오기
     const gamesResponse = await axios.get(`/api/admin/events/${eventId}/games`);
     const games = gamesResponse.data || [];
+    
+    console.log('Event games loaded:', games);
 
     return {
       eventTitle: event.title,
@@ -75,8 +77,18 @@ export default function FeedbackFormPage() {
   const [reelsParticipation, setReelsParticipation] = useState('');
   
   const ACTIVITIES = [
-    '2-day Taiwan traveling', 'Drink at a bar', 'Karaoke Nights', 'Going to the beach', 'EDM festival & Night club',
-    'Bouldering & Running crew', 'Picnic in the Park', 'Board Game Nights', 'Hiking & Nature walks', 'Language Exchange meetups'
+    '🧺 Picnic in the Park',
+    '🎤 Karaoke Nights', 
+    '🎲 Board Game Nights',
+    '🎵 EDM festival & Night club',
+    '🧗 Bouldering & Running crew',
+    '🏖️ Going to the beach',
+    '🥾 Hiking & Nature walks',
+    '✈️ 2-day Taiwan traveling',
+    '🍻 Drink at a bar',
+    '🗣️ Language Exchange meetups',
+    '🎳 Go Bowling',
+    '🍖 BBQ night'
   ];
   const [selectedActivities, setSelectedActivities] = useState([]);
   // 게임별 평점 (객체 형태로 관리)
@@ -89,6 +101,13 @@ export default function FeedbackFormPage() {
   const [goodPoints, setGoodPoints] = useState('');
   const [improvements, setImprovements] = useState('');
   const [isSubmitted, setIsSubmitted] = useState(false);
+
+  // Step 변경 시 스크롤을 맨 위로 이동 (eventDetails가 로드된 후에만)
+  useEffect(() => {
+    if (eventDetails && !loading) {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  }, [currentStep, eventDetails, loading]);
 
   // URL 쿼리 파라미터 파싱
   const queryParams = new URLSearchParams(location.search);
@@ -104,6 +123,9 @@ export default function FeedbackFormPage() {
       setLoading(true);
       fetchEventDetails(eventId, branch, role)
         .then(data => {
+          console.log('Event details loaded:', data);
+          console.log('Games count:', data.games ? data.games.length : 0);
+          console.log('Games data:', data.games);
           setEventDetails(data);
           // 게임 평점 상태를 초기화합니다. (모든 게임 0점)
           const initialGameRatings = data.games.reduce((acc, game) => {
@@ -183,7 +205,20 @@ export default function FeedbackFormPage() {
       return overallRating > 0 && participantsFit > 0 && interactionOpportunity > 0;
     }
     if (currentStep === 2) {
-      return eventDetails.games.length === 0 || Object.keys(gameRatings).length > 0;
+      // 게임이 없으면 바로 진행 가능
+      if (eventDetails.games.length === 0) {
+        return true;
+      }
+      // 게임이 있으면 모든 게임에 대해 평점이 입력되었거나 스킵되었어야 함
+      return eventDetails.games.every(game => {
+        const rating = gameRatings[game.gameId];
+        const isSkipped = skippedGames && skippedGames[game.gameId];
+        return (rating && rating > 0) || isSkipped;
+      });
+    }
+    if (currentStep === 3) {
+      // Step 3에서는 최소 3개의 활동을 선택해야 함
+      return selectedActivities.length >= 3;
     }
     return true;
   };
@@ -205,6 +240,7 @@ export default function FeedbackFormPage() {
       top3Activities,
       goodPoints,
       improvements,
+      comment: `Top 3 Activities: ${top3Activities}\nGood Points: ${goodPoints}\nImprovements: ${improvements}`,
       gameRatings,
       gameNotes,
       skippedGames,
@@ -365,16 +401,17 @@ export default function FeedbackFormPage() {
                         type="radio"
                         name="leadership"
                         value="yes"
-                        checked={leadershipInterest === 'yes'}
+                        checked={leadershipInterest.startsWith('yes')}
                         onChange={(e) => setLeadershipInterest(e.target.value)}
                         className="mr-3 mt-1"
                       />
                       <div>
                         <span className="font-medium">Yes, I'm interested!</span>
-                        {leadershipInterest === 'yes' && (
+                        {leadershipInterest.startsWith('yes') && (
                           <input
                             type="text"
                             placeholder="Your Instagram ID for contact"
+                            value={leadershipInterest.includes(':') ? leadershipInterest.split(':')[1] : ''}
                             className="mt-2 w-full p-2 border rounded-md text-sm"
                             onChange={(e) => setLeadershipInterest(`yes:${e.target.value}`)}
                           />
@@ -405,16 +442,17 @@ export default function FeedbackFormPage() {
                         type="radio"
                         name="reels"
                         value="yes"
-                        checked={reelsParticipation === 'yes'}
+                        checked={reelsParticipation.startsWith('yes')}
                         onChange={(e) => setReelsParticipation(e.target.value)}
                         className="mr-3 mt-1"
                       />
                       <div>
                         <span className="font-medium">Yes, I'd love to!</span>
-                        {reelsParticipation === 'yes' && (
+                        {reelsParticipation.startsWith('yes') && (
                           <input
                             type="text"
                             placeholder="Your Instagram ID for contact"
+                            value={reelsParticipation.includes(':') ? reelsParticipation.split(':')[1] : ''}
                             className="mt-2 w-full p-2 border rounded-md text-sm"
                             onChange={(e) => setReelsParticipation(`yes:${e.target.value}`)}
                           />
@@ -439,9 +477,10 @@ export default function FeedbackFormPage() {
           )}
 
           {/* Step 2: Game Ratings */}
-          {currentStep === 2 && eventDetails.games.length > 0 && (
+          {currentStep === 2 && eventDetails && eventDetails.games && eventDetails.games.length > 0 && (
             <div className="space-y-6">
               <h2 className="text-center text-xl font-semibold text-gray-800">How were the games?</h2>
+              {console.log('Rendering Step 2 with games:', eventDetails.games)}
               {eventDetails.games.map(game => (
                 <div key={game.gameId} className="p-4 border rounded-lg">
                   <div className="game-header mb-4">
@@ -704,7 +743,12 @@ export default function FeedbackFormPage() {
             ) : (
               <button
                 type="submit"
-                className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                disabled={!canProceedToNext()}
+                className={`px-6 py-2 rounded-lg transition-colors ${
+                  canProceedToNext()
+                    ? 'bg-green-600 text-white hover:bg-green-700'
+                    : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                }`}
               >
                 Submit Feedback
               </button>
